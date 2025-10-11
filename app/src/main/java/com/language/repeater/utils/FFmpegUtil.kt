@@ -1,11 +1,15 @@
 package com.language.repeater.utils
 
+import android.R.id.input
 import android.content.Context
+import android.net.Uri
 import android.util.Log
 import androidx.core.net.toUri
 import com.arthenica.ffmpegkit.FFmpegKit
 import com.arthenica.ffmpegkit.FFmpegKitConfig
 import com.arthenica.ffmpegkit.ReturnCode
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 
 /**
@@ -53,13 +57,43 @@ object FFmpegUtil {
     }
   }
 
+  suspend fun extractPcmFileByFFmpeg(context: Context, input: Uri): String = withContext(Dispatchers.IO) {
+    val outputDir = context.getExternalFilesDir("pcm")
+    if (outputDir != null && !outputDir.exists()) {
+      outputDir.mkdirs()
+    }
+    val outputFile = File(outputDir, "output.pcm")
+    if (outputFile.length() > 0) {
+      outputFile.delete()
+    }
+    val outPath = outputFile.absolutePath
+
+    val str = FFmpegKitConfig.getSafParameterForRead(context, input)
+    // ffmpeg 命令
+    //val cmd = "-y -i $str -vn -acodec pcm_s16le -ar 16000 -ac 1 $outPut"
+    val cmd = "-y -i $str -vn -ac 1 -ar 8000 -f s16le -c:a pcm_s16le $outPath"
+    Log.i(TAG, "FFmpegKit cmd:$cmd")
+    val session = FFmpegKit.execute(cmd)
+    val returnCode = session.returnCode
+    if (ReturnCode.isSuccess(returnCode)) {
+      Log.i(TAG, "FFmpegKit success")
+      outPath
+    } else {
+      Log.i(TAG, "FFmpegKit failure:${returnCode}, ${session.failStackTrace}")
+      if (outputFile.length() > 0) {
+        outputFile.delete()
+      }
+      throw Exception("extractPcmFileByFFmpeg failed:${returnCode}")
+    }
+  }
+
   fun extractPcmFileByFFmpeg(
     context: Context,
-    input: String,
+    input: Uri?,
     onSuccess: (outPut: String) -> Unit,
     onFail: (errInfo: String?) -> Unit,
   ) {
-    if (input.isEmpty()) return
+    if (input == null) return
 
     val outputDir = context.getExternalFilesDir("pcm")
     if (outputDir != null && !outputDir.exists()) {
@@ -71,7 +105,7 @@ object FFmpegUtil {
     }
     val outPath = outputFile.absolutePath
 
-    val str = FFmpegKitConfig.getSafParameterForRead(context, input.toUri())
+    val str = FFmpegKitConfig.getSafParameterForRead(context, input)
     // ffmpeg 命令
     //val cmd = "-y -i $str -vn -acodec pcm_s16le -ar 16000 -ac 1 $outPut"
     val cmd = "-y -i $str -vn -ac 1 -ar 8000 -f s16le -c:a pcm_s16le $outPath"

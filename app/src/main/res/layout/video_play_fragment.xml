@@ -43,4 +43,15 @@
     app:show_shuffle_button="false"
     android:layout_width="0dp"
     android:layout_height="300dp" />
+
+  <com.language.repeater.widgets.AudioWaveformView
+    android:id="@+id/audio_wave_view"
+    app:layout_constraintStart_toStartOf="parent"
+    app:layout_constraintEnd_toEndOf="parent"
+    app:layout_constraintTop_toBottomOf="@id/exo_video_view"
+    android:layout_marginTop="15dp"
+    android:background="@color/PastelOrange"
+    android:layout_width="0dp"
+    android:layout_height="100dp"/>
+
 </androidx.constraintlayout.widget.ConstraintLayout>

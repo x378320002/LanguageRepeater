@@ -13,10 +13,15 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import com.language.repeater.databinding.VideoPlayFragmentBinding
+import kotlinx.coroutines.launch
 
 
 class PlayVideoFragment: Fragment() {
@@ -24,6 +29,7 @@ class PlayVideoFragment: Fragment() {
   private val binding get() = _binding!!
 
   private var exoPlayer: ExoPlayer? = null
+  private val viewModel: PlayVideoViewModel by viewModels()
 
   val launcher = registerForActivityResult(ActivityResultContracts.StartActivityForResult(),
     object: ActivityResultCallback<ActivityResult> {
@@ -39,6 +45,8 @@ class PlayVideoFragment: Fragment() {
             exoPlayer?.setMediaItem(mediaItem)
             exoPlayer?.prepare()
             exoPlayer?.play()
+
+            viewModel.parseUriToPcm(videoUri)
           }
         }
       }
@@ -73,6 +81,26 @@ class PlayVideoFragment: Fragment() {
       repeatMode = Player.REPEAT_MODE_ALL
     }
     binding.exoVideoView.player = exoPlayer
+
+    viewLifecycleOwner.lifecycleScope.launch {
+      viewLifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+        viewModel.audioDataStateFlow.collect { data ->
+          if (data != null) {
+            binding.audioWaveView.setPcmData(data)
+          }
+        }
+      }
+    }
+  }
+
+  override fun onPause() {
+    super.onPause()
+    exoPlayer?.pause()
+  }
+
+  override fun onResume() {
+    super.onResume()
+    exoPlayer?.play()
   }
 
   override fun onDestroyView() {
