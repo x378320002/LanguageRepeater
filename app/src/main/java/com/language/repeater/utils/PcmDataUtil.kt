@@ -1,10 +1,12 @@
 
 import android.R.attr.path
 import android.util.Log
+import android.util.Log.v
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileInputStream
+import kotlin.math.abs
 import kotlin.math.sqrt
 
 /**
@@ -60,9 +62,9 @@ object PcmDataUtil {
         if (v < min) min = v
       }
       val rms = sqrt(sum / (end - start)).toDouble()
-      val mixed = (rms * 0.9 + (max - min) * 1 * 0.2)
+      val mixed = (rms * 0.9 + (max - min) * 1 * 0.1)
       result.add(mixed.toInt())
-//      result.add(data[(start + end) / 2].toInt())
+//      result.add(rms.toInt())
     }
     return@withContext result
   }

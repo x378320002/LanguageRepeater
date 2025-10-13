@@ -8,7 +8,7 @@ import android.graphics.Path
 import android.graphics.PointF
 import android.util.AttributeSet
 import android.view.View
-import kotlin.math.abs
+import com.google.common.collect.Multimaps.index
 
 /**
  * 一个用于绘制音频PCM数据波形图的自定义View。
@@ -20,8 +20,8 @@ class AudioWaveformView @JvmOverloads constructor(
 ) : View(context, attrs, defStyleAttr) {
 
   // 1. 将绘图对象作为成员变量，避免在 onDraw 中重复创建
-  private var pcmData: List<Int> = listOf()
-  private var pathPoints: Array<PointF>? = null
+  private var pcmData: List<WaveformPoint> = listOf()
+//  private var pathPoints: Array<PointF>? = null
   // 复用 Path 对象
   private val path = Path()
 
@@ -45,39 +45,23 @@ class AudioWaveformView @JvmOverloads constructor(
     strokeWidth = 1f
   }
 
+  private val playedPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    color = 0x20000000.toInt() // 对应 Color.LightGray.copy(alpha = 0.5f)
+    style = Paint.Style.FILL
+  }
+
   /**
    * 设置要显示的音频PCM数据，并触发重绘。
    * @param data 原始PCM数据数组（通常是16-bit，范围从 -32768 到 32767）。
    */
-  fun setPcmData(data: List<Int>) {
+  fun setPcmData(data: List<WaveformPoint>) {
     if (data != this.pcmData) {
       this.pcmData = data
-      pathPoints = null
+//      pathPoints = null
       // 请求重新绘制 View
       invalidate()
     }
   }
-
-//  /**
-//   * 当 View 的尺寸发生变化时调用。
-//   * 这是创建依赖于尺寸的对象的最佳位置，例如渐变。
-//   */
-//  override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
-//    super.onSizeChanged(w, h, oldw, oldh)
-//    // 创建垂直渐变。Compose 的 Brush.verticalGradient 对应 LinearGradient
-//    val gradient = LinearGradient(
-//      0f, 0f, 0f, h.toFloat(),
-//      intArrayOf(
-//        0xFF64B5F6.toInt(), // 对应 Color(0xFF64B5F6)
-//        0xFF64B5F6.toInt(),
-//        0xFF64B5F6.toInt()
-//      ),
-//      null, // positions, null for even distribution
-//      Shader.TileMode.CLAMP
-//    )
-//    // 将渐变设置给填充画笔
-//    fillPaint.shader = gradient
-//  }
 
   /**
    * 核心绘图逻辑。
@@ -94,6 +78,7 @@ class AudioWaveformView @JvmOverloads constructor(
     val canvasWidth = width.toFloat()
     val canvasHeight = height.toFloat()
     val centerY = canvasHeight / 2f
+    val availableHeight = centerY * 0.9f
 
     // 重置路径，以便下次重绘
     path.reset()
@@ -102,26 +87,31 @@ class AudioWaveformView @JvmOverloads constructor(
 
     // 计算每个数据点在X轴上的步长
     val xStep = canvasWidth / (pcmData.size - 1).coerceAtLeast(1)
-    if (pathPoints.isNullOrEmpty()) {
-      @SuppressLint("DrawAllocation")
-      pathPoints = Array(pcmData.size) {index ->
-        val value = pcmData[index]
-        // 归一化振幅并映射到视图高度
-        val amp = abs((value / 32768f) * centerY)
-        val x = index * xStep
-        PointF(x, amp)
-      }
-    }
+//    if (pathPoints.isNullOrEmpty()) {
+//      @SuppressLint("DrawAllocation")
+//      pathPoints = Array(pcmData.size) {index ->
+//        val value = pcmData[index]
+//        // 归一化振幅并映射到视图高度
+////        val amp = abs((value / 32768f) * centerY)
+//        val amp = (value / 32768f) * centerY
+//        val x = index * xStep
+//        PointF(x, amp)
+//      }
+//    }
+//    val points = pathPoints ?: return
 
-    val points = pathPoints ?: return
-    for (i in points.indices) {
-      val p = points[i]
-      path.lineTo(p.x, centerY - p.y)
+    for (i in pcmData.indices) {
+      val p = pcmData[i]
+      val x = i * xStep
+      val y = centerY - (p.max / 32768f) * availableHeight
+      path.lineTo(x, y)
     }
     path.lineTo(canvasWidth, centerY) // 连接到右下角
-    for (i in points.lastIndex downTo 0) {
-      val p = points[i]
-      path.lineTo(p.x, centerY + p.y)
+    for (i in pcmData.lastIndex downTo 0) {
+      val p = pcmData[i]
+      val x = i * xStep
+      val y = centerY - (p.min / 32768f) * availableHeight
+      path.lineTo(x, y)
     }
     path.close() // 闭合路径
 
@@ -132,10 +122,16 @@ class AudioWaveformView @JvmOverloads constructor(
 
     // 5. 绘制中心线
     canvas.drawLine(0f, centerY, canvasWidth, centerY, centerLinePaint)
+
+    canvas.drawRect(0f, 0f, canvasWidth * currentProgress, canvasHeight, playedPaint)
   }
 
-  // 辅助函数，用于将 dp 单位转换为像素
-  private fun Float.dpToPx(): Float {
-    return this * context.resources.displayMetrics.density
+  var currentProgress = 0f
+  /**
+   * 更新播放位置, 0-1
+   */
+  fun updatePosition(positionSeconds: Float) {
+    currentProgress = positionSeconds
+    invalidate()
   }
 }

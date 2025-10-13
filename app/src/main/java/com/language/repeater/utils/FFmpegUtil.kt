@@ -8,6 +8,7 @@ import androidx.core.net.toUri
 import com.arthenica.ffmpegkit.FFmpegKit
 import com.arthenica.ffmpegkit.FFmpegKitConfig
 import com.arthenica.ffmpegkit.ReturnCode
+import com.language.repeater.GlobalConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -71,7 +72,7 @@ object FFmpegUtil {
     val str = FFmpegKitConfig.getSafParameterForRead(context, input)
     // ffmpeg 命令
     //val cmd = "-y -i $str -vn -acodec pcm_s16le -ar 16000 -ac 1 $outPut"
-    val cmd = "-y -i $str -vn -ac 1 -ar 8000 -f s16le -c:a pcm_s16le $outPath"
+    val cmd = "-y -i $str -vn -ac 1 -ar ${GlobalConfig.PCM_SAMPLE_RATE} -f s16le -c:a pcm_s16le $outPath"
     Log.i(TAG, "FFmpegKit cmd:$cmd")
     val session = FFmpegKit.execute(cmd)
     val returnCode = session.returnCode

@@ -1,5 +1,7 @@
 package com.language.repeater.playvideo
 
+import android.R.attr.data
+import android.R.attr.duration
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
@@ -21,7 +23,11 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import com.language.repeater.databinding.VideoPlayFragmentBinding
+import com.language.repeater.widgets.PCMSegmentLoader
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import java.io.File
 
 
 class PlayVideoFragment: Fragment() {
@@ -84,9 +90,47 @@ class PlayVideoFragment: Fragment() {
 
     viewLifecycleOwner.lifecycleScope.launch {
       viewLifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-        viewModel.audioDataStateFlow.collect { data ->
-          if (data != null) {
-            binding.audioWaveView.setPcmData(data)
+        launch {
+          viewModel.pcmLoaderStateFlow.collect { loader ->
+            if (loader != null) {
+              // 加载PCM文件
+              binding.audioProgressWaveView.setPCMLoader(loader)
+              binding.audioWaveView.setPcmData(loader.allData)
+
+//              binding.audioProgressWaveView.onSeekListener = { position ->
+//                when {
+//                  position < 0 -> {
+//                    // 开始拖动，暂停播放
+//                    //userIsSeeking = true
+//                    if (exoPlayer?.isPlaying == true) {
+//                      exoPlayer?.pause()
+//                    }
+//                  }
+//                  else -> {
+//                    // 拖动结束，跳转到新位置
+//                    //userIsSeeking = false
+//                    view.post {
+//                      exoPlayer?.seekTo((position * 1000).toLong())
+//                      exoPlayer?.play()
+//                    }
+//                  }
+//                }
+//              }
+            }
+          }
+        }
+
+        launch {
+          while (isActive) {
+            if (exoPlayer?.isPlaying == true) {
+              val cur = exoPlayer?.currentPosition ?: -1
+              val duration = exoPlayer?.duration ?: 0
+              if (duration > 0L) {
+                binding.audioProgressWaveView.updatePosition(cur.toFloat()/1000)
+                binding.audioWaveView.updatePosition(cur.toFloat()/duration)
+              }
+            }
+            delay(16)
           }
         }
       }

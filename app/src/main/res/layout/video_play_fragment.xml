@@ -23,6 +23,8 @@
     app:layout_constraintStart_toStartOf="parent"
     app:layout_constraintEnd_toEndOf="parent"
     app:layout_constraintTop_toBottomOf="@id/select_file_btn"
+    android:maxLines="1"
+    android:ellipsize="end"
     android:padding="10dp"
     android:gravity="center"
     android:layout_width="0dp"
@@ -53,5 +55,16 @@
     android:background="@color/PastelOrange"
     android:layout_width="0dp"
     android:layout_height="100dp"/>
+
+  <com.language.repeater.widgets.ScrollingWaveformView
+    android:id="@+id/audio_progress_wave_view"
+    app:layout_constraintStart_toStartOf="parent"
+    app:layout_constraintEnd_toEndOf="parent"
+    app:layout_constraintTop_toBottomOf="@id/audio_wave_view"
+    android:layout_marginTop="15dp"
+    android:background="@color/PastelOrange"
+    android:layout_width="0dp"
+    android:layout_height="100dp"
+    />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
