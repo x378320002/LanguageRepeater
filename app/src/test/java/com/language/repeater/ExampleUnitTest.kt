@@ -10,9 +10,12 @@ import org.junit.Test
 class ExampleUnitTest {
   @Test
   fun addition_isCorrect() {
-    val list = mutableListOf<String>()
+    val list = mutableListOf<Int>()
     val set = mutableSetOf<Char>()
     val arr = list.toTypedArray()
     val map = mutableMapOf<String, String>()
+
+    val str = "xxx"
+    val str2 = "aaa"
   }
 }

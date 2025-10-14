@@ -80,6 +80,61 @@
             </LeetcodeEditor>
           </value>
         </entry>
+        <entry key="$PROJECT_DIR$/../leetcode/src/leetcode/editor/cn/[面试题 10.01]合并排序的数组.kt">
+          <value>
+            <LeetcodeEditor>
+              <option name="contentPath" value="$PROJECT_DIR$/../leetcode/src/leetcode/editor/cn/doc/content/[面试题 10.01]合并排序的数组.md" />
+              <option name="frontendQuestionId" value="leetcode.cn面试题 10.01" />
+              <option name="host" value="leetcode.cn" />
+              <option name="path" value="$PROJECT_DIR$/../leetcode/src/leetcode/editor/cn/[面试题 10.01]合并排序的数组.kt" />
+              <option name="titleSlug" value="sorted-merge-lcci" />
+            </LeetcodeEditor>
+          </value>
+        </entry>
+        <entry key="$PROJECT_DIR$/../leetcode/src/leetcode/editor/cn/[面试题 10.02]变位词组.kt">
+          <value>
+            <LeetcodeEditor>
+              <option name="contentPath" value="$PROJECT_DIR$/../leetcode/src/leetcode/editor/cn/doc/content/[面试题 10.02]变位词组.md" />
+              <option name="frontendQuestionId" value="leetcode.cn面试题 10.02" />
+              <option name="host" value="leetcode.cn" />
+              <option name="path" value="$PROJECT_DIR$/../leetcode/src/leetcode/editor/cn/[面试题 10.02]变位词组.kt" />
+              <option name="titleSlug" value="group-anagrams-lcci" />
+            </LeetcodeEditor>
+          </value>
+        </entry>
+        <entry key="$PROJECT_DIR$/../leetcode/src/leetcode/editor/cn/[面试题 10.03]搜索旋转数组.kt">
+          <value>
+            <LeetcodeEditor>
+              <option name="contentPath" value="$PROJECT_DIR$/../leetcode/src/leetcode/editor/cn/doc/content/[面试题 10.03]搜索旋转数组.md" />
+              <option name="frontendQuestionId" value="leetcode.cn面试题 10.03" />
+              <option name="host" value="leetcode.cn" />
+              <option name="path" value="$PROJECT_DIR$/../leetcode/src/leetcode/editor/cn/[面试题 10.03]搜索旋转数组.kt" />
+              <option name="titleSlug" value="search-rotate-array-lcci" />
+            </LeetcodeEditor>
+          </value>
+        </entry>
+        <entry key="$PROJECT_DIR$/../leetcode/src/leetcode/editor/cn/[面试题 10.05]稀疏数组搜索.kt">
+          <value>
+            <LeetcodeEditor>
+              <option name="contentPath" value="$PROJECT_DIR$/../leetcode/src/leetcode/editor/cn/doc/content/[面试题 10.05]稀疏数组搜索.md" />
+              <option name="frontendQuestionId" value="leetcode.cn面试题 10.05" />
+              <option name="host" value="leetcode.cn" />
+              <option name="path" value="$PROJECT_DIR$/../leetcode/src/leetcode/editor/cn/[面试题 10.05]稀疏数组搜索.kt" />
+              <option name="titleSlug" value="sparse-array-search-lcci" />
+            </LeetcodeEditor>
+          </value>
+        </entry>
+        <entry key="$PROJECT_DIR$/../leetcode/src/leetcode/editor/cn/[面试题 10.09]排序矩阵查找.kt">
+          <value>
+            <LeetcodeEditor>
+              <option name="contentPath" value="$PROJECT_DIR$/../leetcode/src/leetcode/editor/cn/doc/content/[面试题 10.09]排序矩阵查找.md" />
+              <option name="frontendQuestionId" value="leetcode.cn面试题 10.09" />
+              <option name="host" value="leetcode.cn" />
+              <option name="path" value="$PROJECT_DIR$/../leetcode/src/leetcode/editor/cn/[面试题 10.09]排序矩阵查找.kt" />
+              <option name="titleSlug" value="sorted-matrix-search-lcci" />
+            </LeetcodeEditor>
+          </value>
+        </entry>
       </map>
     </option>
   </component>

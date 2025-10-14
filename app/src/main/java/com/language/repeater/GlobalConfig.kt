@@ -7,7 +7,7 @@ package com.language.repeater
  */
 object GlobalConfig {
   //音频文件采样数
-  const val PCM_SAMPLE_RATE = 44100
+  const val PCM_SAMPLE_RATE = 16000
   const val PCM_CHANNEL = 1
   const val PCM_BIT_DEPTH = 16
 }

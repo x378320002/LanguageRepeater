@@ -1,3 +1,5 @@
+import org.gradle.kotlin.dsl.implementation
+
 plugins {
   alias(libs.plugins.android.application)
   alias(libs.plugins.kotlin.android)
@@ -50,8 +52,8 @@ dependencies {
   androidTestImplementation(libs.androidx.espresso.core)
 
   implementation(libs.ffmpeg.kit.x6kb)
-
-  implementation("androidx.media3:media3-exoplayer:1.7.1")
-  implementation("androidx.media3:media3-exoplayer-dash:1.7.1")
-  implementation("androidx.media3:media3-ui:1.7.1")
+  implementation(libs.androidx.exoplayer)
+  implementation(libs.androidx.exoplayer.ui)
+  implementation(libs.vad.webrtc)
+  implementation(libs.vad.silero)
 }

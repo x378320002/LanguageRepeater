@@ -9,6 +9,7 @@ import android.graphics.PointF
 import android.util.AttributeSet
 import android.view.View
 import com.google.common.collect.Multimaps.index
+import com.language.repeater.pcm.WaveformPoint
 
 /**
  * 一个用于绘制音频PCM数据波形图的自定义View。

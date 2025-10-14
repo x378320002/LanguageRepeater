@@ -2,26 +2,16 @@ package com.language.repeater.playvideo
 
 import android.app.Application
 import android.net.Uri
-import android.os.SystemClock
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.application
 import androidx.lifecycle.viewModelScope
 import com.language.repeater.utils.FFmpegUtil
-import com.language.repeater.utils.ScreenUtil
 import com.language.repeater.utils.ToastUtil
-import com.language.repeater.widgets.PCMSegmentLoader
+import com.language.repeater.pcm.PCMSegmentLoader
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.io.File
 
 /**
@@ -35,8 +25,8 @@ class PlayVideoViewModel(application: Application): AndroidViewModel(application
     private const val MB = 1024.0 * 1024.0
   }
 
-  val audioDataStateFlow = MutableStateFlow<List<Int>?>(null)
   var pcmLoaderStateFlow = MutableStateFlow<PCMSegmentLoader?>(null)
+  var playUriStateFlow = MutableStateFlow<Uri?>(null)
 
   fun parseUriToPcm(uri: Uri) {
     Log.i(TAG, "parseUriToPcm begin:$uri")
@@ -46,10 +36,10 @@ class PlayVideoViewModel(application: Application): AndroidViewModel(application
         val path = FFmpegUtil.extractPcmFileByFFmpeg(application, uri)
         val file = File(path)
         val pcmLoader = PCMSegmentLoader(File(path))
-        pcmLoader.loadAll()
+        pcmLoader.prepareAllData()
         pcmLoaderStateFlow.value = pcmLoader
+        playUriStateFlow.value = uri
         Log.i(TAG, "parseUriToPcm 转换成pcm文件成功:${file.length() / MB}MB")
-
 //        //读取原始音频文件, 从pcm数据文件读取原始的short数组
 //        val oriData = PcmDataUtil.readPcmFile(path)
 //        val oriDataSizeInMB = oriData.size * Short.SIZE_BYTES / MB

@@ -1,7 +1,5 @@
 package com.language.repeater.playvideo
 
-import android.R.attr.data
-import android.R.attr.duration
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
@@ -12,6 +10,7 @@ import android.view.ViewGroup
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.ActivityResultCallback
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.OptIn
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.Fragment
@@ -21,13 +20,11 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import com.language.repeater.databinding.VideoPlayFragmentBinding
-import com.language.repeater.widgets.PCMSegmentLoader
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import java.io.File
 
 
 class PlayVideoFragment: Fragment() {
@@ -46,17 +43,30 @@ class PlayVideoFragment: Fragment() {
             //这里你可以用 videoUri 播放视频或读取内容
             Log.d("VideoSelect", "Selected video uri: $videoUri")
             binding.filePathTv.text = videoUri.toString()
-
-            val mediaItem = MediaItem.fromUri(videoUri)
-            exoPlayer?.setMediaItem(mediaItem)
-            exoPlayer?.prepare()
-            exoPlayer?.play()
-
             viewModel.parseUriToPcm(videoUri)
           }
         }
       }
     })
+
+  override fun onCreate(savedInstanceState: Bundle?) {
+    super.onCreate(savedInstanceState)
+    exoPlayer = ExoPlayer.Builder(requireContext()).build().apply {
+      repeatMode = Player.REPEAT_MODE_ALL
+    }
+    lifecycleScope.launch {
+      viewModel.playUriStateFlow.collect {
+        if (it != null) {
+          val mediaItem = MediaItem.fromUri(it)
+          exoPlayer?.setMediaItem(mediaItem)
+          exoPlayer?.prepare()
+          if (isResumed) {
+            exoPlayer?.play()
+          }
+        }
+      }
+    }
+  }
 
   override fun onCreateView(
     inflater: LayoutInflater,
@@ -68,6 +78,7 @@ class PlayVideoFragment: Fragment() {
     return view
   }
 
+  @OptIn(UnstableApi::class)
   override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
     super.onViewCreated(view, savedInstanceState)
     ViewCompat.setOnApplyWindowInsetsListener(binding.root) { v, insets ->
@@ -83,10 +94,8 @@ class PlayVideoFragment: Fragment() {
       launcher.launch(intent)
     }
 
-    exoPlayer = ExoPlayer.Builder(requireContext()).build().apply {
-      repeatMode = Player.REPEAT_MODE_ALL
-    }
     binding.exoVideoView.player = exoPlayer
+    binding.exoVideoView.showController()
 
     viewLifecycleOwner.lifecycleScope.launch {
       viewLifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -96,7 +105,6 @@ class PlayVideoFragment: Fragment() {
               // 加载PCM文件
               binding.audioProgressWaveView.setPCMLoader(loader)
               binding.audioWaveView.setPcmData(loader.allData)
-
 //              binding.audioProgressWaveView.onSeekListener = { position ->
 //                when {
 //                  position < 0 -> {
@@ -121,7 +129,7 @@ class PlayVideoFragment: Fragment() {
         }
 
         launch {
-          while (isActive) {
+          while (true) {
             if (exoPlayer?.isPlaying == true) {
               val cur = exoPlayer?.currentPosition ?: -1
               val duration = exoPlayer?.duration ?: 0
@@ -149,6 +157,11 @@ class PlayVideoFragment: Fragment() {
 
   override fun onDestroyView() {
     super.onDestroyView()
+    exoPlayer?.stop()
+  }
+
+  override fun onDestroy() {
+    super.onDestroy()
     exoPlayer?.release()
     exoPlayer = null
   }

@@ -5,10 +5,16 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Path
 import android.util.AttributeSet
-import android.util.Log
 import android.view.View
-import kotlinx.coroutines.*
-import java.io.File
+import com.language.repeater.pcm.PCMSegmentLoader
+import com.language.repeater.pcm.WaveformPoint
+import com.language.repeater.utils.CommonUtil.toDp
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.math.min
 
 /**
@@ -27,12 +33,15 @@ class ScrollingWaveformView @JvmOverloads constructor(
 
   // ========== 配置参数 ==========
 
-  /** 每秒音频对应的像素宽度 */
-  val pixelsPerSecond: Float = 100f
-  val secondPerPixel: Float = 1/100f
+  /**
+   * 每秒音频对应的像素宽度
+   * 这个数字越大, 整体波形越长, 播放时移动的越快
+   */
+  val pixelsPerSecond: Float = 80f
 
   /** 波形颜色 */
-  val waveformColor: Int = 0xFF2196F3.toInt()
+//  val waveformColor: Int = 0xFF2196F3.toInt()
+  val waveformColor: Int = 0xFF1565C0.toInt()
 
   /** 已播放波形颜色 */
   val playedWaveformColor: Int = 0xFF90CAF9.toInt()
@@ -47,7 +56,7 @@ class ScrollingWaveformView @JvmOverloads constructor(
   //未播放画笔
   private val waveformPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
     color = waveformColor
-    style = Paint.Style.FILL_AND_STROKE
+    style = Paint.Style.STROKE
     strokeWidth = 2f
     strokeCap = Paint.Cap.ROUND
   }
@@ -55,7 +64,7 @@ class ScrollingWaveformView @JvmOverloads constructor(
   //已经播放画笔
   private val playedWaveformPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
     color = playedWaveformColor
-    style = Paint.Style.FILL_AND_STROKE
+    style = Paint.Style.STROKE
     strokeWidth = 2f
     strokeCap = Paint.Cap.ROUND
   }
@@ -63,7 +72,7 @@ class ScrollingWaveformView @JvmOverloads constructor(
   //进度条
   private val progressLinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
     color = progressLineColor
-    strokeWidth = 3f
+    strokeWidth = 1f.toDp()
   }
 
   //进度条三角形
@@ -98,7 +107,7 @@ class ScrollingWaveformView @JvmOverloads constructor(
   private val cacheWindowSize = 5f
 
   /** 预加载的窗口数量 */
-  private val preloadWindowCount = 3
+  private val preloadWindowCount = 2
 
   /** 协程作用域 */
   private val scope = CoroutineScope(Dispatchers.Main + Job())
@@ -116,16 +125,19 @@ class ScrollingWaveformView @JvmOverloads constructor(
    * 设置PCM文件
    */
   fun setPCMLoader(loader: PCMSegmentLoader) {
+    if (pcmLoader == loader) {
+      return
+    }
+
     pcmLoader = loader
     totalDurationSeconds = pcmLoader?.durationSeconds ?: 0f
     currentPositionSeconds = 0f
 
     waveformCache.clear()
+    //提前绘制一遍, 清空上一个视频的内容
+    invalidate()
+
     recalculateVisibleRange()
-
-    // 预加载初始数据
-    loadWaveformData(0f, cacheWindowSize * preloadWindowCount)
-
     invalidate()
   }
 
@@ -151,12 +163,9 @@ class ScrollingWaveformView @JvmOverloads constructor(
    * @param positionSeconds 当前播放位置（秒）
    */
   fun updatePosition(positionSeconds: Float) {
+    if (pcmLoader == null) return
     currentPositionSeconds = positionSeconds.coerceIn(0f, totalDurationSeconds)
     recalculateVisibleRange()
-
-    // 检查是否需要加载新数据
-    checkAndLoadData()
-
     invalidate()
   }
 
@@ -204,6 +213,11 @@ class ScrollingWaveformView @JvmOverloads constructor(
     // 计算可见范围：中心线左右各一半
     visibleStartTime = (currentPositionSeconds - visibleDuration).coerceAtLeast(0f)
     visibleEndTime = (currentPositionSeconds + visibleDuration).coerceAtMost(totalDurationSeconds)
+
+    checkAndLoadData()
+
+    // 准备已播放和未播放的波形数据
+    prepareWaveData()
   }
 
   /**
@@ -258,6 +272,29 @@ class ScrollingWaveformView @JvmOverloads constructor(
     cleanupOldCache(startWindow - 2)
   }
 
+  //需要绘制的数据
+  private val leftData = mutableListOf<WaveformPoint>()
+  private val rightData = mutableListOf<WaveformPoint>()
+  private fun prepareWaveData() {
+    val startTime = visibleStartTime
+    val endTime = visibleEndTime
+    val curTime = currentPositionSeconds
+    val startWindow = (startTime / cacheWindowSize).toInt()
+    val endWindow = (endTime / cacheWindowSize).toInt()
+    leftData.clear()
+    rightData.clear()
+    for (windowIndex in startWindow..endWindow) {
+      val windowData = waveformCache[windowIndex] ?: continue
+      windowData.forEachIndexed { index, point ->
+        if (point.time in startTime..curTime) {
+          leftData.add(point)
+        } else if (point.time in curTime..endTime) {
+          rightData.add(point)
+        }
+      }
+    }
+  }
+
   /**
    * 清理旧缓存
    */
@@ -266,45 +303,10 @@ class ScrollingWaveformView @JvmOverloads constructor(
     toRemove.forEach { waveformCache.remove(it) }
   }
 
-  /**
-   * 加载波形数据
-   */
-  private fun loadWaveformData(startTime: Float, duration: Float) {
-    val loader = pcmLoader ?: return
-
-    scope.launch(Dispatchers.IO) {
-      try {
-        val startWindow = (startTime / cacheWindowSize).toInt()
-        val endWindow = ((startTime + duration) / cacheWindowSize).toInt() + 1
-
-        for (windowIndex in startWindow until endWindow) {
-          if (waveformCache.containsKey(windowIndex)) continue
-
-          val windowStartTime = windowIndex * cacheWindowSize
-          if (windowStartTime >= totalDurationSeconds) continue
-
-          val windowEndTime = min(
-            windowStartTime + cacheWindowSize,
-            totalDurationSeconds
-          )
-          val windowDuration = windowEndTime - windowStartTime
-          val pointsNeeded = (windowDuration * pixelsPerSecond).toInt()
-
-          val waveformData = loader.loadWaveformData(
-            startTimeSeconds = windowStartTime,
-            durationSeconds = windowDuration,
-            targetPoints = pointsNeeded
-          )
-
-          withContext(Dispatchers.Main) {
-            waveformCache[windowIndex] = waveformData
-            invalidate()
-          }
-        }
-      } catch (e: Exception) {
-        e.printStackTrace()
-      }
-    }
+  // ========== 绘制 ==========
+  override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+    super.onSizeChanged(w, h, oldw, oldh)
+    recalculateVisibleRange()
   }
 
   /**
@@ -314,38 +316,6 @@ class ScrollingWaveformView @JvmOverloads constructor(
     val centerX = width / 2f
     val offsetFromCurrent = timeSeconds - currentPositionSeconds
     return centerX + offsetFromCurrent * pixelsPerSecond
-  }
-
-  /**
-   * 从缓存中获取指定时间范围的波形数据
-   */
-  private fun getWaveformInRange(startTime: Float, endTime: Float): List<Pair<Float, WaveformPoint>> {
-    val result = mutableListOf<Pair<Float, WaveformPoint>>()
-    val startWindow = (startTime / cacheWindowSize).toInt()
-    val endWindow = (endTime / cacheWindowSize).toInt()
-
-    for (windowIndex in startWindow..endWindow) {
-      val windowData = waveformCache[windowIndex] ?: continue
-      val windowStartTime = windowIndex * cacheWindowSize
-
-      windowData.forEachIndexed { index, point ->
-        val pointTime = windowStartTime + (index.toFloat() / windowData.size) * cacheWindowSize
-
-        if (point.time in startTime..endTime) {
-          result.add(Pair(pointTime, point))
-        }
-      }
-    }
-
-    return result
-  }
-
-  // ========== 绘制 ==========
-
-  override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
-    super.onSizeChanged(w, h, oldw, oldh)
-    recalculateVisibleRange()
-    checkAndLoadData()
   }
 
   override fun onDraw(canvas: Canvas) {
@@ -360,23 +330,11 @@ class ScrollingWaveformView @JvmOverloads constructor(
     // 绘制中心线
     canvas.drawLine(0f, centerY, width.toFloat(), centerY, centerLinePaint)
 
-    // 获取可见范围的波形数据
-    val waveformData = getWaveformInRange(visibleStartTime, visibleEndTime)
-
-    if (waveformData.isEmpty()) {
-      // 显示加载提示
-      drawLoadingIndicator(canvas)
-      return
-    }
-
     // 分别绘制已播放和未播放的波形
-    drawWaveformSection(canvas, waveformData, visibleStartTime, currentPositionSeconds, playedWaveformPaint)
-    drawWaveformSection(canvas, waveformData, currentPositionSeconds, visibleEndTime, waveformPaint)
+    drawWaveformSection(canvas, leftData, playedWaveformPaint)
+    drawWaveformSection(canvas, rightData, waveformPaint)
 
-    // 绘制进度线
-    canvas.drawLine(centerX, 0f, centerX, height.toFloat(), progressLinePaint)
-
-    // 绘制进度指示器（小三角形）
+    // 绘制进度指示器（竖线+小三角形）
     drawProgressIndicator(canvas, centerX)
   }
 
@@ -385,28 +343,19 @@ class ScrollingWaveformView @JvmOverloads constructor(
    */
   private fun drawWaveformSection(
     canvas: Canvas,
-    waveformData: List<Pair<Float, WaveformPoint>>,
-    startTime: Float,
-    endTime: Float,
+    waveformData: List<WaveformPoint>,
     paint: Paint
   ) {
     val centerY = height / 2f
     val maxAmplitude = 32767f
     val availableHeight = height / 2f * 0.9f
 
-    // 过滤出指定时间范围的数据
-    val sectionData = waveformData.filter { it.second.time in startTime..endTime }
-
-    if (sectionData.isEmpty()) return
-
     // 绘制上半部分
     path.reset()
     var isFirst = true
-
-    sectionData.forEach { (time, point) ->
+    waveformData.forEach { point ->
       val x = timeToX(point.time)
       val y = centerY - (point.max / maxAmplitude) * availableHeight
-
       if (isFirst) {
         path.moveTo(x, y)
         isFirst = false
@@ -415,33 +364,31 @@ class ScrollingWaveformView @JvmOverloads constructor(
       }
     }
 
-    //canvas.drawPath(path, paint)
-
     // 绘制下半部分
-    //path.reset()
-    //isFirst = true
-
-    for (i in sectionData.lastIndex downTo 0) {
-      val time = sectionData[i].second.time
-      val point = sectionData[i].second
-      val x = timeToX(time)
+    //如果只画轮廓打开下面的注释
+    canvas.drawPath(path, paint)
+    path.reset()
+    isFirst = true
+    waveformData.forEach { point ->
+      val x = timeToX(point.time)
       val y = centerY - (point.min / maxAmplitude) * availableHeight
-      path.lineTo(x, y)
+      if (isFirst) {
+        path.moveTo(x, y)
+        isFirst = false
+      } else {
+        path.lineTo(x, y)
+      }
     }
 
-//    sectionData.forEach { (time, point) ->
+    //下半部分实心样式
+//    for (i in waveformData.lastIndex downTo 0) {
+//      val point = waveformData[i]
+//      val time = point.time
 //      val x = timeToX(time)
 //      val y = centerY - (point.min / maxAmplitude) * availableHeight
-//
-//      if (isFirst) {
-//        path.moveTo(x, y)
-//        isFirst = false
-//      } else {
-//        path.lineTo(x, y)
-//      }
+//      path.lineTo(x, y)
 //    }
-
-    path.close()
+//    path.close()
 
     canvas.drawPath(path, paint)
   }
@@ -449,26 +396,28 @@ class ScrollingWaveformView @JvmOverloads constructor(
   /**
    * 绘制进度指示器
    */
-  private fun drawProgressIndicator(canvas: Canvas, x: Float) {
-    val triangleSize = 15f
+  private fun drawProgressIndicator(canvas: Canvas, centerX: Float) {
+    // 绘制进度线
+    canvas.drawLine(centerX, 0f, centerX, height.toFloat(), progressLinePaint)
 
-    // 顶部三角形
-    path.reset()
-    path.moveTo(x, 0f)
-    path.lineTo(x - triangleSize, triangleSize)
-    path.lineTo(x + triangleSize, triangleSize)
-    path.close()
-
-    canvas.drawPath(path, progressLinePaint)
-
-    // 底部三角形
-    path.reset()
-    path.moveTo(x, height.toFloat())
-    path.lineTo(x - triangleSize, height - triangleSize)
-    path.lineTo(x + triangleSize, height - triangleSize)
-    path.close()
-
-    canvas.drawPath(path, progressLinePaint)
+//    val triangleSize = 15f
+//    // 顶部三角形
+//    path.reset()
+//    path.moveTo(centerX, 0f)
+//    path.lineTo(centerX - triangleSize, triangleSize)
+//    path.lineTo(centerX + triangleSize, triangleSize)
+//    path.close()
+//
+//    canvas.drawPath(path, progressLinePaint)
+//
+//    // 底部三角形
+//    path.reset()
+//    path.moveTo(centerX, height.toFloat())
+//    path.lineTo(centerX - triangleSize, height - triangleSize)
+//    path.lineTo(centerX + triangleSize, height - triangleSize)
+//    path.close()
+//
+//    canvas.drawPath(path, progressLinePaint)
   }
 
   /**

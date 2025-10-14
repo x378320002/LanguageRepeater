@@ -1,16 +1,21 @@
-package com.language.repeater.widgets
+package com.language.repeater.pcm
 
+import android.util.Log
+import androidx.core.content.ContentProviderCompat.requireContext
+import com.konovalov.vad.silero.Vad
+import com.konovalov.vad.silero.VadSilero
 import com.language.repeater.GlobalConfig
 import com.language.repeater.utils.ScreenUtil
 import java.io.File
 import java.io.RandomAccessFile
 import kotlin.math.min
 
+
 class PCMSegmentLoader(
   private val pcmFile: File,
   private val sampleRate: Int = GlobalConfig.PCM_SAMPLE_RATE,
   private val channels: Int = GlobalConfig.PCM_CHANNEL,
-  private val bitDepth: Int = GlobalConfig.PCM_BIT_DEPTH
+  private val bitDepth: Int = GlobalConfig.PCM_BIT_DEPTH,
 ) {
   private val bytesPerSample = (bitDepth / 8) * channels
   private val fileSize = pcmFile.length()
@@ -18,19 +23,40 @@ class PCMSegmentLoader(
   val durationSeconds = totalSamples.toFloat() / sampleRate
 
   var allData: List<WaveformPoint> = listOf()
+  //预处理全部的PCM数据, 根据波形做一些基本的分割
+  fun prepareAllData() {
+//    allData = loadWaveformData(0f, durationSeconds, ScreenUtil.getScreenSize().width)
 
-  fun loadAll() {
-    allData = loadWaveformData(0f, durationSeconds, ScreenUtil.getScreenSize().width)
+    // 1. 准备PCM数据
+    val startSample = 0
+    val sampleCount = (durationSeconds * sampleRate).toInt()
+    val pcmData = loadSegmentBySample(startSample, sampleCount)
+
+    //用于绘制波形的数据
+    allData = downsampleToWaveform(pcmData,
+      ScreenUtil.getScreenSize().width,
+      0f,
+      1f / sampleRate)
+
+    // 2. 创建VAD分离器
+    val segmentation = VoiceSegmentation()
+
+    // 3. 使用默认配置分离
+    val segments = segmentation.segment(pcmData)
+
+    Log.i("wangzixu", "检测到 ${segments.size} 句话:")
+    segments.forEachIndexed { index, (start, end) ->
+      Log.i("wangzixu", "句子 ${index + 1}: [$start, $end]")
+    }
   }
 
   fun loadWaveformData(
     startTimeSeconds: Float,
     durationSeconds: Float,
-    targetPoints: Int
+    targetPoints: Int,
   ): List<WaveformPoint> {
     val startSample = (startTimeSeconds * sampleRate).toInt()
     val sampleCount = (durationSeconds * sampleRate).toInt()
-
     val samples = loadSegmentBySample(startSample, sampleCount)
     return downsampleToWaveform(samples, targetPoints, startTimeSeconds, durationSeconds/targetPoints)
   }
@@ -61,8 +87,10 @@ class PCMSegmentLoader(
     return samples
   }
 
-  private fun downsampleToWaveform(samples: ShortArray, targetPoints: Int, startTime: Float,
-    perPointTime: Float): List<WaveformPoint> {
+  private fun downsampleToWaveform(
+    samples: ShortArray, targetPoints: Int, startTime: Float,
+    perPointTime: Float,
+  ): List<WaveformPoint> {
     if (samples.isEmpty()) return emptyList()
 
     val result = mutableListOf<WaveformPoint>()
