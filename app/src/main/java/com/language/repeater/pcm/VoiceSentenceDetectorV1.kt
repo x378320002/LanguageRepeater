@@ -1,7 +1,7 @@
 package com.language.repeater.pcm
 
+import android.annotation.SuppressLint
 import com.language.repeater.GlobalConfig
-import kotlin.math.abs
 import kotlin.math.sqrt
 
 /**
@@ -117,7 +117,7 @@ import kotlin.math.sqrt
  *
  * 这个算法在大多数场景下都能获得不错的效果！需要我补充可视化调试工具吗？
  */
-class VoiceSegmentation(
+class VoiceSentenceDetectorV1(
   private val sampleRate: Int = GlobalConfig.PCM_SAMPLE_RATE  // 采样率
 ) {
   /**
@@ -125,22 +125,25 @@ class VoiceSegmentation(
    */
   data class SegmentationConfig(
     /** 能量检测窗口大小(毫秒) */
-    val windowSizeMs: Int = 30,
+    val windowSizeMs: Int = 32,
 
     /** 窗口重叠率(0.0-1.0) */
     val overlapRatio: Float = 0.5f,
 
     /** 语音能量阈值(0.0-1.0)，低于此值视为静音 */
-    val energyThreshold: Float = 0.02f,
+    val energyThreshold: Float = 0.01f,
 
     /** 过零率阈值(0.0-1.0)，用于辅助判断 */
-    val zcrThreshold: Float = 0.3f,
+    val zcrThreshold: Float = 0.5f,
 
     /** 最小静音持续时间(毫秒)，低于此值不算句子间隔 */
-    val minSilenceDurationMs: Int = 300,
+    val minSilenceDurationMs: Int = 500,
 
     /** 最小语音持续时间(毫秒)，低于此值不算一句话 */
-    val minSpeechDurationMs: Int = 500,
+    val minSpeechDurationMs: Int = 100,
+
+    /** 是否把过长持续时间的语音分割(毫秒)*/
+    val needCutTooLongVoice: Boolean = false,
 
     /** 最大语音持续时间(毫秒)，超过此值强制分句 */
     val maxSpeechDurationMs: Int = 15000,
@@ -171,7 +174,7 @@ class VoiceSegmentation(
   fun segment(
     pcmData: ShortArray,
     config: SegmentationConfig = SegmentationConfig()
-  ): List<Pair<Int, Int>> {
+  ): List<Pair<Float, Float>> {
 
     if (pcmData.isEmpty()) return emptyList()
 
@@ -192,14 +195,18 @@ class VoiceSegmentation(
     val rawSegments = extractSegments(speechMarks, config)
 
     // 5. 后处理：分割过长的片段
-    val refinedSegments = refineSegments(rawSegments, pcmData, config)
+    val refinedSegments = if (config.needCutTooLongVoice) {
+      refineSegments(rawSegments, pcmData, config)
+    } else {
+      rawSegments
+    }
 
     // 6. 添加padding并确保在有效范围内
     return refinedSegments.map { (start, end) ->
       val paddingSamples = (config.paddingMs * sampleRate / 1000)
       val paddedStart = (start - paddingSamples).coerceAtLeast(0)
       val paddedEnd = (end + paddingSamples).coerceAtMost(pcmData.size - 1)
-      Pair(paddedStart, paddedEnd)
+      Pair(paddedStart.toFloat()/sampleRate, paddedEnd.toFloat()/sampleRate)
     }
   }
 
@@ -356,23 +363,22 @@ class VoiceSegmentation(
           speechStart = feature.sampleIndex
         }
         lastSpeechIndex = feature.sampleIndex
-
       } else {
         // 检测到静音
         if (speechStart != null && lastSpeechIndex != null) {
           // 检查静音持续时间
           val silenceDuration = if (index < features.size) {
-            (feature.sampleIndex - lastSpeechIndex!!) * 1000 / sampleRate
+            (feature.sampleIndex - lastSpeechIndex) * 1000 / sampleRate
           } else {
             Int.MAX_VALUE
           }
 
           if (silenceDuration >= config.minSilenceDurationMs) {
             // 静音足够长，结束当前语音片段
-            val duration = (lastSpeechIndex!! - speechStart!!) * 1000 / sampleRate
+            val duration = (lastSpeechIndex - speechStart) * 1000 / sampleRate
 
             if (duration >= config.minSpeechDurationMs) {
-              segments.add(Pair(speechStart!!, lastSpeechIndex!!))
+              segments.add(Pair(speechStart, lastSpeechIndex))
             }
 
             speechStart = null
@@ -492,69 +498,51 @@ class VoiceSegmentation(
 
     return minEnergyIndex
   }
-
-  /**
-   * 转换为时间格式（用于调试）
-   */
-  fun segmentsToTimeString(segments: List<Pair<Int, Int>>): List<String> {
-    return segments.map { (start, end) ->
-      val startSec = start.toFloat() / sampleRate
-      val endSec = end.toFloat() / sampleRate
-      String.format("%.2fs - %.2fs (%.2fs)", startSec, endSec, endSec - startSec)
-    }
-  }
 }
 
 // ========== 使用示例 ==========
 
-fun example() {
-  // 1. 准备PCM数据
-  val pcmData: ShortArray = loadPCMData()  // 你的PCM数据加载函数
-
-  // 2. 创建分离器
-  val segmentation = VoiceSegmentation(
-    sampleRate = 16000
-  )
-
-  // 3. 使用默认配置分离
-  val segments = segmentation.segment(pcmData)
-
-  println("检测到 ${segments.size} 句话:")
-  segments.forEachIndexed { index, (start, end) ->
-    println("句子 ${index + 1}: [$start, $end]")
-  }
-
-  // 4. 使用自定义配置
-  val customConfig = VoiceSegmentation.SegmentationConfig(
-    windowSizeMs = 30,              // 30ms分析窗口
-    energyThreshold = 0.015f,       // 能量阈值（可以调低以检测更轻的语音）
-    minSilenceDurationMs = 400,     // 至少400ms静音才算句子间隔
-    minSpeechDurationMs = 600,      // 至少600ms才算一句话
-    maxSpeechDurationMs = 20000,    // 超过20秒强制分句
-    paddingMs = 150,                // 前后各扩展150ms
-    useAdaptiveThreshold = true     // 使用自适应阈值
-  )
-
-  val customSegments = segmentation.segment(pcmData, customConfig)
-
-  // 5. 查看时间格式
-  val timeStrings = segmentation.segmentsToTimeString(customSegments)
-  timeStrings.forEachIndexed { index, timeStr ->
-    println("句子 ${index + 1}: $timeStr")
-  }
-
-  // 6. 提取每句话的音频数据
-  customSegments.forEachIndexed { index, (start, end) ->
-    val sentenceData = pcmData.sliceArray(start..end)
-    // 保存或处理每句话的数据
-    saveSentence(sentenceData, "sentence_$index.pcm")
-  }
-}
-
-fun loadPCMData(): ShortArray {
-  // 你的PCM加载实现
-  return shortArrayOf()
-}
+//fun example() {
+//  // 1. 准备PCM数据
+//  val pcmData: ShortArray = loadPCMData()  // 你的PCM数据加载函数
+//
+//  // 2. 创建分离器
+//  val segmentation = VoiceSegmentation(
+//    sampleRate = 16000
+//  )
+//
+//  // 3. 使用默认配置分离
+//  val segments = segmentation.segment(pcmData)
+//
+//  println("检测到 ${segments.size} 句话:")
+//  segments.forEachIndexed { index, (start, end) ->
+//    println("句子 ${index + 1}: [$start, $end]")
+//  }
+//
+//  // 4. 使用自定义配置
+//  val customConfig = VoiceSegmentation.SegmentationConfig(
+//    windowSizeMs = 30,              // 30ms分析窗口
+//    energyThreshold = 0.015f,       // 能量阈值（可以调低以检测更轻的语音）
+//    minSilenceDurationMs = 400,     // 至少400ms静音才算句子间隔
+//    minSpeechDurationMs = 600,      // 至少600ms才算一句话
+//    maxSpeechDurationMs = 20000,    // 超过20秒强制分句
+//    paddingMs = 150,                // 前后各扩展150ms
+//    useAdaptiveThreshold = true     // 使用自适应阈值
+//  )
+//
+//  val customSegments = segmentation.segment(pcmData, customConfig)
+//
+//  // 5. 查看时间格式
+//  val timeStrings = segmentation.segmentsToTimeString(customSegments)
+//  timeStrings.forEachIndexed { index, timeStr ->
+//    println("句子 ${index + 1}: $timeStr")
+//  }
+//}
+//
+//fun loadPCMData(): ShortArray {
+//  // 你的PCM加载实现
+//  return shortArrayOf()
+//}
 
 fun saveSentence(data: ShortArray, filename: String) {
   // 保存单句音频

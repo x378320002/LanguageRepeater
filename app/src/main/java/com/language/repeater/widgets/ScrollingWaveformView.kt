@@ -1,5 +1,6 @@
 package com.language.repeater.widgets
 
+import android.R.attr.centerX
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
@@ -8,6 +9,7 @@ import android.util.AttributeSet
 import android.view.View
 import com.language.repeater.pcm.PCMSegmentLoader
 import com.language.repeater.pcm.WaveformPoint
+import com.language.repeater.utils.CommonUtil
 import com.language.repeater.utils.CommonUtil.toDp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -39,23 +41,13 @@ class ScrollingWaveformView @JvmOverloads constructor(
    */
   val pixelsPerSecond: Float = 80f
 
-  /** 波形颜色 */
-//  val waveformColor: Int = 0xFF2196F3.toInt()
-  val waveformColor: Int = 0xFF1565C0.toInt()
-
-  /** 已播放波形颜色 */
-  val playedWaveformColor: Int = 0xFF90CAF9.toInt()
-
-  /** 进度线颜色 */
-  val progressLineColor: Int = 0xFFFF5722.toInt()
-
   /** 背景颜色 */
   val waveBackgroundColor: Int = 0xFFF5F5F5.toInt()
 
   // ========== 画笔 ==========
   //未播放画笔
   private val waveformPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-    color = waveformColor
+    color = 0xFF1565C0.toInt()
     style = Paint.Style.STROKE
     strokeWidth = 2f
     strokeCap = Paint.Cap.ROUND
@@ -63,7 +55,7 @@ class ScrollingWaveformView @JvmOverloads constructor(
 
   //已经播放画笔
   private val playedWaveformPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-    color = playedWaveformColor
+    color = 0xFF90CAF9.toInt()
     style = Paint.Style.STROKE
     strokeWidth = 2f
     strokeCap = Paint.Cap.ROUND
@@ -71,20 +63,34 @@ class ScrollingWaveformView @JvmOverloads constructor(
 
   //进度条
   private val progressLinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-    color = progressLineColor
+    color = 0xFFFF5722.toInt()
+    strokeWidth = 1f.toDp()
+    strokeCap = Paint.Cap.ROUND
+  }
+
+  //voice开始指示器
+  private val voiceStartPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    color = 0xFFFF0000.toInt()
     strokeWidth = 1f.toDp()
   }
 
-  //进度条三角形
-  val indicatorPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-    color = progressLineColor
-    style = Paint.Style.FILL
+  //voice结束指示器
+  private val voiceEndPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    color = 0xFF00FF00.toInt()
+    strokeWidth = 1f.toDp()
   }
 
   //中线画笔
   private val centerLinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
     color = 0x20000000
     strokeWidth = 1f
+  }
+
+  //draw时间的画笔
+  val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    color = 0xFF666666.toInt()
+    textSize = 30f
+    textAlign = Paint.Align.CENTER
   }
 
   private val path = Path()
@@ -115,9 +121,6 @@ class ScrollingWaveformView @JvmOverloads constructor(
   /** 当前可见时间范围 */
   private var visibleStartTime = 0f
   private var visibleEndTime = 0f
-
-  /** 是否正在播放 */
-  private var isPlaying = false
 
   // ========== 公共方法 ==========
 
@@ -157,48 +160,6 @@ class ScrollingWaveformView @JvmOverloads constructor(
 //
 //    invalidate()
 //  }
-
-  /**
-   * 更新播放位置
-   * @param positionSeconds 当前播放位置（秒）
-   */
-  fun updatePosition(positionSeconds: Float) {
-    if (pcmLoader == null) return
-    currentPositionSeconds = positionSeconds.coerceIn(0f, totalDurationSeconds)
-    recalculateVisibleRange()
-    invalidate()
-  }
-
-  /**
-   * 开始播放动画
-   */
-  fun startPlayback() {
-    isPlaying = true
-  }
-
-  /**
-   * 停止播放动画
-   */
-  fun stopPlayback() {
-    isPlaying = false
-  }
-
-  /**
-   * 跳转到指定位置
-   */
-  fun seekTo(positionSeconds: Float) {
-    updatePosition(positionSeconds)
-  }
-
-  /**
-   * 清理资源
-   */
-  fun cleanup() {
-    scope.cancel()
-    waveformCache.clear()
-  }
-
-  // ========== 内部方法 ==========
 
   /**
    * 重新计算可见时间范围
@@ -336,6 +297,32 @@ class ScrollingWaveformView @JvmOverloads constructor(
 
     // 绘制进度指示器（竖线+小三角形）
     drawProgressIndicator(canvas, centerX)
+
+    drawVoiceBorder(canvas)
+  }
+
+  /**
+   * 绘制每句话的开始和结束点
+   */
+  private fun drawVoiceBorder(canvas: Canvas) {
+    val segments = pcmLoader?.getVoiceSegments()
+    if (segments.isNullOrEmpty()) {
+      return
+    }
+
+    fun drawPoint(time: Float, paint: Paint) {
+      if (time < visibleStartTime || time > visibleEndTime) {
+        return
+      }
+      val x = timeToX(time)
+      val y = height / 2f
+      canvas.drawLine(x, y - 12, x, y + 12, paint)
+    }
+
+    for (seg in segments) {
+      drawPoint(seg.first, voiceStartPaint)
+      drawPoint(seg.second, voiceEndPaint)
+    }
   }
 
   /**
@@ -380,16 +367,6 @@ class ScrollingWaveformView @JvmOverloads constructor(
       }
     }
 
-    //下半部分实心样式
-//    for (i in waveformData.lastIndex downTo 0) {
-//      val point = waveformData[i]
-//      val time = point.time
-//      val x = timeToX(time)
-//      val y = centerY - (point.min / maxAmplitude) * availableHeight
-//      path.lineTo(x, y)
-//    }
-//    path.close()
-
     canvas.drawPath(path, paint)
   }
 
@@ -397,27 +374,33 @@ class ScrollingWaveformView @JvmOverloads constructor(
    * 绘制进度指示器
    */
   private fun drawProgressIndicator(canvas: Canvas, centerX: Float) {
-    // 绘制进度线
-    canvas.drawLine(centerX, 0f, centerX, height.toFloat(), progressLinePaint)
+    val textSize = textPaint.textSize
+    textPaint.textAlign = Paint.Align.CENTER
+    canvas.drawText(
+      CommonUtil.formatTimeFloat(currentPositionSeconds),
+      width / 2f,
+      textSize,
+      textPaint
+    )
 
-//    val triangleSize = 15f
-//    // 顶部三角形
-//    path.reset()
-//    path.moveTo(centerX, 0f)
-//    path.lineTo(centerX - triangleSize, triangleSize)
-//    path.lineTo(centerX + triangleSize, triangleSize)
-//    path.close()
-//
-//    canvas.drawPath(path, progressLinePaint)
-//
-//    // 底部三角形
-//    path.reset()
-//    path.moveTo(centerX, height.toFloat())
-//    path.lineTo(centerX - triangleSize, height - triangleSize)
-//    path.lineTo(centerX + triangleSize, height - triangleSize)
-//    path.close()
-//
-//    canvas.drawPath(path, progressLinePaint)
+    textPaint.textAlign = Paint.Align.LEFT
+    canvas.drawText(
+      CommonUtil.formatTime(0f),
+      0f,
+      textSize,
+      textPaint
+    )
+
+    textPaint.textAlign = Paint.Align.RIGHT
+    canvas.drawText(
+      CommonUtil.formatTime(totalDurationSeconds),
+      width.toFloat(),
+      textSize,
+      textPaint
+    )
+
+    // 绘制进度线
+    canvas.drawLine(centerX, textSize + 10, centerX, height.toFloat(), progressLinePaint)
   }
 
   /**
@@ -438,13 +421,35 @@ class ScrollingWaveformView @JvmOverloads constructor(
     )
   }
 
+  /**
+   * 更新播放位置
+   * @param positionSeconds 当前播放位置（秒）
+   */
+  fun updatePosition(positionSeconds: Float) {
+    if (pcmLoader == null) return
+    currentPositionSeconds = positionSeconds.coerceIn(0f, totalDurationSeconds)
+    recalculateVisibleRange()
+    invalidate()
+  }
+
+  /**
+   * 跳转到指定位置
+   */
+  fun seekTo(positionSeconds: Float) {
+    updatePosition(positionSeconds)
+  }
+
+  /**
+   * 清理资源
+   */
+  fun cleanup() {
+    scope.cancel()
+    waveformCache.clear()
+  }
+
   override fun onDetachedFromWindow() {
     super.onDetachedFromWindow()
     cleanup()
   }
 }
-
-// ========== 数据类 ==========
-
-// ========== PCM加载器（简化版，与之前的类似）==========
 

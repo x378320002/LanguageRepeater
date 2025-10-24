@@ -1,10 +1,9 @@
 package com.language.repeater.pcm
 
+import android.annotation.SuppressLint
 import android.util.Log
-import androidx.core.content.ContentProviderCompat.requireContext
-import com.konovalov.vad.silero.Vad
-import com.konovalov.vad.silero.VadSilero
 import com.language.repeater.GlobalConfig
+import com.language.repeater.MyApp
 import com.language.repeater.utils.ScreenUtil
 import java.io.File
 import java.io.RandomAccessFile
@@ -23,30 +22,61 @@ class PCMSegmentLoader(
   val durationSeconds = totalSamples.toFloat() / sampleRate
 
   var allData: List<WaveformPoint> = listOf()
+  private var voiceSegmentsV1 = listOf<Pair<Float, Float>>()
+  private var voiceSegmentsV2 = listOf<Pair<Float, Float>>()
+  fun getVoiceSegments(): List<Pair<Float, Float>> {
+    return voiceSegmentsV2
+  }
+
   //预处理全部的PCM数据, 根据波形做一些基本的分割
   fun prepareAllData() {
 //    allData = loadWaveformData(0f, durationSeconds, ScreenUtil.getScreenSize().width)
 
-    // 1. 准备PCM数据
-    val startSample = 0
-    val sampleCount = (durationSeconds * sampleRate).toInt()
-    val pcmData = loadSegmentBySample(startSample, sampleCount)
+    //V1版本
+//    // 1. 准备PCM数据
+//    val startSample = 0
+//    val sampleCount = (durationSeconds * sampleRate).toInt()
+//    val pcmData = loadSegmentBySample(startSample, sampleCount)
+//    //用于绘制波形的数据
+//    var time = System.currentTimeMillis()
+//    allData = downsampleToWaveform(pcmData,
+//      ScreenUtil.getScreenSize().width,
+//      0f,
+//      1f / sampleRate)
+//    // 2. 创建VAD分离器
+//    val segmentation = VoiceSentenceDetectorV1()
+//    // 3. 使用默认配置分离
+//    voiceSegmentsV1 = segmentation.segment(pcmData)
+//    Log.i("wangzixu", "耗时 ${(System.currentTimeMillis()-time).toFloat()/1000}")
+//    Log.i("wangzixu", "检测到 ${voiceSegmentsV1.size} 句话:")
+////    voiceSegmentsV1.forEachIndexed { index, (start, end) ->
+////      Log.i("wangzixu", "句子 ${index + 1}: [$start, $end]")
+////    }
+//    // 5. 查看时间格式
+//    val timeStrings = segmentation.segmentsToTimeString(voiceSegmentsV1)
+//    timeStrings.forEachIndexed { index, timeStr ->
+//      Log.i("wangzixu", "句子 ${index + 1}: $timeStr")
+//    }
 
-    //用于绘制波形的数据
-    allData = downsampleToWaveform(pcmData,
-      ScreenUtil.getScreenSize().width,
-      0f,
-      1f / sampleRate)
+    //V2版本
+    val time = System.currentTimeMillis()
+    val detectorV2 = VoiceSentenceDetectorV2(MyApp.instance)
+    voiceSegmentsV2 = detectorV2.detectSentences(pcmFile)
+    Log.i("wangzixu", "V2耗时 ${(System.currentTimeMillis()-time).toFloat()/1000}")
+    Log.i("wangzixu", "V2检测到 ${voiceSegmentsV2.size} 句话:")
+    val timeStringsV2 = segmentsToTimeString(voiceSegmentsV2)
+    timeStringsV2.forEachIndexed { index, timeStr ->
+      Log.i("wangzixu", "句子 ${index + 1}: $timeStr")
+    }
+  }
 
-    // 2. 创建VAD分离器
-    val segmentation = VoiceSegmentation()
-
-    // 3. 使用默认配置分离
-    val segments = segmentation.segment(pcmData)
-
-    Log.i("wangzixu", "检测到 ${segments.size} 句话:")
-    segments.forEachIndexed { index, (start, end) ->
-      Log.i("wangzixu", "句子 ${index + 1}: [$start, $end]")
+  /**
+   * 转换为时间格式（用于调试）
+   */
+  @SuppressLint("DefaultLocale")
+  fun segmentsToTimeString(segments: List<Pair<Float, Float>>): List<String> {
+    return segments.map { (start, end) ->
+      String.format("%.2fs - %.2fs (%.2fs)", start, end, end - start)
     }
   }
 

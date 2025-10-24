@@ -34,6 +34,11 @@ class PlayVideoFragment: Fragment() {
   private var exoPlayer: ExoPlayer? = null
   private val viewModel: PlayVideoViewModel by viewModels()
 
+  //当前所有的语音片段
+  private var voiceSegments = listOf<Pair<Float, Float>>()
+  //当前正在读的语音片段
+  private var curSegment: Pair<Float, Float>? = null
+
   val launcher = registerForActivityResult(ActivityResultContracts.StartActivityForResult(),
     object: ActivityResultCallback<ActivityResult> {
       override fun onActivityResult(result: ActivityResult) {
@@ -97,6 +102,13 @@ class PlayVideoFragment: Fragment() {
     binding.exoVideoView.player = exoPlayer
     binding.exoVideoView.showController()
 
+    binding.voiceNext.setOnClickListener {
+      seekToNextOrPreSegment(true)
+    }
+    binding.voicePrevious.setOnClickListener {
+      seekToNextOrPreSegment(false)
+    }
+
     viewLifecycleOwner.lifecycleScope.launch {
       viewLifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
         launch {
@@ -105,6 +117,8 @@ class PlayVideoFragment: Fragment() {
               // 加载PCM文件
               binding.audioProgressWaveView.setPCMLoader(loader)
               binding.audioWaveView.setPcmData(loader.allData)
+              voiceSegments = loader.getVoiceSegments()
+              curSegment = voiceSegments.getOrNull(0)
 //              binding.audioProgressWaveView.onSeekListener = { position ->
 //                when {
 //                  position < 0 -> {
@@ -131,17 +145,59 @@ class PlayVideoFragment: Fragment() {
         launch {
           while (true) {
             if (exoPlayer?.isPlaying == true) {
-              val cur = exoPlayer?.currentPosition ?: -1
-              val duration = exoPlayer?.duration ?: 0
-              if (duration > 0L) {
-                binding.audioProgressWaveView.updatePosition(cur.toFloat()/1000)
-                binding.audioWaveView.updatePosition(cur.toFloat()/duration)
+              var cur = exoPlayer?.currentPosition?.toFloat() ?: -1f
+              if (cur != -1f) {
+                var curSec = cur / 1000
+                val seg = curSegment
+                if (seg != null) {
+                  if (curSec >= seg.second) {
+                    //跳回开始
+                    exoPlayer?.seekTo((seg.first * 1000).toLong())
+                    curSec = seg.first
+                    cur = seg.first * 1000
+                  }
+                }
+
+                val duration = exoPlayer?.duration ?: -1
+                if (duration > 0) {
+                  binding.audioProgressWaveView.updatePosition(curSec)
+                  binding.audioWaveView.updatePosition(cur/duration)
+                }
               }
             }
             delay(16)
           }
         }
       }
+    }
+  }
+
+  private fun seekToNextOrPreSegment(isNext: Boolean) {
+    val segments = voiceSegments
+    val player = exoPlayer
+    if (segments.isNotEmpty() && player != null) {
+      val cur = player.currentPosition.toFloat() / 1000
+      //计算当前是哪句
+      var targetSeg: Pair<Float, Float>? = null
+      for (i in segments.indices) {
+        val seg = segments[i]
+        if (cur >= seg.first && cur <= seg.second) {
+          targetSeg = if (isNext) {
+            segments.getOrNull(i + 1)
+          } else {
+            segments.getOrNull(i - 1)
+          }
+          break
+        }
+      }
+      seekToSegment(targetSeg)
+    }
+  }
+
+  private fun seekToSegment(segmentation: Pair<Float, Float>?) {
+    curSegment = segmentation
+    if (segmentation != null) {
+      exoPlayer?.seekTo((segmentation.first * 1000).toLong())
     }
   }
 
