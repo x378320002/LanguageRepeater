@@ -9,7 +9,7 @@ import com.konovalov.vad.webrtc.VadWebRTC
 import com.konovalov.vad.webrtc.config.FrameSize
 import com.konovalov.vad.webrtc.config.Mode
 import com.konovalov.vad.webrtc.config.SampleRate
-import com.language.repeater.GlobalConfig
+import com.language.repeater.pcm.PcmConfig
 import java.io.File
 import java.io.RandomAccessFile
 
@@ -40,7 +40,7 @@ class VoiceSentenceDetectorV2(private val context: Context) {
     val engine: VadEngine = VadEngine.WEBRTC,
 
     /** 采样率 */
-    val sampleRate: Int = GlobalConfig.PCM_SAMPLE_RATE,
+    val sampleRate: Int = PcmConfig.PCM_SAMPLE_RATE,
 
     /** 静音持续时间阈值(毫秒) */
     val silenceDurationMs: Int = 300,
@@ -164,14 +164,14 @@ class VoiceSentenceDetectorV2(private val context: Context) {
     doCheck: (buffer: ByteArray) -> Boolean,
   ): List<Pair<Float, Float>> {
     // 计算每帧需要的字节数（1个采样点 = 2字节）
-    val bufferSize = frameSize * 2
+    val bufferSize = frameSize * PcmConfig.BYTES_PER_SAMPLE
     val segments = mutableListOf<Pair<Long, Long>>()
     var speechStartSample: Long? = null
     var currentSampleIndex = 0L
     val buffer = ByteArray(bufferSize)
 
     RandomAccessFile(pcmFile, "r").use { input ->
-      while (currentSampleIndex + bufferSize <= input.length()) {
+      while (currentSampleIndex * 2 < input.length()) {
         input.seek(currentSampleIndex * 2)
         val bytesRead = input.read(buffer)
         if (bytesRead < bufferSize) break

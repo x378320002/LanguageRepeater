@@ -39,6 +39,9 @@ class PlayVideoFragment: Fragment() {
   //当前正在读的语音片段
   private var curSegment: Pair<Float, Float>? = null
 
+  private var repeatable = false
+  private var playWhenResume = true
+
   val launcher = registerForActivityResult(ActivityResultContracts.StartActivityForResult(),
     object: ActivityResultCallback<ActivityResult> {
       override fun onActivityResult(result: ActivityResult) {
@@ -115,10 +118,9 @@ class PlayVideoFragment: Fragment() {
           viewModel.pcmLoaderStateFlow.collect { loader ->
             if (loader != null) {
               // 加载PCM文件
-              binding.audioProgressWaveView.setPCMLoader(loader)
-              binding.audioWaveView.setPcmData(loader.allData)
-              voiceSegments = loader.getVoiceSegments()
-              curSegment = voiceSegments.getOrNull(0)
+              binding.audioProgressWaveView.setPCMLoader(loader) {
+                Log.i("wangzixu", "audioProgressWaveView loadWindow $it")
+              }
 //              binding.audioProgressWaveView.onSeekListener = { position ->
 //                when {
 //                  position < 0 -> {
@@ -143,13 +145,27 @@ class PlayVideoFragment: Fragment() {
         }
 
         launch {
+          viewModel.allWaveDataFlow.collect {
+            binding.audioWaveView.setPcmData(it)
+          }
+        }
+
+        launch {
+          viewModel.sentencesFlow.collect {
+            binding.audioProgressWaveView.setSentenceData(it)
+            voiceSegments = it
+            curSegment = voiceSegments.getOrNull(0)
+          }
+        }
+
+        launch {
           while (true) {
             if (exoPlayer?.isPlaying == true) {
               var cur = exoPlayer?.currentPosition?.toFloat() ?: -1f
               if (cur != -1f) {
                 var curSec = cur / 1000
                 val seg = curSegment
-                if (seg != null) {
+                if (seg != null && repeatable) {
                   if (curSec >= seg.second) {
                     //跳回开始
                     exoPlayer?.seekTo((seg.first * 1000).toLong())
@@ -203,12 +219,15 @@ class PlayVideoFragment: Fragment() {
 
   override fun onPause() {
     super.onPause()
+    playWhenResume = exoPlayer?.isPlaying == true
     exoPlayer?.pause()
   }
 
   override fun onResume() {
     super.onResume()
-    exoPlayer?.play()
+    if (playWhenResume) {
+      exoPlayer?.play()
+    }
   }
 
   override fun onDestroyView() {

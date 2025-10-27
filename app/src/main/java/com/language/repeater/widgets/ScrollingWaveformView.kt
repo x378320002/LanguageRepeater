@@ -1,6 +1,5 @@
 package com.language.repeater.widgets
 
-import android.R.attr.centerX
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
@@ -17,6 +16,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.collections.isNullOrEmpty
 import kotlin.math.min
 
 /**
@@ -101,10 +101,10 @@ class ScrollingWaveformView @JvmOverloads constructor(
   private var pcmLoader: PCMSegmentLoader? = null
 
   /** 当前播放位置（秒） */
-  private var currentPositionSeconds: Float = 0f
+  private var currentTime: Float = 0f
 
   /** 音频总时长（秒） */
-  private var totalDurationSeconds: Float = 0f
+  private var totalDuration: Float = 0f
 
   /** 波形数据缓存：时间窗口 -> 波形数据 */
   private val waveformCache = mutableMapOf<Int, List<WaveformPoint>>()
@@ -122,25 +122,31 @@ class ScrollingWaveformView @JvmOverloads constructor(
   private var visibleStartTime = 0f
   private var visibleEndTime = 0f
 
+  //分句子信息
+  private var sentences: List<Pair<Float, Float>>? = null
+
   // ========== 公共方法 ==========
 
   /**
    * 设置PCM文件
    */
-  fun setPCMLoader(loader: PCMSegmentLoader) {
+  fun setPCMLoader(loader: PCMSegmentLoader, loadWindowComplete: ((Int)->Unit)? = null) {
     if (pcmLoader == loader) {
       return
     }
 
     pcmLoader = loader
-    totalDurationSeconds = pcmLoader?.durationSeconds ?: 0f
-    currentPositionSeconds = 0f
+    totalDuration = pcmLoader?.totalDuration ?: 0f
+    currentTime = 0f
 
     waveformCache.clear()
     //提前绘制一遍, 清空上一个视频的内容
     invalidate()
+    refreshWave(loadWindowComplete)
+  }
 
-    recalculateVisibleRange()
+  fun setSentenceData(data : List<Pair<Float, Float>>) {
+    sentences = data
     invalidate()
   }
 
@@ -164,7 +170,7 @@ class ScrollingWaveformView @JvmOverloads constructor(
   /**
    * 重新计算可见时间范围
    */
-  private fun recalculateVisibleRange() {
+  private fun refreshWave(loadWindowComplete: ((Int)->Unit)? = null) {
     if (width == 0) return
 
     // 中心线在屏幕中央
@@ -172,19 +178,21 @@ class ScrollingWaveformView @JvmOverloads constructor(
     val visibleDuration = centerX / pixelsPerSecond
 
     // 计算可见范围：中心线左右各一半
-    visibleStartTime = (currentPositionSeconds - visibleDuration).coerceAtLeast(0f)
-    visibleEndTime = (currentPositionSeconds + visibleDuration).coerceAtMost(totalDurationSeconds)
+    visibleStartTime = (currentTime - visibleDuration).coerceAtLeast(0f)
+    visibleEndTime = (currentTime + visibleDuration).coerceAtMost(totalDuration)
 
-    checkAndLoadData()
+    checkAndLoadData(loadWindowComplete)
 
     // 准备已播放和未播放的波形数据
     prepareWaveData()
+
+    invalidate()
   }
 
   /**
    * 检查并加载需要的数据
    */
-  private fun checkAndLoadData() {
+  private fun checkAndLoadData(loadWindowComplete: ((Int)->Unit)? = null) {
     val loader = pcmLoader ?: return
 
     // 计算需要哪些窗口的数据
@@ -198,14 +206,14 @@ class ScrollingWaveformView @JvmOverloads constructor(
         val windowStartTime = windowIndex * cacheWindowSize
 
         // 超出音频范围则跳过
-        if (windowStartTime >= totalDurationSeconds) continue
+        if (windowStartTime >= totalDuration) continue
 
         // 异步加载
         scope.launch(Dispatchers.IO) {
           try {
             val windowEndTime = min(
               windowStartTime + cacheWindowSize,
-              totalDurationSeconds
+              totalDuration
             )
             val duration = windowEndTime - windowStartTime
 
@@ -221,6 +229,7 @@ class ScrollingWaveformView @JvmOverloads constructor(
             withContext(Dispatchers.Main) {
               waveformCache[windowIndex] = waveformData
               invalidate()
+              loadWindowComplete?.invoke(windowIndex)
             }
           } catch (e: Exception) {
             e.printStackTrace()
@@ -239,7 +248,7 @@ class ScrollingWaveformView @JvmOverloads constructor(
   private fun prepareWaveData() {
     val startTime = visibleStartTime
     val endTime = visibleEndTime
-    val curTime = currentPositionSeconds
+    val curTime = currentTime
     val startWindow = (startTime / cacheWindowSize).toInt()
     val endWindow = (endTime / cacheWindowSize).toInt()
     leftData.clear()
@@ -267,7 +276,7 @@ class ScrollingWaveformView @JvmOverloads constructor(
   // ========== 绘制 ==========
   override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
     super.onSizeChanged(w, h, oldw, oldh)
-    recalculateVisibleRange()
+    refreshWave()
   }
 
   /**
@@ -275,7 +284,7 @@ class ScrollingWaveformView @JvmOverloads constructor(
    */
   private fun timeToX(timeSeconds: Float): Float {
     val centerX = width / 2f
-    val offsetFromCurrent = timeSeconds - currentPositionSeconds
+    val offsetFromCurrent = timeSeconds - currentTime
     return centerX + offsetFromCurrent * pixelsPerSecond
   }
 
@@ -298,31 +307,30 @@ class ScrollingWaveformView @JvmOverloads constructor(
     // 绘制进度指示器（竖线+小三角形）
     drawProgressIndicator(canvas, centerX)
 
-    drawVoiceBorder(canvas)
+    //绘制每句话的起始点标记
+    drawSentenceSign(canvas)
   }
 
   /**
    * 绘制每句话的开始和结束点
    */
-  private fun drawVoiceBorder(canvas: Canvas) {
-    val segments = pcmLoader?.getVoiceSegments()
-    if (segments.isNullOrEmpty()) {
+  private fun drawSentenceSign(canvas: Canvas) {
+    if (leftData.isEmpty() || rightData.isEmpty()) {
       return
     }
-
-    fun drawPoint(time: Float, paint: Paint) {
-      if (time < visibleStartTime || time > visibleEndTime) {
-        return
-      }
-      val x = timeToX(time)
-      val y = height / 2f
-      canvas.drawLine(x, y - 12, x, y + 12, paint)
+    sentences?.forEach {seg->
+      drawPoint(canvas, seg.first, voiceStartPaint)
+      drawPoint(canvas, seg.second, voiceEndPaint)
     }
+  }
 
-    for (seg in segments) {
-      drawPoint(seg.first, voiceStartPaint)
-      drawPoint(seg.second, voiceEndPaint)
+  fun drawPoint(canvas: Canvas, time: Float, paint: Paint) {
+    if (time < visibleStartTime || time > visibleEndTime) {
+      return
     }
+    val x = timeToX(time)
+    val y = height / 2f
+    canvas.drawLine(x, y - 12, x, y + 12, paint)
   }
 
   /**
@@ -377,7 +385,7 @@ class ScrollingWaveformView @JvmOverloads constructor(
     val textSize = textPaint.textSize
     textPaint.textAlign = Paint.Align.CENTER
     canvas.drawText(
-      CommonUtil.formatTimeFloat(currentPositionSeconds),
+      CommonUtil.formatTimeFloat(currentTime),
       width / 2f,
       textSize,
       textPaint
@@ -393,7 +401,7 @@ class ScrollingWaveformView @JvmOverloads constructor(
 
     textPaint.textAlign = Paint.Align.RIGHT
     canvas.drawText(
-      CommonUtil.formatTime(totalDurationSeconds),
+      CommonUtil.formatTime(totalDuration),
       width.toFloat(),
       textSize,
       textPaint
@@ -427,9 +435,8 @@ class ScrollingWaveformView @JvmOverloads constructor(
    */
   fun updatePosition(positionSeconds: Float) {
     if (pcmLoader == null) return
-    currentPositionSeconds = positionSeconds.coerceIn(0f, totalDurationSeconds)
-    recalculateVisibleRange()
-    invalidate()
+    currentTime = positionSeconds.coerceIn(0f, totalDuration)
+    refreshWave()
   }
 
   /**

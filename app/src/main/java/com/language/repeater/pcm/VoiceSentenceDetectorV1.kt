@@ -1,7 +1,6 @@
 package com.language.repeater.pcm
 
-import android.annotation.SuppressLint
-import com.language.repeater.GlobalConfig
+import com.language.repeater.pcm.PcmConfig
 import kotlin.math.sqrt
 
 /**
@@ -118,7 +117,7 @@ import kotlin.math.sqrt
  * 这个算法在大多数场景下都能获得不错的效果！需要我补充可视化调试工具吗？
  */
 class VoiceSentenceDetectorV1(
-  private val sampleRate: Int = GlobalConfig.PCM_SAMPLE_RATE  // 采样率
+  private val sampleRate: Int = PcmConfig.PCM_SAMPLE_RATE  // 采样率
 ) {
   /**
    * 配置参数
