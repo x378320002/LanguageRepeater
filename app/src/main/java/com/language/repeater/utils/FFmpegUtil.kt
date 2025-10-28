@@ -1,4 +1,4 @@
-package com.language.repeater.pcm
+package com.language.repeater.utils
 
 import android.content.Context
 import android.net.Uri
@@ -18,7 +18,9 @@ import java.io.File
  * Description:
  */
 object FFmpegUtil {
-  private const val TAG = "FFmpegUtil"
+  private const val TAG = "wangzixu"
+  private const val PCM_SUFFIX = ".pcm"
+
   fun extractWavByFFmpeg(
     context: Context,
     input: String,
@@ -57,18 +59,19 @@ object FFmpegUtil {
     }
   }
 
-  suspend fun extractPcmFileByFFmpeg(context: Context, input: Uri): String =
+  suspend fun extractPcmFileByFFmpeg(context: Context, input: Uri, key: String): String =
     withContext(Dispatchers.IO) {
       val outputDir = context.getExternalFilesDir("pcm")
       if (outputDir != null && !outputDir.exists()) {
         outputDir.mkdirs()
       }
-      val outputFile = File(outputDir, "output.pcm")
-      if (outputFile.length() > 0) {
-        outputFile.delete()
+      val outputFile = File(outputDir, key + PCM_SUFFIX)
+      if (outputFile.exists() && outputFile.length() > 0) {
+        Log.i(TAG, "FFmpegKit extractPcmFileByFFmpeg 文件已经存在, 直接返回")
+        return@withContext outputFile.absolutePath
       }
-      val outPath = outputFile.absolutePath
 
+      val outPath = outputFile.absolutePath
       val str = FFmpegKitConfig.getSafParameterForRead(context, input)
       // ffmpeg 命令
       //val cmd = "-y -i $str -vn -acodec pcm_s16le -ar 16000 -ac 1 $outPut"

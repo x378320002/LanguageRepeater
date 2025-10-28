@@ -23,6 +23,7 @@ import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import com.language.repeater.databinding.VideoPlayFragmentBinding
+import com.language.repeater.pcm.Sentence
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -35,9 +36,9 @@ class PlayVideoFragment: Fragment() {
   private val viewModel: PlayVideoViewModel by viewModels()
 
   //当前所有的语音片段
-  private var voiceSegments = listOf<Pair<Float, Float>>()
+  private var voiceSegments = listOf<Sentence>()
   //当前正在读的语音片段
-  private var curSegment: Pair<Float, Float>? = null
+  private var curSegment: Sentence? = null
 
   private var repeatable = false
   private var playWhenResume = true
@@ -166,11 +167,11 @@ class PlayVideoFragment: Fragment() {
                 var curSec = cur / 1000
                 val seg = curSegment
                 if (seg != null && repeatable) {
-                  if (curSec >= seg.second) {
+                  if (curSec >= seg.end) {
                     //跳回开始
-                    exoPlayer?.seekTo((seg.first * 1000).toLong())
-                    curSec = seg.first
-                    cur = seg.first * 1000
+                    exoPlayer?.seekTo((seg.start * 1000).toLong())
+                    curSec = seg.start
+                    cur = seg.start * 1000
                   }
                 }
 
@@ -194,10 +195,10 @@ class PlayVideoFragment: Fragment() {
     if (segments.isNotEmpty() && player != null) {
       val cur = player.currentPosition.toFloat() / 1000
       //计算当前是哪句
-      var targetSeg: Pair<Float, Float>? = null
+      var targetSeg: Sentence? = null
       for (i in segments.indices) {
         val seg = segments[i]
-        if (cur >= seg.first && cur <= seg.second) {
+        if (cur >= seg.start && cur <= seg.end) {
           targetSeg = if (isNext) {
             segments.getOrNull(i + 1)
           } else {
@@ -210,10 +211,10 @@ class PlayVideoFragment: Fragment() {
     }
   }
 
-  private fun seekToSegment(segmentation: Pair<Float, Float>?) {
+  private fun seekToSegment(segmentation: Sentence?) {
     curSegment = segmentation
     if (segmentation != null) {
-      exoPlayer?.seekTo((segmentation.first * 1000).toLong())
+      exoPlayer?.seekTo((segmentation.start * 1000).toLong())
     }
   }
 

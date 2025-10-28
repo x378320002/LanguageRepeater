@@ -9,7 +9,6 @@ import com.konovalov.vad.webrtc.VadWebRTC
 import com.konovalov.vad.webrtc.config.FrameSize
 import com.konovalov.vad.webrtc.config.Mode
 import com.konovalov.vad.webrtc.config.SampleRate
-import com.language.repeater.pcm.PcmConfig
 import java.io.File
 import java.io.RandomAccessFile
 
@@ -82,7 +81,7 @@ class VoiceSentenceDetectorV2(private val context: Context) {
   fun detectSentences(
     pcmFile: File,
     config: Config = Config(),
-  ): List<Pair<Float, Float>> {
+  ): List<Sentence> {
 
     return when (config.engine) {
       VadEngine.WEBRTC -> detectWithWebRTC(pcmFile, config)
@@ -95,7 +94,7 @@ class VoiceSentenceDetectorV2(private val context: Context) {
   private fun detectWithWebRTC(
     pcmFile: File,
     config: Config,
-  ): List<Pair<Float, Float>> {
+  ): List<Sentence> {
 
     // 创建VAD实例（参数必须在构造函数中传入）
     VadWebRTC(
@@ -128,7 +127,7 @@ class VoiceSentenceDetectorV2(private val context: Context) {
   private fun detectWithSilero(
     pcmFile: File,
     config: Config,
-  ): List<Pair<Float, Float>> {
+  ): List<Sentence> {
 
     // 创建VAD实例（参数必须在构造函数中传入）
     VadSilero(
@@ -162,7 +161,7 @@ class VoiceSentenceDetectorV2(private val context: Context) {
     frameSize: Int,
     config: Config,
     doCheck: (buffer: ByteArray) -> Boolean,
-  ): List<Pair<Float, Float>> {
+  ): List<Sentence> {
     // 计算每帧需要的字节数（1个采样点 = 2字节）
     val bufferSize = frameSize * PcmConfig.BYTES_PER_SAMPLE
     val segments = mutableListOf<Pair<Long, Long>>()
@@ -207,10 +206,10 @@ class VoiceSentenceDetectorV2(private val context: Context) {
   private fun postProcessSegments(
     segments: List<Pair<Long, Long>>,
     config: Config,
-  ): List<Pair<Float, Float>> {
+  ): List<Sentence> {
 
     val ranges = segments.map { (start, end) ->
-      Pair(
+      Sentence(
         start.toFloat() / config.sampleRate,
         end.toFloat() / config.sampleRate
       )
@@ -220,9 +219,9 @@ class VoiceSentenceDetectorV2(private val context: Context) {
       return ranges
     }
 
-    val merged = mutableListOf<Pair<Float, Float>>()
-    var currentStart = ranges[0].first
-    var currentEnd = ranges[0].second
+    val merged = mutableListOf<Sentence>()
+    var currentStart = ranges[0].start
+    var currentEnd = ranges[0].end
 
     for (i in 1 until ranges.size) {
       val (nextStart, nextEnd) = ranges[i]
@@ -233,14 +232,14 @@ class VoiceSentenceDetectorV2(private val context: Context) {
         currentEnd = maxOf(currentEnd, nextEnd)
       } else {
         // 不重叠，保存上一个区间
-        merged.add(currentStart to currentEnd)
+        merged.add(Sentence(currentStart, currentEnd))
         currentStart = nextStart
         currentEnd = nextEnd
       }
     }
 
     // 别忘了最后一个
-    merged.add(currentStart to currentEnd)
+    merged.add(Sentence(currentStart, currentEnd))
 
     // 1. 过滤过短的片段
     val filteredSegments = merged.filter { (start, end) ->
@@ -251,7 +250,7 @@ class VoiceSentenceDetectorV2(private val context: Context) {
     return filteredSegments.map { (start, end) ->
       val paddedStart = (start + config.paddingMsPre).coerceAtLeast(0f)
       val paddedEnd = end + config.paddingMsAfter
-      Pair(paddedStart, paddedEnd)
+      Sentence(paddedStart, paddedEnd)
     }
   }
 }

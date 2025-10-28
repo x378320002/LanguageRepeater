@@ -56,4 +56,6 @@ dependencies {
   implementation(libs.androidx.exoplayer.ui)
   implementation(libs.vad.webrtc)
   implementation(libs.vad.silero)
+
+  implementation(libs.kotlinx.serialization.json)
 }

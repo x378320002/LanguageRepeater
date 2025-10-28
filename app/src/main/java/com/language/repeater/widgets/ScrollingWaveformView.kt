@@ -7,6 +7,7 @@ import android.graphics.Path
 import android.util.AttributeSet
 import android.view.View
 import com.language.repeater.pcm.PCMSegmentLoader
+import com.language.repeater.pcm.Sentence
 import com.language.repeater.pcm.WaveformPoint
 import com.language.repeater.utils.CommonUtil
 import com.language.repeater.utils.CommonUtil.toDp
@@ -16,7 +17,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlin.collections.isNullOrEmpty
 import kotlin.math.min
 
 /**
@@ -123,7 +123,7 @@ class ScrollingWaveformView @JvmOverloads constructor(
   private var visibleEndTime = 0f
 
   //分句子信息
-  private var sentences: List<Pair<Float, Float>>? = null
+  private var sentences: List<Sentence>? = null
 
   // ========== 公共方法 ==========
 
@@ -145,7 +145,7 @@ class ScrollingWaveformView @JvmOverloads constructor(
     refreshWave(loadWindowComplete)
   }
 
-  fun setSentenceData(data : List<Pair<Float, Float>>) {
+  fun setSentenceData(data : List<Sentence>) {
     sentences = data
     invalidate()
   }
@@ -319,8 +319,8 @@ class ScrollingWaveformView @JvmOverloads constructor(
       return
     }
     sentences?.forEach {seg->
-      drawPoint(canvas, seg.first, voiceStartPaint)
-      drawPoint(canvas, seg.second, voiceEndPaint)
+      drawPoint(canvas, seg.start, voiceStartPaint)
+      drawPoint(canvas, seg.end, voiceEndPaint)
     }
   }
 

@@ -1,6 +1,6 @@
 [versions]
 agp = "8.11.0"
-kotlin = "2.0.21"
+kotlin = "2.2.21"
 coreKtx = "1.16.0"
 junit = "4.13.2"
 junitVersion = "1.2.1"
@@ -9,7 +9,8 @@ appcompat = "1.6.1"
 material = "1.10.0"
 activity = "1.10.1"
 constraintlayout = "2.1.4"
-kotlinSerialization = "2.2.0"
+kotlinSerialization = "2.2.21"
+kotlinJson = "1.9.0"
 navVersion = "2.9.1"
 
 ffmpegKitX6kb = "6.0.0"
@@ -33,6 +34,9 @@ androidx-exoplayer-ui = { group = "androidx.media3", name = "media3-ui", version
 ffmpeg-kit-x6kb = { module = "com.moizhassan.ffmpeg:ffmpeg-kit-16kb", version.ref = "ffmpegKitX6kb" }
 vad-webrtc = { group = "com.github.gkonovalov.android-vad", name = "webrtc", version.ref ="vad" }
 vad-silero = { group = "com.github.gkonovalov.android-vad", name = "silero", version.ref ="vad" }
+
+# kotlinx-serialization-json 依赖
+kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinJson" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

@@ -7,13 +7,16 @@ import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.application
 import androidx.lifecycle.viewModelScope
-import com.language.repeater.pcm.FFmpegUtil
+import com.language.repeater.utils.FFmpegUtil
 import com.language.repeater.utils.ToastUtil
 import com.language.repeater.pcm.PCMSegmentLoader
 import com.language.repeater.pcm.PcmDataUtil
+import com.language.repeater.pcm.Sentence
 import com.language.repeater.pcm.VoiceSentenceDetectorV2
 import com.language.repeater.pcm.WaveformPoint
+import com.language.repeater.utils.Md5Util
 import com.language.repeater.utils.ScreenUtil
+import com.language.repeater.utils.SentenceFileStoreUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -26,7 +29,7 @@ import java.io.File
  */
 class PlayVideoViewModel(application: Application): AndroidViewModel(application) {
   companion object {
-    private const val TAG = "PlayVideoViewModel"
+    private const val TAG = "wangzixu"
     private const val MB = 1024.0 * 1024.0
   }
 
@@ -37,14 +40,18 @@ class PlayVideoViewModel(application: Application): AndroidViewModel(application
   //画全量波形图的数据流
   var allWaveDataFlow = MutableStateFlow<List<WaveformPoint>>(listOf())
   //句子划分的数据流
-  var sentencesFlow = MutableStateFlow<List<Pair<Float, Float>>>(listOf())
+  var sentencesFlow = MutableStateFlow<List<Sentence>>(listOf())
+
+  var uniqueKey: String = ""
 
   fun parseUriToPcm(uri: Uri) {
-    Log.i(TAG, "parseUriToPcm begin:$uri")
+    Log.i(TAG, "parseUriToPcm begin: $uri")
     viewModelScope.launch(Dispatchers.IO) {
       try {
+        uniqueKey = Md5Util.generateFastUniqueKey(application, uri) ?: System.currentTimeMillis().toString()
+        Log.i(TAG, "parseUriToPcm uniqueKey: $uniqueKey")
         //通过ffmpeg把视频文件解析成原始音频文件
-        val path = FFmpegUtil.extractPcmFileByFFmpeg(application, uri)
+        val path = FFmpegUtil.extractPcmFileByFFmpeg(application, uri, uniqueKey)
         val file = File(path)
         val pcmLoader = PCMSegmentLoader(file)
 
@@ -52,7 +59,7 @@ class PlayVideoViewModel(application: Application): AndroidViewModel(application
           loadAllWaveData(file)
         }
         launch(Dispatchers.IO) {
-          loadSentenceData(file)
+          loadSentenceData(file, uniqueKey)
         }
 
         pcmLoaderStateFlow.value = pcmLoader
@@ -85,7 +92,7 @@ class PlayVideoViewModel(application: Application): AndroidViewModel(application
     allWaveDataFlow.value = data
   }
 
-  private fun loadSentenceData(file: File) {
+  private suspend fun loadSentenceData(file: File, key: String) {
     //V1版本
 //    // 1. 准备PCM数据
 //    val startSample = 0
@@ -112,24 +119,39 @@ class PlayVideoViewModel(application: Application): AndroidViewModel(application
 //      Log.i("wangzixu", "句子 ${index + 1}: $timeStr")
 //    }
 
-    //V2版本
-    val time = System.currentTimeMillis()
-    val detectorV2 = VoiceSentenceDetectorV2(application)
-    val sentences = detectorV2.detectSentences(file)
-    Log.i("wangzixu", "V2耗时 ${(System.currentTimeMillis()-time).toFloat()/1000}")
-    Log.i("wangzixu", "V2检测到 ${sentences.size} 句话:")
-    val timeStringsV2 = sentenceToTimeString(sentences)
+    var list = SentenceFileStoreUtil.loadData(application, key)
+    if (list.isNullOrEmpty()) {
+      //V2版本
+      val time = System.currentTimeMillis()
+      val detectorV2 = VoiceSentenceDetectorV2(application)
+      list = detectorV2.detectSentences(file)
+      SentenceFileStoreUtil.saveData(application, key, list!!)
+      Log.i("wangzixu", "V2耗时 ${(System.currentTimeMillis()-time).toFloat()/1000}")
+    } else {
+      Log.i("wangzixu", "key: $key 已经存在")
+    }
+
+    sentencesFlow.value = list
+    Log.i("wangzixu", "V2检测到 ${list.size} 句话:")
+    val timeStringsV2 = sentenceToTimeString(list)
     timeStringsV2.forEachIndexed { index, timeStr ->
       Log.i("wangzixu", "句子 ${index + 1}: $timeStr")
     }
-    sentencesFlow.value = sentences
+  }
+
+  fun changeSentenceData(list : List<Sentence>) {
+    if (uniqueKey.isEmpty()) {
+      viewModelScope.launch {
+        SentenceFileStoreUtil.saveData(application, uniqueKey, list)
+      }
+    }
   }
 
   /**
    * 转换为时间格式（用于调试）
    */
   @SuppressLint("DefaultLocale")
-  fun sentenceToTimeString(segments: List<Pair<Float, Float>>): List<String> {
+  fun sentenceToTimeString(segments: List<Sentence>): List<String> {
     return segments.map { (start, end) ->
       String.format("%.2fs - %.2fs (%.2fs)", start, end, end - start)
     }
