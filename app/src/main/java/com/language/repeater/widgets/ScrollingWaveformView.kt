@@ -5,6 +5,8 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Path
 import android.util.AttributeSet
+import android.view.GestureDetector
+import android.view.MotionEvent
 import android.view.View
 import com.language.repeater.pcm.PCMSegmentLoader
 import com.language.repeater.pcm.Sentence
@@ -26,6 +28,7 @@ import kotlin.math.min
  * 2. 波形从右向左滚动
  * 3. 支持长音频的分段加载
  * 4. 预加载和缓存机制
+ * 5. 支持手势拖动调整播放进度
  */
 class ScrollingWaveformView @JvmOverloads constructor(
   context: Context,
@@ -44,21 +47,62 @@ class ScrollingWaveformView @JvmOverloads constructor(
   /** 背景颜色 */
   val waveBackgroundColor: Int = 0xFFF5F5F5.toInt()
 
+  // ========== 拖动相关接口 ==========
+  
+  /**
+   * 拖动监听器
+   */
+  interface OnSeekListener {
+    /**
+     * 拖动开始
+     */
+    fun onSeekStart()
+    
+    /**
+     * 拖动中
+     * @param position 当前拖动到的播放位置（秒）
+     */
+    fun onSeeking(position: Float)
+    
+    /**
+     * 拖动结束
+     * @param position 最终的播放位置（秒）
+     */
+    fun onSeekEnd(position: Float)
+  }
+  
+  /** 拖动监听器 */
+  private var onSeekListener: OnSeekListener? = null
+
   // ========== 画笔 ==========
   //未播放画笔
   private val waveformPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
     color = 0xFF1565C0.toInt()
     style = Paint.Style.STROKE
-    strokeWidth = 2f
+    strokeWidth = 1f
     strokeCap = Paint.Cap.ROUND
+  }
+
+  // 用于绘制填充区域的画笔
+  private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    style = Paint.Style.FILL
+    color = 0xFF64B5F6.toInt()
+    //alpha = 1 // 0-255
   }
 
   //已经播放画笔
   private val playedWaveformPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
     color = 0xFF90CAF9.toInt()
     style = Paint.Style.STROKE
-    strokeWidth = 2f
+    strokeWidth = 1f
     strokeCap = Paint.Cap.ROUND
+  }
+
+  // 用于绘制填充区域的画笔
+  private val playedFillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    style = Paint.Style.FILL
+    color = 0xFF90CAF9.toInt()
+    alpha = 180 // 0-255
   }
 
   //进度条
@@ -125,7 +169,64 @@ class ScrollingWaveformView @JvmOverloads constructor(
   //分句子信息
   private var sentences: List<Sentence>? = null
 
+  // ========== 手势相关 ==========
+  
+  /** 是否正在拖动 */
+  private var isDragging = false
+  
+  /** 拖动开始时的播放位置 */
+  private var dragStartTime = 0f
+  
+  /** 手势检测器 */
+  private val gestureDetector = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
+    
+    override fun onDown(e: MotionEvent): Boolean {
+      // 记录拖动开始时的播放位置
+      dragStartTime = currentTime
+      return true
+    }
+    
+    override fun onScroll(
+      e1: MotionEvent?,
+      e2: MotionEvent,
+      distanceX: Float,
+      distanceY: Float
+    ): Boolean {
+      if (pcmLoader == null) {
+        return false
+      }
+
+      if (!isDragging) {
+        // 开始拖动
+        isDragging = true
+        onSeekListener?.onSeekStart()
+      }
+      
+      // 计算拖动对应的时间偏移
+      // distanceX > 0 表示向左滑动（时间增加）
+      // distanceX < 0 表示向右滑动（时间减少）
+      val deltaTime = distanceX / pixelsPerSecond
+      val newTime = (currentTime + deltaTime).coerceIn(0f, totalDuration)
+      
+      // 更新当前时间并刷新显示
+      currentTime = newTime
+      refreshWave()
+      
+      // 通知监听器
+      onSeekListener?.onSeeking(currentTime)
+      
+      return true
+    }
+  })
+
   // ========== 公共方法 ==========
+
+  /**
+   * 设置拖动监听器
+   */
+  fun setOnSeekListener(listener: OnSeekListener?) {
+    onSeekListener = listener
+  }
 
   /**
    * 设置PCM文件
@@ -149,23 +250,6 @@ class ScrollingWaveformView @JvmOverloads constructor(
     sentences = data
     invalidate()
   }
-
-//  /**
-//   * 设置PCM文件
-//   */
-//  fun setPCMFile(pcmFile: File) {
-//    pcmLoader = PCMSegmentLoader(pcmFile)
-//    totalDurationSeconds = pcmLoader?.durationSeconds ?: 0f
-//    currentPositionSeconds = 0f
-//
-//    waveformCache.clear()
-//    recalculateVisibleRange()
-//
-//    // 预加载初始数据
-//    loadWaveformData(0f, cacheWindowSize * preloadWindowCount)
-//
-//    invalidate()
-//  }
 
   /**
    * 重新计算可见时间范围
@@ -273,6 +357,26 @@ class ScrollingWaveformView @JvmOverloads constructor(
     toRemove.forEach { waveformCache.remove(it) }
   }
 
+  // ========== 触摸事件处理 ==========
+  
+  override fun onTouchEvent(event: MotionEvent): Boolean {
+    // 先让手势检测器处理
+    val gestureHandled = gestureDetector.onTouchEvent(event)
+    
+    // 处理拖动结束
+    when (event.action) {
+      MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+        if (isDragging) {
+          // 拖动结束，通知监听器最终位置
+          onSeekListener?.onSeekEnd(currentTime)
+          isDragging = false
+        }
+      }
+    }
+    
+    return gestureHandled || super.onTouchEvent(event)
+  }
+
   // ========== 绘制 ==========
   override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
     super.onSizeChanged(w, h, oldw, oldh)
@@ -301,8 +405,8 @@ class ScrollingWaveformView @JvmOverloads constructor(
     canvas.drawLine(0f, centerY, width.toFloat(), centerY, centerLinePaint)
 
     // 分别绘制已播放和未播放的波形
-    drawWaveformSection(canvas, leftData, playedWaveformPaint)
-    drawWaveformSection(canvas, rightData, waveformPaint)
+    drawWaveformSection(canvas, leftData, waveformPaint, playedFillPaint)
+    drawWaveformSection(canvas, rightData, waveformPaint, fillPaint)
 
     // 绘制进度指示器（竖线+小三角形）
     drawProgressIndicator(canvas, centerX)
@@ -339,7 +443,8 @@ class ScrollingWaveformView @JvmOverloads constructor(
   private fun drawWaveformSection(
     canvas: Canvas,
     waveformData: List<WaveformPoint>,
-    paint: Paint
+    paint: Paint,
+    fillPaint: Paint
   ) {
     val centerY = height / 2f
     val maxAmplitude = 32767f
@@ -361,20 +466,30 @@ class ScrollingWaveformView @JvmOverloads constructor(
 
     // 绘制下半部分
     //如果只画轮廓打开下面的注释
-    canvas.drawPath(path, paint)
-    path.reset()
-    isFirst = true
-    waveformData.forEach { point ->
+//    canvas.drawPath(path, paint)
+//    path.reset()
+//    isFirst = true
+//    waveformData.forEach { point ->
+//      val x = timeToX(point.time)
+//      val y = centerY - (point.min / maxAmplitude) * availableHeight
+//      if (isFirst) {
+//        path.moveTo(x, y)
+//        isFirst = false
+//      } else {
+//        path.lineTo(x, y)
+//      }
+//    }
+
+    //绘制成实心的
+    for (i in waveformData.lastIndex downTo 0) {
+      val point = waveformData[i]
       val x = timeToX(point.time)
       val y = centerY - (point.min / maxAmplitude) * availableHeight
-      if (isFirst) {
-        path.moveTo(x, y)
-        isFirst = false
-      } else {
-        path.lineTo(x, y)
-      }
+      path.lineTo(x, y)
     }
+    path.close()
 
+    canvas.drawPath(path, fillPaint)
     canvas.drawPath(path, paint)
   }
 
@@ -435,6 +550,9 @@ class ScrollingWaveformView @JvmOverloads constructor(
    */
   fun updatePosition(positionSeconds: Float) {
     if (pcmLoader == null) return
+    // 如果正在拖动，不要更新位置，避免冲突
+    if (isDragging) return
+    
     currentTime = positionSeconds.coerceIn(0f, totalDuration)
     refreshWave()
   }
@@ -459,4 +577,3 @@ class ScrollingWaveformView @JvmOverloads constructor(
     cleanup()
   }
 }
-

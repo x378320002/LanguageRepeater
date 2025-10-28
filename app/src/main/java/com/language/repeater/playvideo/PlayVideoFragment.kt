@@ -24,6 +24,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import com.language.repeater.databinding.VideoPlayFragmentBinding
 import com.language.repeater.pcm.Sentence
+import com.language.repeater.widgets.ScrollingWaveformView.OnSeekListener
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -122,25 +123,25 @@ class PlayVideoFragment: Fragment() {
               binding.audioProgressWaveView.setPCMLoader(loader) {
                 Log.i("wangzixu", "audioProgressWaveView loadWindow $it")
               }
-//              binding.audioProgressWaveView.onSeekListener = { position ->
-//                when {
-//                  position < 0 -> {
-//                    // 开始拖动，暂停播放
-//                    //userIsSeeking = true
-//                    if (exoPlayer?.isPlaying == true) {
-//                      exoPlayer?.pause()
-//                    }
-//                  }
-//                  else -> {
-//                    // 拖动结束，跳转到新位置
-//                    //userIsSeeking = false
-//                    view.post {
-//                      exoPlayer?.seekTo((position * 1000).toLong())
-//                      exoPlayer?.play()
-//                    }
-//                  }
-//                }
-//              }
+              binding.audioProgressWaveView.setOnSeekListener(object : OnSeekListener {
+                var isPlayWhenStart = false
+                override fun onSeekStart() {
+                  isPlayWhenStart = exoPlayer?.isPlaying == true
+                  if (isPlayWhenStart) {
+                    exoPlayer?.pause()
+                  }
+                }
+
+                override fun onSeeking(position: Float) {
+                }
+
+                override fun onSeekEnd(position: Float) {
+                  exoPlayer?.seekTo((position * 1000).toLong())
+                  if (isPlayWhenStart) {
+                    exoPlayer?.play()
+                  }
+                }
+              })
             }
           }
         }
