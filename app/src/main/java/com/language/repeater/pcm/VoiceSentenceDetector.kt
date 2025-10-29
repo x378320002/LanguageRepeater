@@ -1,8 +1,7 @@
 package com.language.repeater.pcm
 
-import com.language.repeater.pcm.PcmConfig
+import android.util.Log
 import kotlin.math.sqrt
-
 /**
  * 语音断句分离器
  * 从PCM音频数据中识别出每句话的起始和结束位置
@@ -116,7 +115,7 @@ import kotlin.math.sqrt
  *
  * 这个算法在大多数场景下都能获得不错的效果！需要我补充可视化调试工具吗？
  */
-class VoiceSentenceDetectorV1(
+class VoiceSentenceDetector(
   private val sampleRate: Int = PcmConfig.PCM_SAMPLE_RATE  // 采样率
 ) {
   /**
@@ -124,16 +123,19 @@ class VoiceSentenceDetectorV1(
    */
   data class SegmentationConfig(
     /** 能量检测窗口大小(毫秒) */
-    val windowSizeMs: Int = 32,
+    val windowSizeMs: Int = 30,
 
     /** 窗口重叠率(0.0-1.0) */
     val overlapRatio: Float = 0.5f,
 
     /** 语音能量阈值(0.0-1.0)，低于此值视为静音 */
-    val energyThreshold: Float = 0.01f,
+    var energyThreshold: Float = 0.01f,
+
+    /** 是否使用自适应阈值, 此值为ture, 则不再使用上面的energyThreshold */
+    var useAdaptiveThreshold: Int = 2,
 
     /** 过零率阈值(0.0-1.0)，用于辅助判断 */
-    val zcrThreshold: Float = 0.5f,
+    var zcrThreshold: Float = 0.5f,
 
     /** 最小静音持续时间(毫秒)，低于此值不算句子间隔 */
     val minSilenceDurationMs: Int = 500,
@@ -148,10 +150,7 @@ class VoiceSentenceDetectorV1(
     val maxSpeechDurationMs: Int = 15000,
 
     /** 句子前后扩展时间(毫秒)，避免截断 */
-    val paddingMs: Int = 100,
-
-    /** 是否使用自适应阈值 */
-    val useAdaptiveThreshold: Boolean = true
+    var paddingMs: Int = 100
   )
 
   /**
@@ -164,16 +163,17 @@ class VoiceSentenceDetectorV1(
     val isSpeech: Boolean      // 是否为语音
   )
 
+  val thresholdCalc = VoiceEnergyDetector()
   /**
    * 主函数：分离语音片段
    * @param pcmData 原始PCM数据
    * @param config 配置参数
    * @return 每句话的起始和结束采样点位置 List<Pair<起始索引, 结束索引>>
    */
-  fun segment(
+  fun detectSentences(
     pcmData: ShortArray,
     config: SegmentationConfig = SegmentationConfig()
-  ): List<Pair<Float, Float>> {
+  ): List<Sentence> {
 
     if (pcmData.isEmpty()) return emptyList()
 
@@ -181,11 +181,21 @@ class VoiceSentenceDetectorV1(
     val features = extractFeatures(pcmData, config)
 
     // 2. 如果启用自适应阈值，重新计算阈值
-    val actualThreshold = if (config.useAdaptiveThreshold) {
-      calculateAdaptiveThreshold(features, config.energyThreshold)
-    } else {
-      config.energyThreshold
+    val actualThreshold = when (config.useAdaptiveThreshold) {
+      2 -> {
+        val array = features.map { it.energy }.toFloatArray()
+        calculateThresholdV2(array, config.energyThreshold)
+      }
+      1 -> {
+        val array = features.map { it.energy }.toFloatArray()
+        calculateThresholdV1(array, config.energyThreshold)
+      }
+      else -> {
+        config.energyThreshold
+      }
     }
+
+    Log.i("wangzixu", "detectSentences actualThreshold:$actualThreshold")
 
     // 3. 标记语音/静音片段
     val speechMarks = markSpeechRegions(features, actualThreshold, config)
@@ -205,7 +215,7 @@ class VoiceSentenceDetectorV1(
       val paddingSamples = (config.paddingMs * sampleRate / 1000)
       val paddedStart = (start - paddingSamples).coerceAtLeast(0)
       val paddedEnd = (end + paddingSamples).coerceAtMost(pcmData.size - 1)
-      Pair(paddedStart.toFloat()/sampleRate, paddedEnd.toFloat()/sampleRate)
+      Sentence(paddedStart.toFloat()/sampleRate, paddedEnd.toFloat()/sampleRate)
     }
   }
 
@@ -278,21 +288,66 @@ class VoiceSentenceDetectorV1(
   /**
    * 计算自适应阈值
    */
-  private fun calculateAdaptiveThreshold(
-    features: List<AudioFeature>,
+  private fun calculateThresholdV1(
+    energies: FloatArray,
     baseThreshold: Float
   ): Float {
-    if (features.isEmpty()) return baseThreshold
+    if (energies.isEmpty()) return baseThreshold
 
     // 计算能量的统计特性
-    val energies = features.map { it.energy }.sorted()
+    energies.sort()
 
     // 使用中位数和上四分位数来估计阈值
     val median = energies[energies.size / 2]
-    val q75 = energies[(energies.size * 0.75).toInt()]
+    val q75 = energies[(energies.size * 0.75f).toInt()]
 
     // 如果音频很安静，使用基础阈值；否则使用自适应阈值
     val adaptiveThreshold = (median + q75) / 2 * 1.5f
+    Log.i("wangzixu", "calculateAdaptiveThreshold actualThreshold:$adaptiveThreshold")
+    return if (adaptiveThreshold > baseThreshold) {
+      adaptiveThreshold.coerceAtMost(0.1f)  // 不要太高
+    } else {
+      baseThreshold
+    }
+  }
+
+  /**
+   * 计算自适应阈值V2
+   */
+  fun calculateThresholdV2(energies: FloatArray, baseThreshold: Float): Float {
+    val bins = 100
+    val min = energies.minOrNull() ?: 0f
+    val max = energies.maxOrNull() ?: 1f
+    val hist = IntArray(bins)
+    val binWidth = (max - min) / bins
+    for (v in energies) {
+      val idx = ((v - min) / binWidth).toInt().coerceIn(0, bins - 1)
+      hist[idx]++
+    }
+    val total = energies.size
+    val prob = hist.map { it.toDouble() / total }
+
+    var sumAll = 0.0
+    for (i in 0 until bins) sumAll += i * prob[i]
+
+    var wB = 0.0
+    var sumB = 0.0
+    var maxVar = -1.0
+    var thresholdBin = 0
+    for (t in 0 until bins) {
+      wB += prob[t]
+      sumB += t * prob[t]
+      if (wB == 0.0 || wB == 1.0) continue
+      val mB = sumB / wB
+      val mF = (sumAll - sumB) / (1 - wB)
+      val varBetween = wB * (1 - wB) * (mB - mF) * (mB - mF)
+      if (varBetween > maxVar) {
+        maxVar = varBetween
+        thresholdBin = t
+      }
+    }
+    // convert bin back to energy value
+    val adaptiveThreshold = min + (thresholdBin + 0.5f) * binWidth
 
     return if (adaptiveThreshold > baseThreshold) {
       adaptiveThreshold.coerceAtMost(0.1f)  // 不要太高
@@ -312,12 +367,13 @@ class VoiceSentenceDetectorV1(
 
     // 初步标记
     val marked = features.map { feature ->
-      val isSpeech = feature.energy > threshold && feature.zcr < config.zcrThreshold
+      //val isSpeech = feature.energy > threshold && feature.zcr < config.zcrThreshold
+      val isSpeech = thresholdCalc.isActive(feature.energy) && feature.zcr < config.zcrThreshold
       feature.copy(isSpeech = isSpeech)
     }
 
     // 中值滤波平滑（去除孤立的噪点）
-    return medianFilter(marked, windowSize = 5)
+    return medianFilter(marked, windowSize = 6)
   }
 
   /**

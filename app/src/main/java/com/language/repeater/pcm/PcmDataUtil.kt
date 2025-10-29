@@ -1,7 +1,7 @@
 package com.language.repeater.pcm
 
+import android.R.attr.path
 import android.util.Log
-import com.language.repeater.pcm.PcmConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -58,7 +58,7 @@ object PcmDataUtil {
     return result
   }
 
-  fun readAllPcmData(file: File, targetSize: Int): List<WaveformPoint> {
+  fun readAllPcmToWavePoint(file: File, targetSize: Int): List<WaveformPoint> {
     val total = file.length() / PcmConfig.BYTES_PER_SAMPLE
     val step = total / targetSize
 
@@ -82,21 +82,19 @@ object PcmDataUtil {
   }
 
   //从指定pcm文件中读取字节数组, 转成short数组
-  suspend fun readPcmFile(path: String): List<Short> = withContext(Dispatchers.IO) {
-    val file = File(path)
+  suspend fun readPcmFile(file: File): ShortArray = withContext(Dispatchers.IO) {
+    val totalSamples = (file.length() / PcmConfig.BYTES_PER_SAMPLE).toInt()
+    val arr = ShortArray(totalSamples)
+    var index = 0
     FileInputStream(file).buffered().use { input ->
-      val buffer = ByteArray(8192)
-      var bytesRead: Int
-      val samples = mutableListOf<Short>()
-      while (input.read(buffer).also { bytesRead = it } != -1) {
+      val buffer = ByteArray(2)
+      while (input.read(buffer) != -1) {
         // s16le -> 2字节小端
-        val count = bytesRead / 2
-        for (i in 0 until count) {
-          val value = (buffer[i * 2 + 1].toInt() shl 8) or (buffer[i * 2].toInt() and 0xFF)
-          samples.add(value.toShort())
-        }
+        val byteIndex = 0
+        arr[index] = ((buffer[1].toInt() shl 8) or (buffer[0].toInt() and 0xFF)).toShort()
+        index++
       }
-      samples
+      arr
     }
   }
 

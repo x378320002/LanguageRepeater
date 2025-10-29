@@ -12,7 +12,7 @@ import com.language.repeater.utils.ToastUtil
 import com.language.repeater.pcm.PCMSegmentLoader
 import com.language.repeater.pcm.PcmDataUtil
 import com.language.repeater.pcm.Sentence
-import com.language.repeater.pcm.VoiceSentenceDetectorV2
+import com.language.repeater.pcm.VoiceSentenceDetector
 import com.language.repeater.pcm.WaveformPoint
 import com.language.repeater.utils.Md5Util
 import com.language.repeater.utils.ScreenUtil
@@ -88,7 +88,7 @@ class PlayVideoViewModel(application: Application): AndroidViewModel(application
   }
 
   private fun loadAllWaveData(file: File) {
-    val data = PcmDataUtil.readAllPcmData(file, ScreenUtil.getScreenSize().width)
+    val data = PcmDataUtil.readAllPcmToWavePoint(file, ScreenUtil.getScreenSize().width)
     allWaveDataFlow.value = data
   }
 
@@ -98,6 +98,7 @@ class PlayVideoViewModel(application: Application): AndroidViewModel(application
 //    val startSample = 0
 //    val sampleCount = (durationSeconds * sampleRate).toInt()
 //    val pcmData = loadSegmentBySample(startSample, sampleCount)
+
 //    //用于绘制波形的数据
 //    var time = System.currentTimeMillis()
 //    allData = downsampleToWaveform(pcmData,
@@ -121,10 +122,24 @@ class PlayVideoViewModel(application: Application): AndroidViewModel(application
 
     var list = SentenceFileStoreUtil.loadData(application, key)
     if (list.isNullOrEmpty()) {
-      //V2版本
+      //用于绘制波形的数据
       val time = System.currentTimeMillis()
-      val detectorV2 = VoiceSentenceDetectorV2(application)
-      list = detectorV2.detectSentences(file)
+
+      //创建VAD分离器
+      val segmentation = VoiceSentenceDetector()
+      //使用默认配置分离
+      list = segmentation.detectSentences(PcmDataUtil.readPcmFile(file),
+        VoiceSentenceDetector.SegmentationConfig().also {
+          it.zcrThreshold = 0.8f
+          it.useAdaptiveThreshold = 2
+      })
+
+      //V2版本
+//      val detectorV2 = VoiceSentenceDetectorV2(application)
+//      list = detectorV2.detectSentences(file, Config().also {
+//        it.webrtcMode = Mode.LOW_BITRATE
+//      })
+
       SentenceFileStoreUtil.saveData(application, key, list!!)
       Log.i("wangzixu", "V2耗时 ${(System.currentTimeMillis()-time).toFloat()/1000}")
     } else {

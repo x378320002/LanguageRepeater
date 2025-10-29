@@ -49,10 +49,10 @@ class VoiceSentenceDetectorV2(private val context: Context) {
 
     // WebRTC 专用参数
     /** WebRTC模式 */
-    val webrtcMode: Mode = Mode.VERY_AGGRESSIVE,
+    var webrtcMode: Mode = Mode.VERY_AGGRESSIVE,
 
     /** WebRTC帧大小 */
-    val webrtcFrameSize: FrameSize = FrameSize.FRAME_SIZE_480,  // 30ms for 16kHz
+    var webrtcFrameSize: FrameSize = FrameSize.FRAME_SIZE_480,  // 30ms for 16kHz
 
     // Silero 专用参数
     /** Silero模式 */
