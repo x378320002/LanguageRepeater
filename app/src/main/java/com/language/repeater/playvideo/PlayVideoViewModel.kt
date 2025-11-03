@@ -7,6 +7,7 @@ import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.application
 import androidx.lifecycle.viewModelScope
+import com.google.common.collect.Multimaps.index
 import com.language.repeater.utils.FFmpegUtil
 import com.language.repeater.utils.ToastUtil
 import com.language.repeater.pcm.PCMSegmentLoader
@@ -20,6 +21,7 @@ import com.language.repeater.utils.SentenceFileStoreUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 
 /**
@@ -43,6 +45,7 @@ class PlayVideoViewModel(application: Application): AndroidViewModel(application
   var sentencesFlow = MutableStateFlow<List<Sentence>>(listOf())
 
   var uniqueKey: String = ""
+  var curFile: File? = null
 
   fun parseUriToPcm(uri: Uri) {
     Log.i(TAG, "parseUriToPcm begin: $uri")
@@ -53,6 +56,7 @@ class PlayVideoViewModel(application: Application): AndroidViewModel(application
         //通过ffmpeg把视频文件解析成原始音频文件
         val path = FFmpegUtil.extractPcmFileByFFmpeg(application, uri, uniqueKey)
         val file = File(path)
+        curFile = file
         val pcmLoader = PCMSegmentLoader(file)
 
         launch(Dispatchers.IO) {
@@ -126,9 +130,7 @@ class PlayVideoViewModel(application: Application): AndroidViewModel(application
       val time = System.currentTimeMillis()
 
       //创建VAD分离器
-      val segmentation = VoiceSentenceDetector()
-      //使用默认配置分离
-      list = segmentation.detectSentences(PcmDataUtil.readPcmFile(file),
+      list = VoiceSentenceDetector().detectSentences(PcmDataUtil.readPcmFile(file),
         VoiceSentenceDetector.SegmentationConfig().also {
           it.zcrThreshold = 0.8f
           it.useAdaptiveThreshold = 2
@@ -140,7 +142,7 @@ class PlayVideoViewModel(application: Application): AndroidViewModel(application
 //        it.webrtcMode = Mode.LOW_BITRATE
 //      })
 
-      SentenceFileStoreUtil.saveData(application, key, list!!)
+      SentenceFileStoreUtil.saveData(application, key, list)
       Log.i("wangzixu", "V2耗时 ${(System.currentTimeMillis()-time).toFloat()/1000}")
     } else {
       Log.i("wangzixu", "key: $key 已经存在")
@@ -154,12 +156,43 @@ class PlayVideoViewModel(application: Application): AndroidViewModel(application
     }
   }
 
-  fun changeSentenceData(list : List<Sentence>) {
-    if (uniqueKey.isEmpty()) {
-      viewModelScope.launch {
-        SentenceFileStoreUtil.saveData(application, uniqueKey, list)
+  suspend fun reloadSentencesAuto() = withContext(Dispatchers.IO) {
+    val file = curFile ?: return@withContext
+    val key = uniqueKey ?: return@withContext
+    val list = VoiceSentenceDetector().detectSentences(PcmDataUtil.readPcmFile(file),
+      VoiceSentenceDetector.SegmentationConfig().also {
+        it.zcrThreshold = 0.8f
+        it.useAdaptiveThreshold = 2
+      })
+    SentenceFileStoreUtil.saveData(application, key, list)
+    sentencesFlow.value = list
+  }
+
+  suspend fun saveSentenceDataToFile(list : List<Sentence>) = withContext(Dispatchers.IO) {
+    if (uniqueKey.isEmpty() || list.isEmpty()) {
+      return@withContext
+    }
+    // 按 start 升序排列
+    val sorted = list.sortedBy { it.start }
+    val merged = mutableListOf<Sentence>()
+    var current = sorted.first()
+    // 依次检查是否重叠
+    for (i in 1 until sorted.size) {
+      val next = sorted[i]
+      if (next.start <= current.end) {
+        // 有重叠：取较大的 end 值进行合并
+        Log.i("wangzixu", "saveSentenceDataToFile 重叠了, 第 ${i-1}和$i 句")
+        current.end = maxOf(current.end, next.end)
+      } else {
+        // 无重叠：保存当前区间，移动到下一个
+        merged.add(current)
+        current = next
       }
     }
+    // 最后一个也别忘了加进去
+    merged.add(current)
+    SentenceFileStoreUtil.saveData(application, uniqueKey, merged)
+    Log.i("wangzixu", "saveSentenceDataToFile success")
   }
 
   /**

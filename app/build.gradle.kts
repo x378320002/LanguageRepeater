@@ -58,4 +58,5 @@ dependencies {
   implementation(libs.vad.silero)
 
   implementation(libs.kotlinx.serialization.json)
+  implementation(libs.lottie)
 }

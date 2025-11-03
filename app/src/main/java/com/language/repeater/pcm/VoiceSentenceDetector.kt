@@ -367,8 +367,8 @@ class VoiceSentenceDetector(
 
     // 初步标记
     val marked = features.map { feature ->
-      //val isSpeech = feature.energy > threshold && feature.zcr < config.zcrThreshold
-      val isSpeech = thresholdCalc.isActive(feature.energy) && feature.zcr < config.zcrThreshold
+      val isSpeech = feature.energy > threshold && feature.zcr < config.zcrThreshold
+//      val isSpeech = thresholdCalc.isActive(feature.energy) && feature.zcr < config.zcrThreshold
       feature.copy(isSpeech = isSpeech)
     }
 

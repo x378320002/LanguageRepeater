@@ -2,10 +2,7 @@ package com.language.repeater.utils
 
 import android.content.Context
 import android.net.Uri
-import android.provider.DocumentsContract
-import android.provider.MediaStore
 import android.provider.OpenableColumns
-import androidx.documentfile.provider.DocumentFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.security.MessageDigest

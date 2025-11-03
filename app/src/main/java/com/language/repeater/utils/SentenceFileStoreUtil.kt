@@ -54,27 +54,26 @@ object SentenceFileStoreUtil {
    * @return 找到的数据, 或 null
    */
   suspend fun loadData(context: Context, md5: String) = withContext<List<Sentence>?>(Dispatchers.IO) {
-      return@withContext null
-//    try {
-//      val file = getFile(context, md5)
-//
-//      if (!file.exists()) {
-//        null
-//      }
-//
-//      // 1. 读取文件内容
-//      val jsonString = file.readText()
-//
-//      if (jsonString.isEmpty()) {
-//        null
-//      }
-//
-//      // 2. 使用 kotlinx.serialization 将 JSON 字符串反序列化回 List<SentenceSegment>
-//      json.decodeFromString<List<Sentence>>(jsonString)
-//    } catch (e: Exception) {
-//      // 文件读取、JSON解析或反序列化错误
-//      e.printStackTrace()
-//      null
-//    }
+    try {
+      val file = getFile(context, md5)
+
+      if (!file.exists()) {
+        null
+      }
+
+      // 1. 读取文件内容
+      val jsonString = file.readText()
+
+      if (jsonString.isEmpty()) {
+        null
+      }
+
+      // 2. 使用 kotlinx.serialization 将 JSON 字符串反序列化回 List<SentenceSegment>
+      json.decodeFromString<List<Sentence>>(jsonString)
+    } catch (e: Exception) {
+      // 文件读取、JSON解析或反序列化错误
+      e.printStackTrace()
+      null
+    }
   }
 }

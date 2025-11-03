@@ -1,9 +1,11 @@
 package com.language.repeater.widgets
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Path
+import android.graphics.Typeface
 import android.util.AttributeSet
 import android.view.GestureDetector
 import android.view.MotionEvent
@@ -74,6 +76,18 @@ class ScrollingWaveformView @JvmOverloads constructor(
   /** 拖动监听器 */
   private var onSeekListener: OnSeekListener? = null
 
+  /** AB边界变化监听器 */
+  interface OnABChangeListener {
+    fun onABDragStart(dragAbResult: ABHitResult?)
+
+    fun onABDragging(dragAbResult: ABHitResult?)
+
+    fun onABDragEnd(dragAbResult: ABHitResult?)
+  }
+  
+  /** AB边界变化监听器 */
+  private var onABChangeListener: OnABChangeListener? = null
+
   // ========== 画笔 ==========
   //未播放画笔
   private val waveformPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -120,7 +134,7 @@ class ScrollingWaveformView @JvmOverloads constructor(
 
   //voice结束指示器
   private val voiceEndPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-    color = 0xFF00FF00.toInt()
+    color = 0xFF0000FF.toInt()
     strokeWidth = 1f.toDp()
   }
 
@@ -131,7 +145,7 @@ class ScrollingWaveformView @JvmOverloads constructor(
   }
 
   //draw时间的画笔
-  val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+  val timeTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
     color = 0xFF666666.toInt()
     textSize = 30f
     textAlign = Paint.Align.CENTER
@@ -176,48 +190,14 @@ class ScrollingWaveformView @JvmOverloads constructor(
   
   /** 拖动开始时的播放位置 */
   private var dragStartTime = 0f
-  
-  /** 手势检测器 */
-  private val gestureDetector = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
-    
-    override fun onDown(e: MotionEvent): Boolean {
-      // 记录拖动开始时的播放位置
-      dragStartTime = currentTime
-      return true
-    }
-    
-    override fun onScroll(
-      e1: MotionEvent?,
-      e2: MotionEvent,
-      distanceX: Float,
-      distanceY: Float
-    ): Boolean {
-      if (pcmLoader == null) {
-        return false
-      }
 
-      if (!isDragging) {
-        // 开始拖动
-        isDragging = true
-        onSeekListener?.onSeekStart()
-      }
-      
-      // 计算拖动对应的时间偏移
-      // distanceX > 0 表示向左滑动（时间增加）
-      // distanceX < 0 表示向右滑动（时间减少）
-      val deltaTime = distanceX / pixelsPerSecond
-      val newTime = (currentTime + deltaTime).coerceIn(0f, totalDuration)
-      
-      // 更新当前时间并刷新显示
-      currentTime = newTime
-      refreshWave()
-      
-      // 通知监听器
-      onSeekListener?.onSeeking(currentTime)
-      
-      return true
-    }
-  })
+  private var dragABResult: ABHitResult? = null
+
+  /** 当前拖动的AB边界类型 ("A" 或 "B") */
+  private var draggingABType: String? = null
+
+  /** 拖动开始时的AB边界时间 */
+  private var dragABStartTime = 0f
 
   // ========== 公共方法 ==========
 
@@ -226,6 +206,13 @@ class ScrollingWaveformView @JvmOverloads constructor(
    */
   fun setOnSeekListener(listener: OnSeekListener?) {
     onSeekListener = listener
+  }
+
+  /**
+   * 设置AB边界变化监听器
+   */
+  fun setOnABChangeListener(listener: OnABChangeListener?) {
+    onABChangeListener = listener
   }
 
   /**
@@ -358,7 +345,56 @@ class ScrollingWaveformView @JvmOverloads constructor(
   }
 
   // ========== 触摸事件处理 ==========
-  
+  /** 手势检测器 */
+  private val gestureDetector = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
+
+    override fun onDown(e: MotionEvent): Boolean {
+      // 记录拖动开始时的播放位置
+      dragStartTime = currentTime
+      dragABResult = checkABHitTest(e.x, e.y)?.apply {
+        onABChangeListener?.onABDragStart(this)
+      }
+      return true
+    }
+
+    override fun onScroll(
+      e1: MotionEvent?,
+      e2: MotionEvent,
+      distanceX: Float,
+      distanceY: Float
+    ): Boolean {
+      if (pcmLoader == null) {
+        return false
+      }
+      val dragResult = dragABResult
+      if (dragResult != null) {
+        //拖动AB的逻辑
+        handleABDrag(distanceX)
+      } else {
+        if (!isDragging) {
+          // 开始拖动
+          isDragging = true
+          onSeekListener?.onSeekStart()
+        }
+
+        // 计算拖动对应的时间偏移
+        // distanceX > 0 表示向左滑动（时间增加）
+        // distanceX < 0 表示向右滑动（时间减少）
+        val deltaTime = distanceX / pixelsPerSecond
+        val newTime = (currentTime + deltaTime).coerceIn(0f, totalDuration)
+
+        // 更新当前时间并刷新显示
+        currentTime = newTime
+        refreshWave()
+
+        // 通知监听器
+        onSeekListener?.onSeeking(currentTime)
+      }
+      return true
+    }
+  })
+
+  @SuppressLint("ClickableViewAccessibility")
   override fun onTouchEvent(event: MotionEvent): Boolean {
     // 先让手势检测器处理
     val gestureHandled = gestureDetector.onTouchEvent(event)
@@ -370,6 +406,13 @@ class ScrollingWaveformView @JvmOverloads constructor(
           // 拖动结束，通知监听器最终位置
           onSeekListener?.onSeekEnd(currentTime)
           isDragging = false
+        }
+
+        val dragResult = dragABResult
+        if (dragResult != null) {
+          // AB边界拖动结束
+          onABChangeListener?.onABDragEnd(dragResult)
+          dragABResult = null
         }
       }
     }
@@ -422,13 +465,53 @@ class ScrollingWaveformView @JvmOverloads constructor(
     if (leftData.isEmpty() || rightData.isEmpty()) {
       return
     }
-    sentences?.forEach {seg->
-      drawPoint(canvas, seg.start, voiceStartPaint)
-      drawPoint(canvas, seg.end, voiceEndPaint)
+    sentences?.forEach { seg->
+      if (curABSeg == seg) {
+        drawAB(canvas, seg.start, "A")
+        drawAB(canvas, seg.end, "B")
+      } else {
+        drawSignPoint(canvas, seg.start, voiceStartPaint)
+        drawSignPoint(canvas, seg.end, voiceEndPaint)
+      }
     }
   }
 
-  fun drawPoint(canvas: Canvas, time: Float, paint: Paint) {
+  val abBgRadius = 6f.toDp()
+  val abBgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    style = Paint.Style.FILL
+    color = 0xFF00FFFF.toInt()
+  }
+  val abTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    color = 0xFFFF0000.toInt()
+    textSize = 10f.toDp()
+    textAlign = Paint.Align.CENTER
+    typeface = Typeface.DEFAULT_BOLD
+  }
+  var abTextOffsetY = 0f
+
+  private fun drawAB(canvas: Canvas, time: Float, text: String) {
+    if (time < visibleStartTime || time > visibleEndTime) {
+      return
+    }
+
+    val x = timeToX(time)
+    val y = height / 2f
+    
+    // 绘制白色实心圆背景
+    canvas.drawCircle(x, y, abBgRadius, abBgPaint)
+    
+    // 绘制红色字体 "A"
+    // 计算文字的垂直居中位置
+    if (abTextOffsetY == 0f) {
+      val fontMetrics = abTextPaint.fontMetrics
+      abTextOffsetY = (fontMetrics.ascent + fontMetrics.descent) / 2
+    }
+
+    val textY = y - abTextOffsetY
+    canvas.drawText(text, x, textY, abTextPaint)
+  }
+
+  private fun drawSignPoint(canvas: Canvas, time: Float, paint: Paint) {
     if (time < visibleStartTime || time > visibleEndTime) {
       return
     }
@@ -497,51 +580,33 @@ class ScrollingWaveformView @JvmOverloads constructor(
    * 绘制进度指示器
    */
   private fun drawProgressIndicator(canvas: Canvas, centerX: Float) {
-    val textSize = textPaint.textSize
-    textPaint.textAlign = Paint.Align.CENTER
+    val textSize = timeTextPaint.textSize
+    timeTextPaint.textAlign = Paint.Align.CENTER
     canvas.drawText(
       CommonUtil.formatTimeFloat(currentTime),
       width / 2f,
       textSize,
-      textPaint
+      timeTextPaint
     )
 
-    textPaint.textAlign = Paint.Align.LEFT
+    timeTextPaint.textAlign = Paint.Align.LEFT
     canvas.drawText(
       CommonUtil.formatTime(0f),
       0f,
       textSize,
-      textPaint
+      timeTextPaint
     )
 
-    textPaint.textAlign = Paint.Align.RIGHT
+    timeTextPaint.textAlign = Paint.Align.RIGHT
     canvas.drawText(
       CommonUtil.formatTime(totalDuration),
       width.toFloat(),
       textSize,
-      textPaint
+      timeTextPaint
     )
 
     // 绘制进度线
     canvas.drawLine(centerX, textSize + 10, centerX, height.toFloat(), progressLinePaint)
-  }
-
-  /**
-   * 绘制加载指示器
-   */
-  private fun drawLoadingIndicator(canvas: Canvas) {
-    val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-      color = 0xFF666666.toInt()
-      textSize = 40f
-      textAlign = Paint.Align.CENTER
-    }
-
-    canvas.drawText(
-      "加载中...",
-      width / 2f,
-      height / 2f,
-      textPaint
-    )
   }
 
   /**
@@ -570,6 +635,81 @@ class ScrollingWaveformView @JvmOverloads constructor(
   fun cleanup() {
     scope.cancel()
     waveformCache.clear()
+  }
+
+  /**
+   * AB边界点击检测结果
+   */
+  data class ABHitResult(
+    val sentence: Sentence,
+    val abType: String // "A" 或 "B"
+  )
+
+  var curABSeg: Sentence? = null
+
+  /**
+   * 检查点击是否在AB边界上
+   * @param x 点击的X坐标
+   * @param y 点击的Y坐标
+   * @return 如果点击在AB边界上，返回ABHitResult，否则返回null
+   */
+  private fun checkABHitTest(x: Float, y: Float): ABHitResult? {
+    val sentence = curABSeg ?: return null
+    if (sentences == null) return null
+
+    val hitRadius = abBgRadius * 2 // 扩大点击检测范围
+
+    // 检查是否点击在A边界上
+    val curABA = timeToX(sentence.start)
+    if (curABA >= 0f && curABA <= width && x in (curABA - hitRadius)..(curABA + hitRadius)) {
+      return ABHitResult(sentence, "A")
+    }
+
+    // 检查是否点击在B边界上
+    val curABB = timeToX(sentence.end)
+    if (curABB >= 0f && curABB <= width && x in (curABB - hitRadius)..(curABB + hitRadius)) {
+      return ABHitResult(sentence, "B")
+    }
+    return null
+  }
+
+  /**
+   * 处理AB边界拖动
+   * @param distanceX 拖动的距离（像素）
+   */
+  private fun handleABDrag(distanceX: Float) {
+    val result = dragABResult ?: return
+    val sentence = result.sentence
+    val deltaTime = distanceX / pixelsPerSecond
+    
+    // 根据拖动的AB类型更新时间
+    var hasChanged = false
+    when (result.abType) {
+      "A" -> {
+        val newStartTime = sentence.start - deltaTime
+        // 确保A不能超过B
+        if (newStartTime >= 0 && newStartTime < sentence.end) {
+          sentence.start = newStartTime
+          hasChanged = true
+
+        }
+      }
+      "B" -> {
+        val newEndTime = sentence.end - deltaTime
+        // 确保B不能小于A
+        if (newEndTime > sentence.start && newEndTime <= totalDuration) {
+          sentence.end = newEndTime
+          hasChanged = true
+        }
+      }
+    }
+
+    if (hasChanged) {
+      // 刷新显示
+      invalidate()
+      // 通知监听器
+      onABChangeListener?.onABDragging(result)
+    }
   }
 
   override fun onDetachedFromWindow() {
