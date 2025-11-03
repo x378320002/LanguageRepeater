@@ -22,12 +22,16 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
+import com.dotlottie.dlplayer.Fit
 import com.language.repeater.databinding.VideoPlayFragmentBinding
 import com.language.repeater.loading.LoadingDialogFragment
 import com.language.repeater.pcm.Sentence
 import com.language.repeater.widgets.ScrollingWaveformView
 import com.language.repeater.widgets.ScrollingWaveformView.ABHitResult
 import com.language.repeater.widgets.ScrollingWaveformView.OnSeekListener
+import com.lottiefiles.dotlottie.core.model.Config
+import com.lottiefiles.dotlottie.core.util.DotLottieSource
+import com.lottiefiles.dotlottie.core.util.LayoutUtil
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -153,9 +157,10 @@ class PlayVideoFragment: Fragment() {
 
     binding.saveSentence.setOnClickListener {
       lifecycleScope.launch {
-        //showLoading()
+        showLoading()
         viewModel.saveSentenceDataToFile(voiceSegments)
-        //hideLoading()
+        delay(3000)
+        hideLoading()
       }
     }
 

@@ -132,4 +132,16 @@
       android:layout_width="wrap_content"
       android:layout_height="wrap_content"/>
   </LinearLayout>
+
+<!--  <com.lottiefiles.dotlottie.core.widget.DotLottieAnimation-->
+<!--    android:id="@+id/lottie"-->
+<!--    app:layout_constraintStart_toStartOf="parent"-->
+<!--    app:layout_constraintEnd_toEndOf="parent"-->
+<!--    app:layout_constraintBottom_toBottomOf="parent"-->
+<!--    app:dotLottie_autoplay="true"-->
+<!--    app:dotLottie_loop="true"-->
+<!--    app:dotLottie_src="material_wave_loading.lottie"-->
+<!--    app:dotLottie_speed="1"-->
+<!--    android:layout_width="150dp"-->
+<!--    android:layout_height="150dp"/>-->
 </androidx.constraintlayout.widget.ConstraintLayout>

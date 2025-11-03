@@ -3,12 +3,19 @@ package com.language.repeater.loading
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
+import android.util.Log.v
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
 import androidx.fragment.app.DialogFragment
+import com.dotlottie.dlplayer.Fit
 import com.language.repeater.R
+import com.language.repeater.databinding.DialogLoadingLayoutBinding
+import com.language.repeater.databinding.VideoPlayFragmentBinding
+import com.lottiefiles.dotlottie.core.model.Config
+import com.lottiefiles.dotlottie.core.util.DotLottieSource
+import com.lottiefiles.dotlottie.core.util.LayoutUtil
 
 class LoadingDialogFragment : DialogFragment() {
 
@@ -19,6 +26,9 @@ class LoadingDialogFragment : DialogFragment() {
       return LoadingDialogFragment()
     }
   }
+
+  private var _binding: DialogLoadingLayoutBinding? = null
+  private val binding get() = _binding!!
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
@@ -32,6 +42,18 @@ class LoadingDialogFragment : DialogFragment() {
     container: ViewGroup?,
     savedInstanceState: Bundle?
   ): View? {
-    return inflater.inflate(R.layout.dialog_loading_layout, container, false)
+    _binding = DialogLoadingLayoutBinding.inflate(inflater, container, false)
+    val config = Config.Builder()
+      .useFrameInterpolation(true)
+      .autoplay(true)
+      .speed(1f)
+      .loop(true)
+      .layout(fit = Fit.FIT_WIDTH, LayoutUtil.Alignment.Center)
+      .source(DotLottieSource.Asset("material_wave_loading.lottie")) // asset from the asset folder .json or .lottie
+      .build()
+    binding.lottieAnimation.load(config)
+    binding.lottieAnimation.play()
+
+    return binding.root
   }
 }
