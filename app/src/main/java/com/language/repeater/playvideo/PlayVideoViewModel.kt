@@ -52,9 +52,11 @@ class PlayVideoViewModel(application: Application): AndroidViewModel(application
     viewModelScope.launch(Dispatchers.IO) {
       try {
         uniqueKey = Md5Util.generateFastUniqueKey(application, uri) ?: System.currentTimeMillis().toString()
+        val time = System.currentTimeMillis()
         Log.i(TAG, "parseUriToPcm uniqueKey: $uniqueKey")
         //通过ffmpeg把视频文件解析成原始音频文件
         val path = FFmpegUtil.extractPcmFileByFFmpeg(application, uri, uniqueKey)
+        Log.i("wangzixu", "FFmpegUtil解码耗时 ${(System.currentTimeMillis()-time).toFloat()/1000}")
         val file = File(path)
         curFile = file
         val pcmLoader = PCMSegmentLoader(file)
@@ -143,7 +145,7 @@ class PlayVideoViewModel(application: Application): AndroidViewModel(application
 //      })
 
       SentenceFileStoreUtil.saveData(application, key, list)
-      Log.i("wangzixu", "V2耗时 ${(System.currentTimeMillis()-time).toFloat()/1000}")
+      Log.i("wangzixu", "检测句子耗时 ${(System.currentTimeMillis()-time).toFloat()/1000}")
     } else {
       Log.i("wangzixu", "key: $key 已经存在")
     }

@@ -2,6 +2,7 @@ package com.language.repeater.playvideo
 
 import android.app.Activity
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -60,6 +61,15 @@ class PlayVideoFragment: Fragment() {
 
   private var repeatable = false
   private var playWhenResume = true
+
+  val openFileLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+    uri?.let { videoUri->
+      //这里你可以用 videoUri 播放视频或读取内容
+      Log.d("VideoSelect", "Selected video uri: $videoUri")
+      binding.filePathTv.text = videoUri.toString()
+      viewModel.parseUriToPcm(videoUri)
+    }
+  }
 
   val launcher = registerForActivityResult(ActivityResultContracts.StartActivityForResult(),
     object: ActivityResultCallback<ActivityResult> {
@@ -121,10 +131,15 @@ class PlayVideoFragment: Fragment() {
     }
 
     binding.selectFileBtn.setOnClickListener {
-      val intent = Intent(Intent.ACTION_PICK).apply {
-        type = "video/*" // 只选择视频
-      }
-      launcher.launch(intent)
+//      val intent = Intent(Intent.ACTION_PICK).apply {
+//        type = "audio/*" // 只选择音频文件
+//      }
+//      val intent = Intent(Intent.ACTION_GET_CONTENT)
+//      intent.type = "audio/*" // 只选择音频文件
+//      intent.putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("audio/aac", "audio/mpeg", "audio/wav", "audio/mp3"))
+//      intent.addCategory(Intent.CATEGORY_OPENABLE)
+//      launcher.launch(intent)
+      openFileLauncher.launch(arrayOf("audio/*", "video/*"))
     }
 
     binding.exoVideoView.player = exoPlayer

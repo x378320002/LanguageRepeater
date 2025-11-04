@@ -59,4 +59,5 @@ dependencies {
 
   implementation(libs.kotlinx.serialization.json)
   implementation(libs.lottie)
+  implementation(libs.google.flexbox)
 }

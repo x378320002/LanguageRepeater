@@ -2,37 +2,16 @@ package com.language.repeater
 
 import android.graphics.Color
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
-import androidx.fragment.app.FragmentActivity
 import androidx.navigation.NavOptions
 import androidx.navigation.createGraph
-import androidx.navigation.findNavController
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.fragment.fragment
-import com.language.repeater.databinding.ActivityMainBinding
 import com.language.repeater.playvideo.PlayVideoFragment
-import kotlinx.coroutines.CoroutineExceptionHandler
-import kotlinx.coroutines.CoroutineName
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import com.language.repeater.test.TestFragment
 import kotlinx.serialization.Serializable
-import kotlin.coroutines.ContinuationInterceptor
-import kotlin.coroutines.coroutineContext
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
-import kotlin.coroutines.suspendCoroutine
 
 @Serializable
 object PlayVideoPageKey
