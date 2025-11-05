@@ -164,8 +164,8 @@ class ScrollingWaveformView @JvmOverloads constructor(
   /** 音频总时长（秒） */
   private var totalDuration: Float = 0f
 
-  /** 波形数据缓存：时间窗口 -> 波形数据 */
-  private val waveformCache = mutableMapOf<Int, List<WaveformPoint>>()
+//  /** 波形数据缓存：时间窗口 -> 波形数据 */
+//  private val waveformCache = mutableMapOf<Int, List<WaveformPoint>>()
 
   /** 缓存窗口大小（秒） */
   private val cacheWindowSize = 5f
@@ -218,16 +218,16 @@ class ScrollingWaveformView @JvmOverloads constructor(
   /**
    * 设置PCM文件
    */
-  fun setPCMLoader(loader: PCMSegmentLoader, loadWindowComplete: ((Int)->Unit)? = null) {
+  fun setPCMLoader(loader: PCMSegmentLoader, pos: Long, loadWindowComplete: ((Int)->Unit)? = null) {
     if (pcmLoader == loader) {
       return
     }
 
     pcmLoader = loader
     totalDuration = pcmLoader?.totalDuration ?: 0f
-    currentTime = 0f
+    currentTime = pos / 1000f
 
-    waveformCache.clear()
+    //waveformCache.clear()
     //提前绘制一遍, 清空上一个视频的内容
     invalidate()
     refreshWave(loadWindowComplete)
@@ -273,7 +273,7 @@ class ScrollingWaveformView @JvmOverloads constructor(
 
     // 加载缺失的窗口
     for (windowIndex in startWindow..preloadEnd) {
-      if (!waveformCache.containsKey(windowIndex)) {
+      if (!loader.waveformCache.containsKey(windowIndex)) {
         val windowStartTime = windowIndex * cacheWindowSize
 
         // 超出音频范围则跳过
@@ -298,7 +298,7 @@ class ScrollingWaveformView @JvmOverloads constructor(
             )
 
             withContext(Dispatchers.Main) {
-              waveformCache[windowIndex] = waveformData
+              loader.waveformCache[windowIndex] = waveformData
               invalidate()
               loadWindowComplete?.invoke(windowIndex)
             }
@@ -317,6 +317,7 @@ class ScrollingWaveformView @JvmOverloads constructor(
   private val leftData = mutableListOf<WaveformPoint>()
   private val rightData = mutableListOf<WaveformPoint>()
   private fun prepareWaveData() {
+    val loader = pcmLoader ?: return
     val startTime = visibleStartTime
     val endTime = visibleEndTime
     val curTime = currentTime
@@ -325,7 +326,7 @@ class ScrollingWaveformView @JvmOverloads constructor(
     leftData.clear()
     rightData.clear()
     for (windowIndex in startWindow..endWindow) {
-      val windowData = waveformCache[windowIndex] ?: continue
+      val windowData = loader.waveformCache[windowIndex] ?: continue
       windowData.forEachIndexed { index, point ->
         if (point.time in startTime..curTime) {
           leftData.add(point)
@@ -340,8 +341,8 @@ class ScrollingWaveformView @JvmOverloads constructor(
    * 清理旧缓存
    */
   private fun cleanupOldCache(beforeWindow: Int) {
-    val toRemove = waveformCache.keys.filter { it < beforeWindow }
-    toRemove.forEach { waveformCache.remove(it) }
+    val toRemove = pcmLoader!!.waveformCache.keys.filter { it < beforeWindow }
+    toRemove.forEach { pcmLoader!!.waveformCache.remove(it) }
   }
 
   // ========== 触摸事件处理 ==========
@@ -634,7 +635,7 @@ class ScrollingWaveformView @JvmOverloads constructor(
    */
   fun cleanup() {
     scope.cancel()
-    waveformCache.clear()
+    //waveformCache.clear()
   }
 
   /**

@@ -11,6 +11,9 @@ class PCMSegmentLoader(
   val totalSamples = (pcmFile.length() / PcmConfig.BYTES_PER_SAMPLE).toInt()
   val totalDuration = totalSamples.toFloat() / sampleRate
 
+  /** 波形数据缓存：时间窗口 -> 波形数据 */
+  val waveformCache = mutableMapOf<Int, List<WaveformPoint>>()
+
   fun loadWaveformData(
     startTimeSeconds: Float,
     durationSeconds: Float,

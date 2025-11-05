@@ -23,7 +23,9 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.navigation.findNavController
 import com.dotlottie.dlplayer.Fit
+import com.language.repeater.TestPageKey
 import com.language.repeater.databinding.VideoPlayFragmentBinding
 import com.language.repeater.loading.LoadingDialogFragment
 import com.language.repeater.pcm.Sentence
@@ -45,6 +47,7 @@ class PlayVideoFragment: Fragment() {
   private var _binding: VideoPlayFragmentBinding? = null
   private val binding get() = _binding!!
 
+  private var curPosition = 0L
   private var loadingDialog: LoadingDialogFragment? = null
 
   private var exoPlayer: ExoPlayer? = null
@@ -55,7 +58,12 @@ class PlayVideoFragment: Fragment() {
   //当前正在读的语音片段
   private var curSegment: Sentence? = null
     set(value) {
-      binding.audioProgressWaveView.curABSeg = value
+      if (repeatable) {
+        binding.audioProgressWaveView.curABSeg = value
+      } else {
+        binding.audioProgressWaveView.curABSeg = null
+      }
+      binding.audioProgressWaveView.invalidate()
       field = value
     }
 
@@ -66,7 +74,7 @@ class PlayVideoFragment: Fragment() {
     uri?.let { videoUri->
       //这里你可以用 videoUri 播放视频或读取内容
       Log.d("VideoSelect", "Selected video uri: $videoUri")
-      binding.filePathTv.text = videoUri.toString()
+      curPosition = 0L
       viewModel.parseUriToPcm(videoUri)
     }
   }
@@ -79,7 +87,7 @@ class PlayVideoFragment: Fragment() {
           if (videoUri != null) {
             //这里你可以用 videoUri 播放视频或读取内容
             Log.d("VideoSelect", "Selected video uri: $videoUri")
-            binding.filePathTv.text = videoUri.toString()
+            curPosition = 0L
             viewModel.parseUriToPcm(videoUri)
           }
         }
@@ -88,20 +96,9 @@ class PlayVideoFragment: Fragment() {
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
+    Log.i("wangzixu", "$TAG onCreate")
     exoPlayer = ExoPlayer.Builder(requireContext()).build().apply {
       repeatMode = Player.REPEAT_MODE_ALL
-    }
-    lifecycleScope.launch {
-      viewModel.playUriStateFlow.collect {
-        if (it != null) {
-          val mediaItem = MediaItem.fromUri(it)
-          exoPlayer?.setMediaItem(mediaItem)
-          exoPlayer?.prepare()
-          if (isResumed) {
-            exoPlayer?.play()
-          }
-        }
-      }
     }
   }
 
@@ -110,6 +107,7 @@ class PlayVideoFragment: Fragment() {
     container: ViewGroup?,
     savedInstanceState: Bundle?,
   ): View {
+    Log.i("wangzixu", "$TAG onCreateView")
     _binding = VideoPlayFragmentBinding.inflate(inflater, container, false)
     val view = binding.root
     return view
@@ -165,8 +163,9 @@ class PlayVideoFragment: Fragment() {
     binding.reloadSentence.setOnClickListener {
       lifecycleScope.launch {
         //showLoading()
-        viewModel.reloadSentencesAuto()
+        //viewModel.reloadSentencesAuto()
         //hideLoading()
+        binding.root.findNavController().navigate(TestPageKey)
       }
     }
 
@@ -224,10 +223,25 @@ class PlayVideoFragment: Fragment() {
     viewLifecycleOwner.lifecycleScope.launch {
       viewLifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
         launch {
+          viewModel.playUriStateFlow.collect {
+            if (it != null) {
+              binding.filePathTv.text = it.toString()
+              val mediaItem = MediaItem.fromUri(it)
+              exoPlayer?.setMediaItem(mediaItem)
+              exoPlayer?.seekTo(curPosition)
+              exoPlayer?.prepare()
+              if (isResumed) {
+                exoPlayer?.play()
+              }
+            }
+          }
+        }
+
+        launch {
           viewModel.pcmLoaderStateFlow.collect { loader ->
             if (loader != null) {
               // 加载PCM文件
-              binding.audioProgressWaveView.setPCMLoader(loader) {
+              binding.audioProgressWaveView.setPCMLoader(loader, curPosition) {
                 Log.i("wangzixu", "audioProgressWaveView loadWindow $it")
               }
             }
@@ -260,7 +274,8 @@ class PlayVideoFragment: Fragment() {
         launch {
           while (true) {
             if (exoPlayer?.isPlaying == true) {
-              var cur = exoPlayer?.currentPosition?.toFloat() ?: -1f
+              curPosition = exoPlayer?.currentPosition ?: 0L
+              var cur = curPosition.toFloat() ?: -1f
               if (cur != -1f) {
                 var curSec = cur / 1000
 
@@ -335,13 +350,25 @@ class PlayVideoFragment: Fragment() {
     }
   }
 
+  override fun onStart() {
+    super.onStart()
+    Log.i("wangzixu", "$TAG onStart")
+  }
+
+  override fun onStop() {
+    super.onStop()
+    Log.i("wangzixu", "$TAG onStop")
+  }
+
   override fun onDestroyView() {
     super.onDestroyView()
+    Log.i("wangzixu", "$TAG onDestroyView")
     exoPlayer?.stop()
   }
 
   override fun onDestroy() {
     super.onDestroy()
+    Log.i("wangzixu", "$TAG onDestroy")
     exoPlayer?.release()
     exoPlayer = null
   }
