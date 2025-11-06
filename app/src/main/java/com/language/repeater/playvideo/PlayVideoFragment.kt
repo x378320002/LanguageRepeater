@@ -27,8 +27,10 @@ import androidx.navigation.findNavController
 import com.dotlottie.dlplayer.Fit
 import com.language.repeater.TestPageKey
 import com.language.repeater.databinding.VideoPlayFragmentBinding
+import com.language.repeater.defaultNavOptions
 import com.language.repeater.loading.LoadingDialogFragment
 import com.language.repeater.pcm.Sentence
+import com.language.repeater.test.TestActivity
 import com.language.repeater.widgets.ScrollingWaveformView
 import com.language.repeater.widgets.ScrollingWaveformView.ABHitResult
 import com.language.repeater.widgets.ScrollingWaveformView.OnSeekListener
@@ -165,7 +167,10 @@ class PlayVideoFragment: Fragment() {
         //showLoading()
         //viewModel.reloadSentencesAuto()
         //hideLoading()
-        binding.root.findNavController().navigate(TestPageKey)
+        //binding.root.findNavController().navigate(TestPageKey, defaultNavOptions)
+        startActivity(Intent().apply {
+          setClass(requireContext(), TestActivity::class.java)
+        })
       }
     }
 
@@ -192,7 +197,8 @@ class PlayVideoFragment: Fragment() {
       }
 
       override fun onSeekEnd(position: Float) {
-        exoPlayer?.seekTo((position * 1000).toLong())
+        curPosition = (position * 1000).toLong()
+        exoPlayer?.seekTo(curPosition)
         curSegment = findCurrentSegment()
         if (isPlayWhenStart) {
           exoPlayer?.play()
