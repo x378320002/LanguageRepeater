@@ -15,6 +15,7 @@ import androidx.annotation.OptIn
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -24,7 +25,7 @@ import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.navigation.findNavController
-import com.dotlottie.dlplayer.Fit
+import androidx.navigation.fragment.findNavController
 import com.language.repeater.TestPageKey
 import com.language.repeater.databinding.VideoPlayFragmentBinding
 import com.language.repeater.defaultNavOptions
@@ -34,9 +35,6 @@ import com.language.repeater.test.TestActivity
 import com.language.repeater.widgets.ScrollingWaveformView
 import com.language.repeater.widgets.ScrollingWaveformView.ABHitResult
 import com.language.repeater.widgets.ScrollingWaveformView.OnSeekListener
-import com.lottiefiles.dotlottie.core.model.Config
-import com.lottiefiles.dotlottie.core.util.DotLottieSource
-import com.lottiefiles.dotlottie.core.util.LayoutUtil
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -53,7 +51,7 @@ class PlayVideoFragment: Fragment() {
   private var loadingDialog: LoadingDialogFragment? = null
 
   private var exoPlayer: ExoPlayer? = null
-  private val viewModel: PlayVideoViewModel by viewModels()
+  private val viewModel: PlayVideoViewModel by activityViewModels()
 
   //当前所有的语音片段
   private var voiceSegments = listOf<Sentence>()
@@ -76,7 +74,6 @@ class PlayVideoFragment: Fragment() {
     uri?.let { videoUri->
       //这里你可以用 videoUri 播放视频或读取内容
       Log.d("VideoSelect", "Selected video uri: $videoUri")
-      curPosition = 0L
       viewModel.parseUriToPcm(videoUri)
     }
   }
@@ -89,7 +86,6 @@ class PlayVideoFragment: Fragment() {
           if (videoUri != null) {
             //这里你可以用 videoUri 播放视频或读取内容
             Log.d("VideoSelect", "Selected video uri: $videoUri")
-            curPosition = 0L
             viewModel.parseUriToPcm(videoUri)
           }
         }
@@ -98,7 +94,7 @@ class PlayVideoFragment: Fragment() {
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
-    Log.i("wangzixu", "$TAG onCreate")
+    Log.i(TAG, "$TAG onCreate")
     exoPlayer = ExoPlayer.Builder(requireContext()).build().apply {
       repeatMode = Player.REPEAT_MODE_ALL
     }
@@ -109,7 +105,7 @@ class PlayVideoFragment: Fragment() {
     container: ViewGroup?,
     savedInstanceState: Bundle?,
   ): View {
-    Log.i("wangzixu", "$TAG onCreateView")
+    Log.i(TAG, "$TAG onCreateView")
     _binding = VideoPlayFragmentBinding.inflate(inflater, container, false)
     val view = binding.root
     return view
@@ -144,45 +140,7 @@ class PlayVideoFragment: Fragment() {
 
     binding.exoVideoView.player = exoPlayer
     binding.exoVideoView.showController()
-
-    binding.voiceNext.setOnClickListener {
-      if (curSegment != null) {
-        val index = voiceSegments.indexOf(curSegment)
-        if (index >= 0 && index < voiceSegments.lastIndex) {
-          seekToSegment(voiceSegments[index + 1])
-        }
-      }
-    }
-    binding.voicePrevious.setOnClickListener {
-      if (curSegment != null) {
-        val index = voiceSegments.indexOf(curSegment)
-        if (index > 0 && index <= voiceSegments.lastIndex) {
-          seekToSegment(voiceSegments[index - 1])
-        }
-      }
-    }
-
-    binding.reloadSentence.setOnClickListener {
-      lifecycleScope.launch {
-        //showLoading()
-        //viewModel.reloadSentencesAuto()
-        //hideLoading()
-        //binding.root.findNavController().navigate(TestPageKey, defaultNavOptions)
-        startActivity(Intent().apply {
-          setClass(requireContext(), TestActivity::class.java)
-        })
-      }
-    }
-
-    binding.saveSentence.setOnClickListener {
-      lifecycleScope.launch {
-        showLoading()
-        viewModel.saveSentenceDataToFile(voiceSegments)
-        delay(3000)
-        hideLoading()
-      }
-    }
-
+    bindClickAction()
     //拖动波形图的逻辑
     binding.audioProgressWaveView.setOnSeekListener(object : OnSeekListener {
       var isPlayWhenStart = false
@@ -227,10 +185,10 @@ class PlayVideoFragment: Fragment() {
     })
 
     viewLifecycleOwner.lifecycleScope.launch {
-      viewLifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
         launch {
           viewModel.playUriStateFlow.collect {
             if (it != null) {
+              curPosition = 0L
               binding.filePathTv.text = it.toString()
               val mediaItem = MediaItem.fromUri(it)
               exoPlayer?.setMediaItem(mediaItem)
@@ -248,7 +206,7 @@ class PlayVideoFragment: Fragment() {
             if (loader != null) {
               // 加载PCM文件
               binding.audioProgressWaveView.setPCMLoader(loader, curPosition) {
-                Log.i("wangzixu", "audioProgressWaveView loadWindow $it")
+                Log.i(TAG, "audioProgressWaveView loadWindow $it")
               }
             }
           }
@@ -310,7 +268,48 @@ class PlayVideoFragment: Fragment() {
             delay(16)
           }
         }
+    }
+  }
+
+  private fun bindClickAction() {
+    binding.voiceNext.setOnClickListener {
+      if (curSegment != null) {
+        val index = voiceSegments.indexOf(curSegment)
+        if (index >= 0 && index < voiceSegments.lastIndex) {
+          seekToSegment(voiceSegments[index + 1])
+        }
       }
+    }
+    binding.voicePrevious.setOnClickListener {
+      if (curSegment != null) {
+        val index = voiceSegments.indexOf(curSegment)
+        if (index > 0 && index <= voiceSegments.lastIndex) {
+          seekToSegment(voiceSegments[index - 1])
+        }
+      }
+    }
+
+    binding.reloadSentence.setOnClickListener {
+      lifecycleScope.launch {
+        //showLoading()
+        viewModel.reloadSentencesAuto()
+        //hideLoading()
+        //binding.root.findNavController().navigate(TestPageKey, defaultNavOptions)
+      }
+    }
+
+    binding.saveSentence.setOnClickListener {
+      lifecycleScope.launch {
+        showLoading()
+        viewModel.saveSentenceDataToFile(voiceSegments)
+        delay(3000)
+        hideLoading()
+      }
+    }
+
+    binding.goTestPage.setOnClickListener {
+      //startActivity(Intent(requireContext(), TestActivity::class.java))
+      findNavController().navigate(TestPageKey, defaultNavOptions)
     }
   }
 
@@ -343,14 +342,14 @@ class PlayVideoFragment: Fragment() {
 
   override fun onPause() {
     super.onPause()
-    Log.i("wangzixu", "$TAG onPause")
+    Log.i(TAG, "$TAG onPause")
     playWhenResume = exoPlayer?.isPlaying == true
     exoPlayer?.pause()
   }
 
   override fun onResume() {
     super.onResume()
-    Log.i("wangzixu", "$TAG onResume")
+    Log.i(TAG, "$TAG onResume")
     if (playWhenResume) {
       exoPlayer?.play()
     }
@@ -358,23 +357,23 @@ class PlayVideoFragment: Fragment() {
 
   override fun onStart() {
     super.onStart()
-    Log.i("wangzixu", "$TAG onStart")
+    Log.i(TAG, "$TAG onStart")
   }
 
   override fun onStop() {
     super.onStop()
-    Log.i("wangzixu", "$TAG onStop")
+    Log.i(TAG, "$TAG onStop")
   }
 
   override fun onDestroyView() {
     super.onDestroyView()
-    Log.i("wangzixu", "$TAG onDestroyView")
+    Log.i(TAG, "$TAG onDestroyView")
     exoPlayer?.stop()
   }
 
   override fun onDestroy() {
     super.onDestroy()
-    Log.i("wangzixu", "$TAG onDestroy")
+    Log.i(TAG, "$TAG onDestroy")
     exoPlayer?.release()
     exoPlayer = null
   }

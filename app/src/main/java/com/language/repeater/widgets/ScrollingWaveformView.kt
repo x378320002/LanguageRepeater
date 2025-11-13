@@ -229,7 +229,7 @@ class ScrollingWaveformView @JvmOverloads constructor(
 
     //waveformCache.clear()
     //提前绘制一遍, 清空上一个视频的内容
-    invalidate()
+    //invalidate()
     refreshWave(loadWindowComplete)
   }
 
@@ -238,11 +238,18 @@ class ScrollingWaveformView @JvmOverloads constructor(
     invalidate()
   }
 
+  override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
+    super.onLayout(changed, left, top, right, bottom)
+    if (width != 0) {
+      refreshWave()
+    }
+  }
+
   /**
    * 重新计算可见时间范围
    */
   private fun refreshWave(loadWindowComplete: ((Int)->Unit)? = null) {
-    if (width == 0) return
+    if (width == 0 || pcmLoader == null) return
 
     // 中心线在屏幕中央
     val centerX = width / 2f
@@ -253,10 +260,6 @@ class ScrollingWaveformView @JvmOverloads constructor(
     visibleEndTime = (currentTime + visibleDuration).coerceAtMost(totalDuration)
 
     checkAndLoadData(loadWindowComplete)
-
-    // 准备已播放和未播放的波形数据
-    prepareWaveData()
-
     invalidate()
   }
 
@@ -310,7 +313,7 @@ class ScrollingWaveformView @JvmOverloads constructor(
     }
 
     // 清理过远的缓存
-    cleanupOldCache(startWindow - 2)
+    cleanupOldCache(startWindow - preloadWindowCount)
   }
 
   //需要绘制的数据
@@ -341,8 +344,9 @@ class ScrollingWaveformView @JvmOverloads constructor(
    * 清理旧缓存
    */
   private fun cleanupOldCache(beforeWindow: Int) {
-    val toRemove = pcmLoader!!.waveformCache.keys.filter { it < beforeWindow }
-    toRemove.forEach { pcmLoader!!.waveformCache.remove(it) }
+    val loader = pcmLoader?:return
+    val toRemove = loader.waveformCache.keys.filter { it < beforeWindow }
+    toRemove.forEach { loader.waveformCache.remove(it) }
   }
 
   // ========== 触摸事件处理 ==========
@@ -448,7 +452,9 @@ class ScrollingWaveformView @JvmOverloads constructor(
     // 绘制中心线
     canvas.drawLine(0f, centerY, width.toFloat(), centerY, centerLinePaint)
 
+    // 准备已播放和未播放的波形数据
     // 分别绘制已播放和未播放的波形
+    prepareWaveData()
     drawWaveformSection(canvas, leftData, waveformPaint, playedFillPaint)
     drawWaveformSection(canvas, rightData, waveformPaint, fillPaint)
 

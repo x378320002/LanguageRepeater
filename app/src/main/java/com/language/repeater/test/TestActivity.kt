@@ -25,7 +25,7 @@ class TestActivity : AppCompatActivity() {
       statusBarStyle = SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT),
       navigationBarStyle = SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
     )
-    setContentView(R.layout.activity_main)
+    setContentView(R.layout.activity_nav_host)
 
     val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
     val navController = navHostFragment.navController

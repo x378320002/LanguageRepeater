@@ -150,7 +150,7 @@ class VoiceSentenceDetector(
     val maxSpeechDurationMs: Int = 15000,
 
     /** 句子前后扩展时间(毫秒)，避免截断 */
-    var paddingMs: Int = 100
+    var paddingMs: Int = 150
   )
 
   /**

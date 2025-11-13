@@ -8,7 +8,7 @@
     <item name="android:activityCloseExitAnimation">@anim/slide_out_right</item>
   </style>
 
-  <style name="Base.Theme.LanguageRepeater" parent="Theme.Design.Light.NoActionBar">
+  <style name="Base.Theme.LanguageRepeater" parent="Theme.Material3.DynamicColors.DayNight.NoActionBar">
     <!-- Customize your light theme here. -->
     <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
     <item name="android:windowBackground">@color/main_background</item>

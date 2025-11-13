@@ -68,8 +68,8 @@ class PlayVideoViewModel(application: Application): AndroidViewModel(application
           loadSentenceData(file, uniqueKey)
         }
 
-        pcmLoaderStateFlow.value = pcmLoader
         playUriStateFlow.value = uri
+        pcmLoaderStateFlow.value = pcmLoader
         Log.i(TAG, "parseUriToPcm 转换成pcm文件成功:${file.length() / MB}MB")
 
 //        //读取原始音频文件, 从pcm数据文件读取原始的short数组
@@ -126,17 +126,15 @@ class PlayVideoViewModel(application: Application): AndroidViewModel(application
 //      Log.i("wangzixu", "句子 ${index + 1}: $timeStr")
 //    }
 
-    var list = SentenceFileStoreUtil.loadData(application, key)
+//    var list = SentenceFileStoreUtil.loadData(application, key)
+    var list = listOf<Sentence>()
     if (list.isNullOrEmpty()) {
       //用于绘制波形的数据
       val time = System.currentTimeMillis()
 
       //创建VAD分离器
-      list = VoiceSentenceDetector().detectSentences(PcmDataUtil.readPcmFile(file),
-        VoiceSentenceDetector.SegmentationConfig().also {
-          it.zcrThreshold = 0.8f
-          it.useAdaptiveThreshold = 2
-      })
+      val config = VoiceSentenceDetector.SegmentationConfig()
+      list = VoiceSentenceDetector().detectSentences(PcmDataUtil.readPcmFile(file), config)
 
       //V2版本
 //      val detectorV2 = VoiceSentenceDetectorV2(application)
@@ -161,11 +159,7 @@ class PlayVideoViewModel(application: Application): AndroidViewModel(application
   suspend fun reloadSentencesAuto() = withContext(Dispatchers.IO) {
     val file = curFile ?: return@withContext
     val key = uniqueKey ?: return@withContext
-    val list = VoiceSentenceDetector().detectSentences(PcmDataUtil.readPcmFile(file),
-      VoiceSentenceDetector.SegmentationConfig().also {
-        it.zcrThreshold = 0.8f
-        it.useAdaptiveThreshold = 2
-      })
+    val list = VoiceSentenceDetector().detectSentences(PcmDataUtil.readPcmFile(file), VoiceSentenceDetector.SegmentationConfig())
     SentenceFileStoreUtil.saveData(application, key, list)
     sentencesFlow.value = list
   }
