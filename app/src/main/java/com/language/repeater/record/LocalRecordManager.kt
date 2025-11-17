@@ -5,14 +5,12 @@ import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
 import android.media.audiofx.NoiseSuppressor
-import android.os.Build
 import android.util.Log
-import androidx.annotation.RequiresApi
 import androidx.fragment.app.Fragment
-import com.language.repeater.record.IAudioRecorderManger.Companion.FAIL_TYPE_CANCEL
-import com.language.repeater.record.IAudioRecorderManger.Companion.FAIL_TYPE_ERROR
-import com.language.repeater.record.IAudioRecorderManger.Companion.FAIL_TYPE_NO_INPUT
-import com.language.repeater.record.IAudioRecorderManger.Companion.FAIL_TYPE_TOO_SHORT
+import com.language.repeater.record.IAudioRecordManger.Companion.FAIL_TYPE_CANCEL
+import com.language.repeater.record.IAudioRecordManger.Companion.FAIL_TYPE_ERROR
+import com.language.repeater.record.IAudioRecordManger.Companion.FAIL_TYPE_NO_INPUT
+import com.language.repeater.record.IAudioRecordManger.Companion.FAIL_TYPE_TOO_SHORT
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -24,6 +22,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.IOException
 import java.nio.ByteBuffer
@@ -42,7 +41,7 @@ import kotlin.math.sqrt
  * MediaMuxer-封装aac成mp4音频文件
  * 本期把pcm的录制和编码封装分离, 方便后续切换其他pcm源
  */
-class AudioRecordManagerV5(private val fragment: Fragment) : IAudioRecorderManger {
+class LocalRecordManager(private val fragment: Fragment) : IAudioRecordManger {
 
   companion object {
     private const val TAG = "SearchVoiceV3ViewModel"
@@ -76,16 +75,16 @@ class AudioRecordManagerV5(private val fragment: Fragment) : IAudioRecorderMange
   //降噪
   private var ns: NoiseSuppressor? = null
 
-  private var listener: AudioRecordingListener? = null
+  private var listener: IAudioRecordListener? = null
 
-  fun startRecording() {
+  fun startRecording(useLocalVad: Boolean) {
     val context = fragment.context ?: return
     if (!isRecording.compareAndSet(false, true)) {
       return
     }
 
     recordingJob = scope.launch { // ⬅️ 这是父协程 (Job R)
-      val pcmChannel = Channel<ByteArray>(Channel.BUFFERED)
+      var pcmChannel:Channel<ByteArray>? = null
       var aacFile: File? = null
       var lastError: Throwable? = null
       var recordingSuccess = false
@@ -105,24 +104,63 @@ class AudioRecordManagerV5(private val fragment: Fragment) : IAudioRecorderMange
           throw IllegalStateException("AudioRecord getMinBufferSize failed.")
         }
 
-        coroutineScope {
-          // 消费者 (Job C)
-          launch {
-            PcmToAacEncoder(pcmBufferSize).encode(pcmChannel, aacFile)
+        Log.i(TAG, "top job Recording  start useLocalVad:$useLocalVad")
+        if (useLocalVad) {
+          //使用本地VAD预处理, 串行执行
+          val vadProcessor = LocalRecordSentenceProcessor(SAMPLE_RATE)
+          val pcmBufferStream = ByteArrayOutputStream()
+
+          //先录音
+          Log.i(TAG, "top job Recording Phase 1 starting...")
+          runRecordingLoop(null, pcmBufferStream, startTime)
+
+          val finalElapsed = System.currentTimeMillis() - startTime
+          if (finalElapsed < MIN_RECORDING_MS) {
+            throw RecordingTooShortException()
           }
 
-          // 生产者 (Job P)
-          launch {
-            runRecordingLoop(pcmChannel, startTime)
+          // --- 阶段 2: VAD (批处理) ---
+          Log.i(TAG, "top job VAD Phase 2 starting...")
+          val time1 = System.currentTimeMillis()
+          val pcmByteArray = pcmBufferStream.toByteArray()
+          pcmBufferStream.close()
+          val pcmShortArray = convertByteArrayToShortArray(pcmByteArray)
+          if (pcmShortArray.isEmpty()) {
+            throw RecordingTooShortException()
+          }
+          val vadConfig = LocalRecordSentenceProcessor.SentenceDetectorConfig()
+          val segments = vadProcessor.detectSentences(pcmShortArray, vadConfig)
+          if (segments.isEmpty()) {
+            Log.w(TAG, "top job VAD detected no speech segments.")
+            throw IllegalStateException("VAD detected no speech segments.")
+          }
+          Log.i(TAG,
+            "top job VAD Phase 2 complete. Found ${segments.size} segments. time:${System.currentTimeMillis() - time1}"
+          )
+          //    我们现在在一个 IO 线程上,
+          //    直接*阻塞式*地调用新的 API
+          PcmToAacEncoder(pcmBufferSize).encodeSegments(pcmByteArray, segments, aacFile)
+          Log.i(TAG, "top job Phase 3 complete. time:${System.currentTimeMillis() - time1}")
+        } else {
+          coroutineScope {
+            pcmChannel = Channel<ByteArray>(Channel.BUFFERED)
+            // 消费者 (Job C)
+            launch {
+              PcmToAacEncoder(pcmBufferSize).encode(pcmChannel, aacFile)
+            }
+
+            // 生产者 (Job P)
+            launch {
+              runRecordingLoop(pcmChannel, null, startTime)
+            }
+          }
+
+          // 6. 检查时长
+          val finalElapsed = System.currentTimeMillis() - startTime
+          if (finalElapsed < MIN_RECORDING_MS) {
+            throw RecordingTooShortException()
           }
         }
-
-        // 6. 检查时长
-        val finalElapsed = System.currentTimeMillis() - startTime
-        if (finalElapsed < MIN_RECORDING_MS) {
-          throw RecordingTooShortException()
-        }
-
         // 两个协程都成功完成 (无异常抛出)
         Log.i(TAG, "top job recording successfully.")
         recordingSuccess = true
@@ -132,7 +170,7 @@ class AudioRecordManagerV5(private val fragment: Fragment) : IAudioRecorderMange
       } finally {
         //清理本job的资源, 子任务的资源自己负责清理, 如子录音job, 子编码job
         isRecording.set(false)
-        pcmChannel.close(lastError)
+        pcmChannel?.close(lastError)
         silenceTimeOutJob?.cancel()
         maxTimeJob?.cancel()
         autoDoneTimeOutJob?.cancel()
@@ -228,7 +266,11 @@ class AudioRecordManagerV5(private val fragment: Fragment) : IAudioRecorderMange
    * 生产者循环 (V5)
    */
   @Throws(IOException::class, IllegalStateException::class)
-  private suspend fun runRecordingLoop(pcmChannel: Channel<ByteArray>, startTime: Long) {
+  private suspend fun runRecordingLoop(
+    pcmChannel: Channel<ByteArray>?,
+    outputStream: ByteArrayOutputStream?,
+    startTime: Long
+  ) {
     try {
       setupAudioRecord()
 
@@ -257,8 +299,10 @@ class AudioRecordManagerV5(private val fragment: Fragment) : IAudioRecorderMange
         when {
           readSize > 0 -> {
             //发送给编码器 (必须 copy, 否则 pcmBuffer 会被覆盖)
-            val dataToSend = pcmBuffer.copyOf(readSize)
-            pcmChannel.send(dataToSend) // 挂起点 (可取消)
+            if (pcmChannel != null) {
+              val dataToSend = pcmBuffer.copyOf(readSize)
+              pcmChannel.send(dataToSend) // 挂起点 (可取消)
+            } else outputStream?.write(pcmBuffer, 0, readSize)
 
             // 立即回调进度
             val currentTime = System.currentTimeMillis()
@@ -315,7 +359,7 @@ class AudioRecordManagerV5(private val fragment: Fragment) : IAudioRecorderMange
       throw e // 向上抛出, 让 coroutineScope 捕获
     } finally {
       Log.i(TAG, "Cleaning job record resources...")
-      pcmChannel.close()
+      pcmChannel?.close()
 
       try {
         audioRecord?.stop()
@@ -334,6 +378,18 @@ class AudioRecordManagerV5(private val fragment: Fragment) : IAudioRecorderMange
       }
       ns = null
     }
+  }
+
+  /**
+   * 辅助函数: 将 ByteArray (PCM-16LE) 转换为 ShortArray
+   */
+  private fun convertByteArrayToShortArray(byteArray: ByteArray): ShortArray {
+    val shortArray = ShortArray(byteArray.size / 2)
+    ByteBuffer.wrap(byteArray)
+      .order(ByteOrder.LITTLE_ENDIAN)
+      .asShortBuffer()
+      .get(shortArray)
+    return shortArray
   }
 
   /**
@@ -382,17 +438,9 @@ class AudioRecordManagerV5(private val fragment: Fragment) : IAudioRecorderMange
     isRecording.set(false)
   }
 
-  /**
-   * 从外部取消 (例如 ViewModel.onClear())
-   */
-  fun cancel() {
-    Log.i(TAG, "cancel() called.")
-    recordingJob?.cancel()
-  }
-
   //对齐上版本的AudioRecordManger方法
-  override fun start() {
-    startRecording()
+  override fun start(useLocalVad: Boolean) {
+    startRecording(useLocalVad)
   }
 
   override fun destroy() {
@@ -403,7 +451,7 @@ class AudioRecordManagerV5(private val fragment: Fragment) : IAudioRecorderMange
     stopRecording()
   }
 
-  override fun setRecordListener(l: AudioRecordingListener?) {
+  override fun setRecordListener(l: IAudioRecordListener?) {
     listener = l
   }
 }

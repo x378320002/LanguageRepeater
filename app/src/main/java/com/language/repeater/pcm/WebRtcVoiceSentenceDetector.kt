@@ -21,7 +21,7 @@ import java.io.RandomAccessFile
  *
  * @param context Android Context
  */
-class VoiceSentenceDetectorV2(private val context: Context) {
+class WebRtcVoiceSentenceDetector(private val context: Context) {
 
   /**
    * VAD引擎类型

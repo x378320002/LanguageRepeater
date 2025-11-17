@@ -14,21 +14,19 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import androidx.media3.common.MediaItem
-import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import com.language.repeater.databinding.TestFragmentBinding
+import com.language.repeater.foundation.BaseFragment
 import com.language.repeater.playvideo.PlayVideoViewModel
-import com.language.repeater.record.AudioRecordManagerV5
-import com.language.repeater.record.AudioRecordingListener
-import com.language.repeater.record.IAudioRecorderManger
+import com.language.repeater.record.LocalRecordManager
+import com.language.repeater.record.IAudioRecordListener
+import com.language.repeater.record.IAudioRecordManger
 import java.io.File
 
 
 @SuppressLint("SetTextI18n")
-class TestFragment: Fragment() {
+class TestFragment: BaseFragment() {
   private var _binding: TestFragmentBinding? = null
   private val binding get() = _binding!!
 
@@ -47,7 +45,7 @@ class TestFragment: Fragment() {
     }
 
   private val viewModel: PlayVideoViewModel by activityViewModels()
-  private lateinit var audioRecorderManager: IAudioRecorderManger
+  private lateinit var audioRecorderManager: IAudioRecordManger
   private var exoPlayer: ExoPlayer? = null
   private var aacFilePath: String? = null
 
@@ -70,10 +68,10 @@ class TestFragment: Fragment() {
     }
 
 // 1. 初始化 Manager
-    audioRecorderManager = AudioRecordManagerV5(this)
+    audioRecorderManager = LocalRecordManager(this)
 
     // 2. 设置监听器
-    audioRecorderManager.setRecordListener(object : AudioRecordingListener {
+    audioRecorderManager.setRecordListener(object : IAudioRecordListener {
       override fun onRecordStart() {
         Log.d(TAG, "Recording started...")
         binding.recordStatus.text = "录音开始, 等待说话声..."
@@ -150,7 +148,8 @@ class TestFragment: Fragment() {
   }
 
   private fun startRecording() {
-    audioRecorderManager.start()
+    val localVad = binding.localVadOn.isChecked
+    audioRecorderManager.start(localVad)
   }
 
   override fun onDestroyView() {
@@ -233,5 +232,9 @@ class TestFragment: Fragment() {
     } catch (e: Exception) {
       "temp_file"
     }
+  }
+
+  fun text() {
+
   }
 }

@@ -28,6 +28,19 @@
       android:layout_width="wrap_content"
       android:layout_height="wrap_content"/>
 
+    <androidx.appcompat.widget.SwitchCompat
+      android:id="@+id/local_vad_on"
+      android:layout_marginStart="10dp"
+      android:text="开启本地VAD"
+      android:textOn="开"
+      android:textOff="关"
+      android:checked="true"
+      app:layout_constraintTop_toTopOf="parent"
+      app:layout_constraintStart_toStartOf="parent"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      tools:ignore="HardcodedText" />
+
 <!--    <Button-->
 <!--      android:id="@+id/play_record"-->
 <!--      android:text="播放录音"-->

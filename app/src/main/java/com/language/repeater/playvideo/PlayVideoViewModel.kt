@@ -7,7 +7,7 @@ import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.application
 import androidx.lifecycle.viewModelScope
-import com.google.common.collect.Multimaps.index
+import com.language.repeater.pcm.LocalVoiceSentenceDetector
 import com.language.repeater.utils.FFmpegUtil
 import com.language.repeater.utils.ToastUtil
 import com.language.repeater.pcm.PCMSegmentLoader
@@ -133,14 +133,12 @@ class PlayVideoViewModel(application: Application): AndroidViewModel(application
       val time = System.currentTimeMillis()
 
       //创建VAD分离器
-      val config = VoiceSentenceDetector.SegmentationConfig()
-      list = VoiceSentenceDetector().detectSentences(PcmDataUtil.readPcmFile(file), config)
+      val config = LocalVoiceSentenceDetector.SentenceDetectorConfig()
+      list = LocalVoiceSentenceDetector().detectSentences(PcmDataUtil.readPcmFile(file), config)
 
       //V2版本
 //      val detectorV2 = VoiceSentenceDetectorV2(application)
-//      list = detectorV2.detectSentences(file, Config().also {
-//        it.webrtcMode = Mode.LOW_BITRATE
-//      })
+//      list = detectorV2.detectSentences(file, VoiceSentenceDetectorV2.Config())
 
       SentenceFileStoreUtil.saveData(application, key, list)
       Log.i("wangzixu", "检测句子耗时 ${(System.currentTimeMillis()-time).toFloat()/1000}")

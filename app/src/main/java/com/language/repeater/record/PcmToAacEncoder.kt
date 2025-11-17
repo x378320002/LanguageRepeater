@@ -52,7 +52,7 @@ class PcmToAacEncoder(
         setInteger(MediaFormat.KEY_MAX_INPUT_SIZE, mediaCacheSize)
       }
     mediaCodec = MediaCodec.createEncoderByType(AAC_MIME_TYPE)
-    mediaCodec!!.configure(audioFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
+    mediaCodec?.configure(audioFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
 
     muxerTrackIndex = -1
     pcmPresentationTimeUs = 0L
@@ -82,6 +82,104 @@ class PcmToAacEncoder(
     } catch (e: Exception) {
       Log.i(TAG, "Encoding job failed: ${e.message}")
       throw e // 向上抛出, 让 coroutineScope 捕获
+    } finally {
+      cleanupResources()
+    }
+  }
+
+  /**
+   * 新 API (V-Batch-Final):
+   * 批处理编码。
+   * 这是一个 *阻塞式* 函数, 应该在 IO 协程中被调用。
+   * 它负责解决 Q1(切块) 和 Q2(直塞)。
+   */
+  suspend fun encodeSegments(
+    pcmByteArray: ByteArray,
+    segments: List<LocalRecordSentenceProcessor.Sentence>,
+    aacFile: File
+  ) {
+    if (segments.isEmpty()) {
+      Log.w(TAG, "encodeSegments: No segments to encode.")
+      return
+    }
+
+    try {
+      setupMediaCodecAndMuxer(aacFile)
+      mediaCodec?.start()
+
+      val mediaCodec = mediaCodec ?: throw IllegalStateException("Codec null")
+
+      // 解决 Q1 (切块)
+      // 遍历 VAD 提供的*每一个*句子片段
+      for (segment in segments) {
+        // 将采样点索引转换为字节索引
+        val bytesPerSample = 2 // 16-bit
+        val startByte = (segment.start * bytesPerSample).coerceAtMost(pcmByteArray.size)
+        val endByte = (segment.end * bytesPerSample).coerceAtMost(pcmByteArray.size)
+
+        var currentByteIndex = startByte
+        Log.d(TAG, "Encoding segment: $startByte -> $endByte")
+
+        // 在这个片段内部循环, 直到喂完
+        while (currentByteIndex < endByte && coroutineContext.isActive) {
+
+          // --- 步骤 1: 喂给编码器 (输入) ---
+          val inputIndex = mediaCodec.dequeueInputBuffer(CODEC_TIMEOUT_US)
+          if (inputIndex >= 0) {
+            // 拿到了一个空的输入 Buffer
+            val inputBuffer = mediaCodec.getInputBuffer(inputIndex)
+            if (inputBuffer == null) {
+              throw IllegalStateException(
+                "encodeSegments encodeSegments inputIndex > 0, but inputBuffer is null!"
+              )
+            }
+
+            inputBuffer.clear()
+
+            // 计算这次能喂多少数据
+            val bytesRemainingInSegment = endByte - currentByteIndex
+            val bytesToPut = bytesRemainingInSegment.coerceAtMost(inputBuffer.remaining())
+
+            // 从 pcmByteArray 中复制数据块到编码器
+            inputBuffer.put(pcmByteArray, currentByteIndex, bytesToPut)
+
+            updatePresentationTimeUs(bytesToPut)
+            mediaCodec.queueInputBuffer(inputIndex, 0, bytesToPut, pcmPresentationTimeUs, 0)
+
+            // 推进索引
+            currentByteIndex += bytesToPut
+          }
+
+          // --- 步骤 2: 排干编码器 (输出) ---
+          // (在喂食的同时必须排干)
+          drainCodecOutput(codecBufferInfo)
+        }
+      }
+
+      // --- 步骤 3: 正常结束 (排干) 循环 ---
+      // 所有片段都喂完了, 发送 EOS 信号并等待
+      Log.d(TAG, "All segments fed, starting EOS drain loop.")
+      feedEosToCodec()
+//      var inputEosSent = false
+//      var outputEosReceived = false
+//      while (!outputEosReceived && coroutineContext.isActive) {
+//        if (!inputEosSent) {
+//          val inputIndex = mediaCodec.dequeueInputBuffer(CODEC_TIMEOUT_US)
+//          if (inputIndex >= 0) {
+//            queueInputBuffer(inputIndex, null, 0, isEos = true)
+//            inputEosSent = true
+//          }
+//        }
+//
+//        val drainResult = drainCodecOutput(codecBufferInfo)
+//        if (drainResult == DrainResult.EOS_REACHED) {
+//          outputEosReceived = true
+//        }
+//      }
+      Log.i(TAG, "Encoding job complete.")
+    } catch (e: Exception) {
+      Log.e(TAG, "Encoding job failed: ${e.message}")
+      throw e // 向上抛出
     } finally {
       cleanupResources()
     }
@@ -168,10 +266,17 @@ class PcmToAacEncoder(
       )
     } else if (data != null && size > 0) {
       inputData?.put(data, 0, size)
-      val pts = (size.toDouble() / (SAMPLE_RATE * CHANNEL_COUNT_OUT * 2) * 1_000_000).toLong()
-      pcmPresentationTimeUs += pts
+      updatePresentationTimeUs(size)
       mediaCodec.queueInputBuffer(index, 0, size, pcmPresentationTimeUs, 0)
     }
+  }
+
+  /**
+   * (计算时间戳, queue)
+   */
+  private fun updatePresentationTimeUs(size: Int) {
+    val pts = (size.toDouble() / (SAMPLE_RATE * CHANNEL_COUNT_OUT * 2) * 1_000_000).toLong()
+    pcmPresentationTimeUs += pts
   }
 
   /**

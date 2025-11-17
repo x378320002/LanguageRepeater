@@ -17,9 +17,12 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
@@ -29,32 +32,36 @@ import androidx.navigation.fragment.findNavController
 import com.language.repeater.TestPageKey
 import com.language.repeater.databinding.VideoPlayFragmentBinding
 import com.language.repeater.defaultNavOptions
+import com.language.repeater.foundation.BaseComponent
+import com.language.repeater.foundation.BaseFragment
 import com.language.repeater.loading.LoadingDialogFragment
 import com.language.repeater.pcm.Sentence
 import com.language.repeater.test.TestActivity
+import com.language.repeater.test.TestFragment
 import com.language.repeater.widgets.ScrollingWaveformView
 import com.language.repeater.widgets.ScrollingWaveformView.ABHitResult
 import com.language.repeater.widgets.ScrollingWaveformView.OnSeekListener
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 
-class PlayVideoFragment: Fragment() {
+class PlayVideoFragment: BaseFragment(), Player.Listener  {
   companion object {
     const val TAG = "PlayVideoFragment"
   }
 
   private var _binding: VideoPlayFragmentBinding? = null
-  private val binding get() = _binding!!
+  val binding get() = _binding!!
 
   private var curPosition = 0L
-  private var loadingDialog: LoadingDialogFragment? = null
 
   private var exoPlayer: ExoPlayer? = null
   private val viewModel: PlayVideoViewModel by activityViewModels()
 
   //当前所有的语音片段
   private var voiceSegments = listOf<Sentence>()
+
   //当前正在读的语音片段
   private var curSegment: Sentence? = null
     set(value) {
@@ -138,8 +145,10 @@ class PlayVideoFragment: Fragment() {
       openFileLauncher.launch(arrayOf("audio/*", "video/*"))
     }
 
+
     binding.exoVideoView.player = exoPlayer
     binding.exoVideoView.showController()
+    exoPlayer?.addListener(this)
     bindClickAction()
     //拖动波形图的逻辑
     binding.audioProgressWaveView.setOnSeekListener(object : OnSeekListener {
@@ -234,40 +243,6 @@ class PlayVideoFragment: Fragment() {
             }
           }
         }
-
-        launch {
-          while (true) {
-            if (exoPlayer?.isPlaying == true) {
-              curPosition = exoPlayer?.currentPosition ?: 0L
-              var cur = curPosition.toFloat() ?: -1f
-              if (cur != -1f) {
-                var curSec = cur / 1000
-
-                //处理复读的逻辑
-                if (repeatable) {
-                  if (curSegment == null) {
-                    curSegment = findCurrentSegment()
-                  }
-                  val seg = curSegment
-                  if (seg != null && curSec >= seg.end) {
-                    //跳回开始
-                    exoPlayer?.seekTo((seg.start * 1000).toLong())
-                    curSec = seg.start
-                    cur = seg.start * 1000
-                  }
-                }
-
-                //处理波形图的更新
-                val duration = exoPlayer?.duration ?: -1
-                if (duration > 0) {
-                  binding.audioProgressWaveView.updatePosition(curSec)
-                  binding.audioWaveView.updatePosition(cur/duration)
-                }
-              }
-            }
-            delay(16)
-          }
-        }
     }
   }
 
@@ -280,6 +255,7 @@ class PlayVideoFragment: Fragment() {
         }
       }
     }
+
     binding.voicePrevious.setOnClickListener {
       if (curSegment != null) {
         val index = voiceSegments.indexOf(curSegment)
@@ -310,6 +286,66 @@ class PlayVideoFragment: Fragment() {
     binding.goTestPage.setOnClickListener {
       //startActivity(Intent(requireContext(), TestActivity::class.java))
       findNavController().navigate(TestPageKey, defaultNavOptions)
+    }
+
+    binding.testAction.setOnClickListener {
+    }
+  }
+
+  private var loopJob: Job? = null
+  override fun onIsPlayingChanged(isPlaying: Boolean) {
+    super.onIsPlayingChanged(isPlaying)
+    Log.i(TAG, "$TAG onIsPlayingChanged $isPlaying")
+    if (isPlaying) {
+      loopJob = viewLifecycleOwner.lifecycleScope.launch {
+        while (true) {
+          if (exoPlayer?.isPlaying == true) {
+            curPosition = exoPlayer?.currentPosition ?: 0L
+            var cur = curPosition.toFloat()
+            if (cur != -1f) {
+              var curSec = cur / 1000
+
+              //处理复读的逻辑
+              if (repeatable) {
+                if (curSegment == null) {
+                  curSegment = findCurrentSegment()
+                }
+                val seg = curSegment
+                if (seg != null && curSec >= seg.end) {
+                  //跳回开始
+                  exoPlayer?.seekTo((seg.start * 1000).toLong())
+                  curSec = seg.start
+                  cur = seg.start * 1000
+                }
+              }
+
+              //处理波形图的更新
+              val duration = exoPlayer?.duration ?: -1
+              if (duration > 0) {
+                binding.audioProgressWaveView.updatePosition(curSec)
+                binding.audioWaveView.updatePosition(cur/duration)
+              }
+            }
+          }
+          delay(16)
+        }
+      }
+    } else {
+      loopJob?.cancel()
+      loopJob = null
+    }
+  }
+
+  override fun onPlaybackStateChanged(playbackState: Int) {
+    if (playbackState == Player.STATE_READY) {
+
+      // --- 关键诊断 ---
+      val durationMs = exoPlayer?.duration
+      val isSeekable = exoPlayer?.isCurrentMediaItemSeekable
+
+      Log.d(TAG, "已进入 READY 状态")
+      Log.d(TAG, "文件总时长: $durationMs ms")
+      Log.d(TAG, "文件是否可搜寻: $isSeekable")
     }
   }
 
@@ -368,6 +404,7 @@ class PlayVideoFragment: Fragment() {
   override fun onDestroyView() {
     super.onDestroyView()
     Log.i(TAG, "$TAG onDestroyView")
+    exoPlayer?.removeListener(this)
     exoPlayer?.stop()
   }
 
@@ -376,23 +413,5 @@ class PlayVideoFragment: Fragment() {
     Log.i(TAG, "$TAG onDestroy")
     exoPlayer?.release()
     exoPlayer = null
-  }
-
-  private fun showLoading() {
-    if (loadingDialog == null) {
-      loadingDialog = LoadingDialogFragment.newInstance()
-    }
-    if (!loadingDialog!!.isAdded) {
-      loadingDialog!!.show(parentFragmentManager, LoadingDialogFragment.TAG)
-      //onPause()
-    }
-  }
-
-  private fun hideLoading() {
-    if (loadingDialog != null) {
-      loadingDialog?.dismiss()
-      loadingDialog = null
-      //onResume()
-    }
   }
 }

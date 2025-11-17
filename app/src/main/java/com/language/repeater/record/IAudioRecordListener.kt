@@ -1,8 +1,6 @@
 package com.language.repeater.record
 
-import kotlin.time.Duration
-
-interface AudioRecordingListener {
+interface IAudioRecordListener {
   //录音开始
   fun onRecordStart() {}
 

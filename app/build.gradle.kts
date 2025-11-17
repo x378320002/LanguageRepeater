@@ -54,6 +54,7 @@ dependencies {
   implementation(libs.ffmpeg.kit.x6kb)
   implementation(libs.androidx.exoplayer)
   implementation(libs.androidx.exoplayer.ui)
+  implementation(libs.androidx.exoplayer.session)
   implementation(libs.vad.webrtc)
   implementation(libs.vad.silero)
 
