@@ -14,7 +14,7 @@ kotlinJson = "1.9.0"
 navVersion = "2.9.1"
 
 ffmpegKitX6kb = "6.0.0"
-exoplayer = "1.7.1"
+exoplayer = "1.8.0"
 vad = "2.0.10"
 
 lottie="0.5.0"

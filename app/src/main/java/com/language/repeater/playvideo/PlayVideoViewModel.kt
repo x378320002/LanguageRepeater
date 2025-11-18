@@ -13,7 +13,6 @@ import com.language.repeater.utils.ToastUtil
 import com.language.repeater.pcm.PCMSegmentLoader
 import com.language.repeater.pcm.PcmDataUtil
 import com.language.repeater.pcm.Sentence
-import com.language.repeater.pcm.VoiceSentenceDetector
 import com.language.repeater.pcm.WaveformPoint
 import com.language.repeater.utils.Md5Util
 import com.language.repeater.utils.ScreenUtil
@@ -70,7 +69,7 @@ class PlayVideoViewModel(application: Application): AndroidViewModel(application
 
         playUriStateFlow.value = uri
         pcmLoaderStateFlow.value = pcmLoader
-        Log.i(TAG, "parseUriToPcm 转换成pcm文件成功:${file.length() / MB}MB")
+        Log.i(TAG, "parseUriToPcm 转换成pcm文件成功:${file.length() / MB} mb")
 
 //        //读取原始音频文件, 从pcm数据文件读取原始的short数组
 //        val oriData = com.language.repeater.pcm.PcmDataUtil.readPcmFile(path)
@@ -157,7 +156,8 @@ class PlayVideoViewModel(application: Application): AndroidViewModel(application
   suspend fun reloadSentencesAuto() = withContext(Dispatchers.IO) {
     val file = curFile ?: return@withContext
     val key = uniqueKey ?: return@withContext
-    val list = VoiceSentenceDetector().detectSentences(PcmDataUtil.readPcmFile(file), VoiceSentenceDetector.SegmentationConfig())
+    val config = LocalVoiceSentenceDetector.SentenceDetectorConfig()
+    val list = LocalVoiceSentenceDetector().detectSentences(PcmDataUtil.readPcmFile(file), config)
     SentenceFileStoreUtil.saveData(application, key, list)
     sentencesFlow.value = list
   }

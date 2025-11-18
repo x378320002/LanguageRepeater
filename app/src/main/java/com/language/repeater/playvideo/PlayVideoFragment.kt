@@ -1,5 +1,6 @@
 package com.language.repeater.playvideo
 
+import android.R.attr.duration
 import android.app.Activity
 import android.content.Intent
 import android.net.Uri
@@ -48,7 +49,7 @@ import kotlinx.coroutines.launch
 
 class PlayVideoFragment: BaseFragment(), Player.Listener  {
   companion object {
-    const val TAG = "PlayVideoFragment"
+    const val TAG = "wangzixu"
   }
 
   private var _binding: VideoPlayFragmentBinding? = null
@@ -57,7 +58,7 @@ class PlayVideoFragment: BaseFragment(), Player.Listener  {
   private var curPosition = 0L
 
   private var exoPlayer: ExoPlayer? = null
-  private val viewModel: PlayVideoViewModel by activityViewModels()
+  val viewModel: PlayVideoViewModel by activityViewModels()
 
   //当前所有的语音片段
   private var voiceSegments = listOf<Sentence>()
@@ -77,34 +78,23 @@ class PlayVideoFragment: BaseFragment(), Player.Listener  {
   private var repeatable = false
   private var playWhenResume = true
 
-  val openFileLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
-    uri?.let { videoUri->
-      //这里你可以用 videoUri 播放视频或读取内容
-      Log.d("VideoSelect", "Selected video uri: $videoUri")
-      viewModel.parseUriToPcm(videoUri)
-    }
-  }
-
-  val launcher = registerForActivityResult(ActivityResultContracts.StartActivityForResult(),
-    object: ActivityResultCallback<ActivityResult> {
-      override fun onActivityResult(result: ActivityResult) {
-        if (result.resultCode == Activity.RESULT_OK) {
-          val videoUri = result.data?.data
-          if (videoUri != null) {
-            //这里你可以用 videoUri 播放视频或读取内容
-            Log.d("VideoSelect", "Selected video uri: $videoUri")
-            viewModel.parseUriToPcm(videoUri)
-          }
-        }
-      }
-    })
-
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     Log.i(TAG, "$TAG onCreate")
-    exoPlayer = ExoPlayer.Builder(requireContext()).build().apply {
-      repeatMode = Player.REPEAT_MODE_ALL
+    exoPlayer = getPlayer()
+    addComponent(HeadsetComponent())
+    addComponent(SelectFileComponent())
+  }
+
+  fun getPlayer(): ExoPlayer {
+    var player = exoPlayer
+    if (player == null) {
+      player = ExoPlayer.Builder(requireContext()).build().apply {
+        repeatMode = Player.REPEAT_MODE_ALL
+      }
+      exoPlayer = player
     }
+    return player
   }
 
   override fun onCreateView(
@@ -132,19 +122,6 @@ class PlayVideoFragment: BaseFragment(), Player.Listener  {
       repeatable = checked
       curSegment = findCurrentSegment()
     }
-
-    binding.selectFileBtn.setOnClickListener {
-//      val intent = Intent(Intent.ACTION_PICK).apply {
-//        type = "audio/*" // 只选择音频文件
-//      }
-//      val intent = Intent(Intent.ACTION_GET_CONTENT)
-//      intent.type = "audio/*" // 只选择音频文件
-//      intent.putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("audio/aac", "audio/mpeg", "audio/wav", "audio/mp3"))
-//      intent.addCategory(Intent.CATEGORY_OPENABLE)
-//      launcher.launch(intent)
-      openFileLauncher.launch(arrayOf("audio/*", "video/*"))
-    }
-
 
     binding.exoVideoView.player = exoPlayer
     binding.exoVideoView.showController()
@@ -248,21 +225,11 @@ class PlayVideoFragment: BaseFragment(), Player.Listener  {
 
   private fun bindClickAction() {
     binding.voiceNext.setOnClickListener {
-      if (curSegment != null) {
-        val index = voiceSegments.indexOf(curSegment)
-        if (index >= 0 && index < voiceSegments.lastIndex) {
-          seekToSegment(voiceSegments[index + 1])
-        }
-      }
+      seekToNext()
     }
 
     binding.voicePrevious.setOnClickListener {
-      if (curSegment != null) {
-        val index = voiceSegments.indexOf(curSegment)
-        if (index > 0 && index <= voiceSegments.lastIndex) {
-          seekToSegment(voiceSegments[index - 1])
-        }
-      }
+      seekToPrevious()
     }
 
     binding.reloadSentence.setOnClickListener {
@@ -295,7 +262,7 @@ class PlayVideoFragment: BaseFragment(), Player.Listener  {
   private var loopJob: Job? = null
   override fun onIsPlayingChanged(isPlaying: Boolean) {
     super.onIsPlayingChanged(isPlaying)
-    Log.i(TAG, "$TAG onIsPlayingChanged $isPlaying")
+    //Log.i(TAG, "$TAG onIsPlayingChanged $isPlaying")
     if (isPlaying) {
       loopJob = viewLifecycleOwner.lifecycleScope.launch {
         while (true) {
@@ -337,16 +304,14 @@ class PlayVideoFragment: BaseFragment(), Player.Listener  {
   }
 
   override fun onPlaybackStateChanged(playbackState: Int) {
-    if (playbackState == Player.STATE_READY) {
-
+//    if (playbackState == Player.STATE_READY) {
       // --- 关键诊断 ---
-      val durationMs = exoPlayer?.duration
-      val isSeekable = exoPlayer?.isCurrentMediaItemSeekable
-
-      Log.d(TAG, "已进入 READY 状态")
-      Log.d(TAG, "文件总时长: $durationMs ms")
-      Log.d(TAG, "文件是否可搜寻: $isSeekable")
-    }
+//      val durationMs = exoPlayer?.duration
+//      val isSeekable = exoPlayer?.isCurrentMediaItemSeekable
+//      Log.d(TAG, "已进入 READY 状态")
+//      Log.d(TAG, "文件总时长: $durationMs ms")
+//      Log.d(TAG, "文件是否可搜寻: $isSeekable")
+//    }
   }
 
   private fun findCurrentSegment(): Sentence? {
@@ -369,10 +334,34 @@ class PlayVideoFragment: BaseFragment(), Player.Listener  {
     return targetSeg
   }
 
+  fun seekToNext() {
+    if (curSegment != null) {
+      val index = voiceSegments.indexOf(curSegment)
+      if (index >= 0 && index < voiceSegments.lastIndex) {
+        seekToSegment(voiceSegments[index + 1])
+      }
+    }
+  }
+
+  fun seekToPrevious() {
+    if (curSegment != null) {
+      val index = voiceSegments.indexOf(curSegment)
+      if (index > 0 && index <= voiceSegments.lastIndex) {
+        seekToSegment(voiceSegments[index - 1])
+      }
+    }
+  }
+
   private fun seekToSegment(segmentation: Sentence?) {
     curSegment = segmentation
-    if (segmentation != null) {
-      exoPlayer?.seekTo((segmentation.start * 1000).toLong())
+    exoPlayer?.also {
+      if (segmentation != null) {
+        it.seekTo((segmentation.start * 1000).toLong())
+        if (!it.isPlaying) {
+          binding.audioProgressWaveView.updatePosition(segmentation.start)
+          binding.audioWaveView.updatePosition(segmentation.start/it.duration)
+        }
+      }
     }
   }
 

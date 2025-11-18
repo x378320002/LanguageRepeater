@@ -107,12 +107,13 @@ object Md5Util {
    */
   fun generateFastUniqueKey(context: Context, uri: Uri): String? {
     val metadata = getFileMetadata(context, uri)
-    return metadata?.let {
-      // 组合文件名和文件大小作为 key
-      "${it.displayName}-${it.size}"
-    }
+    val name = metadata?.displayName
+      ?.trim()
+      ?.replace(' ', '-')
+      ?: "${System.currentTimeMillis()}"
+    val size = metadata?.size ?: 0
+    return "$name-$size"
   }
-
 
 // --- 如何使用 ---
 // 这个操作很快，可以直接在主线程调用

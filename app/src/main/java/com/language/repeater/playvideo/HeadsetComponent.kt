@@ -1,8 +1,12 @@
 package com.language.repeater.playvideo
 
 import android.util.Log
-import androidx.core.content.ContentProviderCompat.requireContext
+import androidx.annotation.OptIn
+import androidx.media3.common.ForwardingPlayer
+import androidx.media3.common.ForwardingSimpleBasePlayer
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.MediaSession
+import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionResult
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
@@ -19,65 +23,56 @@ class HeadsetComponent: BaseComponent<PlayVideoFragment>() {
     const val TAG = PlayVideoFragment.TAG
   }
 
+  @UnstableApi
   override fun onCreateView() {
     super.onCreateView()
-//    val mediaCallback = object : MediaSession.Callback {
-//      // 处理“播放”或“暂停” (通常是中间键单击)
-//      private fun handlePlayPause() {
-//        Log.d(TAG, "onPlay/onPause 被触发 (中间键单击)")
-//      }
-//
-//      override fun onPlay(
-//        session: MediaSession,
-//        controller: MediaSession.ControllerInfo
-//      ): ListenableFuture<SessionResult> {
-//        handlePlayPause()
-//        // 关键：返回成功, 告诉系统我们已处理
-//        return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
-//      }
-//
-//      override fun onPause(
-//        session: MediaSession,
-//        controller: MediaSession.ControllerInfo
-//      ): ListenableFuture<SessionResult> {
-//        handlePlayPause()
-//        // 关键：返回成功
-//        return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
-//      }
-//
-//      // 处理“下一首” (双击 / 长按音量+ / AVRCP)
-//      override fun onSkipToNext(
-//        session: MediaSession,
-//        controller: MediaSession.ControllerInfo
-//      ): ListenableFuture<SessionResult> {
-//        Log.d(TAG, "onSkipToNext() 被触发 (下一首)")
-//        listener?.onNextClicked()
-//        // 关键：返回成功
-//        return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
-//      }
-//
-//      // 处理“上一首” (三击 / 长按音量- / AVRCP)
-//      override fun onSkipToPrevious(
-//        session: MediaSession,
-//        controller: MediaSession.ControllerInfo
-//      ): ListenableFuture<SessionResult> {
-//        Log.d(TAG, "onSkipToPrevious() 被触发 (上一首)")
-//        listener?.onPreviousClicked()
-//        // 关键：返回成功
-//        return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
-//      }
-//    }
-//
-//    // 4c. 创建 MediaSession 并绑定
-//    mediaSession = MediaSession.Builder(fragment!!, playerInstance)
-//      .setCallback(mediaCallback)
-//      .build()
-//
-//    // 4d. (可选) media3 会自动处理激活, 但明确设置一下更保险
-//    mediaSession?.isActive = true
-  }
 
-  override fun onDestroyView() {
-    super.onDestroyView()
+    val myPlayer = object : ForwardingPlayer(fragment.getPlayer()) {
+      /**
+       * 覆写“播放”命令
+       */
+      override fun play() {
+        // --- 在这里执行你的自定义“播放”逻辑 ---
+        Log.d(TAG, "play() 已被拦截！执行自定义操作。")
+        // 如果你还想让真正的播放器播放，就调用 super
+         super.play()
+        // 如果你想完全阻止播放器播放，就什么都不调用
+      }
+
+      /**
+       * 覆写“暂停”命令
+       */
+      override fun pause() {
+        // --- 在这里执行你的自定义“暂停”逻辑 ---
+        Log.d(TAG, "pause() 已被拦截！执行自定义操作。")
+        // 如果你还想让真正的播放器暂停，就调用 super
+         super.pause()
+      }
+
+      /**
+       * 覆写“下一首”命令
+       */
+      override fun seekToNext() {
+        // --- 在这里执行你的自定义“上一首”逻辑 ---
+        Log.d(TAG, "seekToNext() 已被拦截！执行自定义操作。")
+        //super.seekToNext()
+        fragment.seekToNext()
+      }
+
+      /**
+       * 覆写“上一首”命令
+       */
+      override fun seekToPrevious() {
+        // --- 在这里执行你的自定义“上一首”逻辑 ---
+        Log.d(TAG, "seekToPrevious() 已被拦截！执行自定义操作。")
+        //super.seekToPrevious()
+        fragment.seekToPrevious()
+      }
+    }
+
+    // 4c. 创建 MediaSession 并绑定
+    mediaSession = MediaSession.Builder(fragment.requireContext(), myPlayer)
+      .setId("HeadsetComponent")
+      .build()
   }
 }

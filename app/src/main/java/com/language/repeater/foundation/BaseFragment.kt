@@ -16,7 +16,7 @@ abstract class BaseFragment: Fragment() {
     if (this !is F) {
       throw IllegalArgumentException("addComponent error, type mismatching! ${this::class.simpleName} add ${component}<${F::class.simpleName}>")
     }
-    if (component.fragment != null) {
+    if (component.hasAttached) {
       throw IllegalArgumentException("addComponent error, has added! ${this::class.simpleName} add ${component}<${F::class.simpleName}>")
     }
     component.attach(this) //this as F, as转换失败强制抛出异常

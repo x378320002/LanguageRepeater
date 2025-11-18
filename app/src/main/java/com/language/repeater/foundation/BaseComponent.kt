@@ -15,20 +15,27 @@ open class BaseComponent<F : BaseFragment>: LifecycleEventObserver {
     private const val TAG = "BaseComponent"
   }
 
-  var fragment: F? = null
+  var hasAttached = false
+    private set
+  lateinit var fragment: F
   private var viewLifecycleOwner: LifecycleOwner? = null
 
-  inline fun <reified T: BaseFragment>addComponent(component: BaseComponent<T>) {
-    fragment?.addComponent(component)
-  }
+//  inline fun <reified T: BaseFragment>addComponent(component: BaseComponent<T>) {
+//    fragment.addComponent(component)
+//  }
 
   /**
    * 1. 附加到 Fragment
    * 这是您在 Fragment 的 onCreate 中唯一需要调用的方法。
    */
-  fun attach(fragment: F) {
-    detach()
-    this.fragment = fragment
+  fun attach(f: F) {
+    if (hasAttached) {
+      fragment.lifecycle.removeObserver(this)
+      viewLifecycleOwner?.lifecycle?.removeObserver(this)
+    }
+    hasAttached = true
+    fragment = f
+
     // --- 步骤 1: 观察 Fragment 的主生命周期 ---
     // (主要用于 onCreate, onDestroy)
     fragment.lifecycle.addObserver(this)
@@ -44,16 +51,6 @@ open class BaseComponent<F : BaseFragment>: LifecycleEventObserver {
       this.viewLifecycleOwner = newViewOwner
       newViewOwner?.lifecycle?.addObserver(this)
     }
-  }
-
-  /**
-   * (可选) 添加一个 detach 方法用于清理
-   */
-  fun detach() {
-    this.fragment?.lifecycle?.removeObserver(this)
-    this.viewLifecycleOwner?.lifecycle?.removeObserver(this)
-    this.fragment = null
-    this.viewLifecycleOwner = null
   }
 
   /**
@@ -77,7 +74,6 @@ open class BaseComponent<F : BaseFragment>: LifecycleEventObserver {
       Lifecycle.Event.ON_CREATE -> onCreate()
       Lifecycle.Event.ON_DESTROY -> {
         onDestroy()
-        this.fragment = null
         this.viewLifecycleOwner = null
       }
       else -> {}
