@@ -1,44 +1,25 @@
 package com.language.repeater.playvideo
 
-import android.R.attr.duration
-import android.app.Activity
-import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.activity.result.ActivityResult
-import androidx.activity.result.ActivityResultCallback
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.OptIn
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import androidx.fragment.app.viewModels
-import androidx.lifecycle.DefaultLifecycleObserver
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.repeatOnLifecycle
-import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.navigation.findNavController
 import androidx.navigation.fragment.findNavController
 import com.language.repeater.TestPageKey
 import com.language.repeater.databinding.VideoPlayFragmentBinding
 import com.language.repeater.defaultNavOptions
-import com.language.repeater.foundation.BaseComponent
 import com.language.repeater.foundation.BaseFragment
-import com.language.repeater.loading.LoadingDialogFragment
 import com.language.repeater.pcm.Sentence
-import com.language.repeater.test.TestActivity
-import com.language.repeater.test.TestFragment
 import com.language.repeater.widgets.ScrollingWaveformView
 import com.language.repeater.widgets.ScrollingWaveformView.ABHitResult
 import com.language.repeater.widgets.ScrollingWaveformView.OnSeekListener
@@ -175,7 +156,6 @@ class PlayVideoFragment: BaseFragment(), Player.Listener  {
           viewModel.playUriStateFlow.collect {
             if (it != null) {
               curPosition = 0L
-              binding.filePathTv.text = it.toString()
               val mediaItem = MediaItem.fromUri(it)
               exoPlayer?.setMediaItem(mediaItem)
               exoPlayer?.seekTo(curPosition)
@@ -367,17 +347,17 @@ class PlayVideoFragment: BaseFragment(), Player.Listener  {
 
   override fun onPause() {
     super.onPause()
-    Log.i(TAG, "$TAG onPause")
-    playWhenResume = exoPlayer?.isPlaying == true
-    exoPlayer?.pause()
+//    Log.i(TAG, "$TAG onPause")
+//    playWhenResume = exoPlayer?.isPlaying == true
+//    exoPlayer?.pause()
   }
 
   override fun onResume() {
     super.onResume()
-    Log.i(TAG, "$TAG onResume")
-    if (playWhenResume) {
-      exoPlayer?.play()
-    }
+//    Log.i(TAG, "$TAG onResume")
+//    if (playWhenResume) {
+//      exoPlayer?.play()
+//    }
   }
 
   override fun onStart() {
