@@ -4,6 +4,7 @@ import android.R.attr.data
 import android.content.Context
 import com.google.common.hash.Hashing.md5
 import com.language.repeater.pcm.Sentence
+import com.language.repeater.utils.Md5Util.isRandomKey
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -32,14 +33,17 @@ object SentenceFileStoreUtil {
    * @param md5 视频文件的 MD5
    * @param data 要保存的数据 (List<SentenceSegment>)
    */
-  suspend fun saveData(context: Context, md5: String, data: List<Sentence>) = withContext(Dispatchers.IO) {
+  suspend fun saveData(context: Context, key: String, data: List<Sentence>) = withContext(Dispatchers.IO) {
+    if (isRandomKey(key)) {
+      throw IllegalStateException("SentenceFileStoreUtil saveData key is random:$key")
+    }
+
     try {
       // 1. 使用 kotlinx.serialization 将 List 转换为 JSON 字符串
       val jsonString = json.encodeToString(data)
 
       // 2. 写入文件
-      getFile(context, md5).writeText(jsonString)
-
+      getFile(context, key).writeText(jsonString)
     } catch (e: IOException) {
       e.printStackTrace()
     } catch (e: Exception) {

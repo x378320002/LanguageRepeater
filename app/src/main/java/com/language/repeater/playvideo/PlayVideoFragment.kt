@@ -36,16 +36,13 @@ class PlayVideoFragment: BaseFragment(), Player.Listener  {
   private var _binding: VideoPlayFragmentBinding? = null
   val binding get() = _binding!!
 
-  private var curPosition = 0L
+//  private var curPosition = 0L
+//  private var exoPlayer: ExoPlayer? = null
 
-  private var exoPlayer: ExoPlayer? = null
   val viewModel: PlayVideoViewModel by activityViewModels()
 
-  //当前所有的语音片段
-  private var voiceSegments = listOf<Sentence>()
-
   //当前正在读的语音片段
-  private var curSegment: Sentence? = null
+  var curSegment: Sentence? = null
     set(value) {
       if (repeatable) {
         binding.audioProgressWaveView.curABSeg = value
@@ -59,23 +56,15 @@ class PlayVideoFragment: BaseFragment(), Player.Listener  {
   private var repeatable = false
   private var playWhenResume = true
 
+  var playComponent: PlayComponent? = null
+
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     Log.i(TAG, "$TAG onCreate")
-    exoPlayer = getPlayer()
+    playComponent = PlayComponent().also { addComponent<PlayVideoFragment>(it) }
     addComponent(HeadsetComponent())
     addComponent(SelectFileComponent())
-  }
-
-  fun getPlayer(): ExoPlayer {
-    var player = exoPlayer
-    if (player == null) {
-      player = ExoPlayer.Builder(requireContext()).build().apply {
-        repeatMode = Player.REPEAT_MODE_ALL
-      }
-      exoPlayer = player
-    }
-    return player
+    addComponent(CutOffSentenceComponent())
   }
 
   override fun onCreateView(
@@ -225,7 +214,6 @@ class PlayVideoFragment: BaseFragment(), Player.Listener  {
       lifecycleScope.launch {
         showLoading()
         viewModel.saveSentenceDataToFile(voiceSegments)
-        delay(3000)
         hideLoading()
       }
     }
@@ -295,8 +283,6 @@ class PlayVideoFragment: BaseFragment(), Player.Listener  {
   }
 
   private fun findCurrentSegment(): Sentence? {
-    if (!repeatable) return null
-
     val segments = voiceSegments
     val player = exoPlayer
     //计算当前是哪句

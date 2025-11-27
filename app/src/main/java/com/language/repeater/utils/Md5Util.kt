@@ -3,6 +3,7 @@ package com.language.repeater.utils
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
+import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.security.MessageDigest
@@ -99,20 +100,28 @@ object Md5Util {
     return null
   }
 
+  private const val RANDOM_KEY_PREFIX = "random_key_"
   /**
    * 根据文件元数据生成一个快速、唯一的 Key
    * @param context Context
    * @param uri 文件的 Uri
    * @return 一个唯一标识字符串，如 "IMG_2023.jpg-1234567"
    */
-  fun generateFastUniqueKey(context: Context, uri: Uri): String? {
+  fun generateFastUniqueKey(context: Context, uri: Uri): String {
     val metadata = getFileMetadata(context, uri)
     val name = metadata?.displayName
       ?.trim()
       ?.replace(' ', '-')
-      ?: "${System.currentTimeMillis()}"
     val size = metadata?.size ?: 0
+    if (name == null) {
+      Log.e("wangzixu", "Warn! Md5Util.generateFastUniqueKey is null!!")
+      return (RANDOM_KEY_PREFIX + System.currentTimeMillis())
+    }
     return "$name-$size"
+  }
+
+  fun isRandomKey(key: String): Boolean{
+    return key.isEmpty() || key.startsWith(RANDOM_KEY_PREFIX)
   }
 
 // --- 如何使用 ---

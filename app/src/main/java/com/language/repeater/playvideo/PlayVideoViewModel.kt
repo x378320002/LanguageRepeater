@@ -44,25 +44,27 @@ class PlayVideoViewModel(application: Application): AndroidViewModel(application
   var sentencesFlow = MutableStateFlow<List<Sentence>>(listOf())
 
   var uniqueKey: String = ""
-  var curFile: File? = null
+  var curPcmFile: File? = null
 
   fun parseUriToPcm(uri: Uri) {
     Log.i(TAG, "parseUriToPcm begin: $uri")
     viewModelScope.launch(Dispatchers.IO) {
       try {
-        uniqueKey = Md5Util.generateFastUniqueKey(application, uri) ?: System.currentTimeMillis().toString()
+        uniqueKey = Md5Util.generateFastUniqueKey(application, uri)
         val time = System.currentTimeMillis()
         Log.i(TAG, "parseUriToPcm uniqueKey: $uniqueKey")
         //通过ffmpeg把视频文件解析成原始音频文件
         val path = FFmpegUtil.extractPcmFileByFFmpeg(application, uri, uniqueKey)
+
         Log.i("wangzixu", "FFmpegUtil解码耗时 ${(System.currentTimeMillis()-time).toFloat()/1000}")
         val file = File(path)
-        curFile = file
+        curPcmFile = file
         val pcmLoader = PCMSegmentLoader(file)
 
         launch(Dispatchers.IO) {
           loadAllWaveData(file)
         }
+
         launch(Dispatchers.IO) {
           loadSentenceData(file, uniqueKey)
         }
@@ -70,20 +72,6 @@ class PlayVideoViewModel(application: Application): AndroidViewModel(application
         playUriStateFlow.value = uri
         pcmLoaderStateFlow.value = pcmLoader
         Log.i(TAG, "parseUriToPcm 转换成pcm文件成功:${file.length() / MB} mb")
-
-//        //读取原始音频文件, 从pcm数据文件读取原始的short数组
-//        val oriData = com.language.repeater.pcm.PcmDataUtil.readPcmFile(path)
-//        val oriDataSizeInMB = oriData.size * Short.SIZE_BYTES / MB
-//        Log.i(TAG, "parseUriToPcm oriDataSize:${oriDataSizeInMB}MB")
-//
-//        //因为原始音频文件数据量通常很大, 采样处理生成和屏幕像素宽度差不多的数据量
-//        val sampleData = com.language.repeater.pcm.PcmDataUtil.downSample(oriData, ScreenUtil.getScreenSize().width)
-//        val sampleDataSizeInMB = sampleData.size * Int.SIZE_BYTES / MB
-//
-//        val time = (System.currentTimeMillis() - beginTime)/1000
-//        Log.i(TAG, "parseUriToPcm success sampleDataSize:${sampleDataSizeInMB}MB, time:$time 秒")
-//
-//        audioDataStateFlow.value = sampleData
       } catch (e: Exception) {
         e.printStackTrace()
         Log.i(TAG, "parseUriToPcm error:$e")
@@ -98,35 +86,8 @@ class PlayVideoViewModel(application: Application): AndroidViewModel(application
   }
 
   private suspend fun loadSentenceData(file: File, key: String) {
-    //V1版本
-//    // 1. 准备PCM数据
-//    val startSample = 0
-//    val sampleCount = (durationSeconds * sampleRate).toInt()
-//    val pcmData = loadSegmentBySample(startSample, sampleCount)
-
-//    //用于绘制波形的数据
-//    var time = System.currentTimeMillis()
-//    allData = downsampleToWaveform(pcmData,
-//      ScreenUtil.getScreenSize().width,
-//      0f,
-//      1f / sampleRate)
-//    // 2. 创建VAD分离器
-//    val segmentation = VoiceSentenceDetectorV1()
-//    // 3. 使用默认配置分离
-//    voiceSegmentsV1 = segmentation.segment(pcmData)
-//    Log.i("wangzixu", "耗时 ${(System.currentTimeMillis()-time).toFloat()/1000}")
-//    Log.i("wangzixu", "检测到 ${voiceSegmentsV1.size} 句话:")
-////    voiceSegmentsV1.forEachIndexed { index, (start, end) ->
-////      Log.i("wangzixu", "句子 ${index + 1}: [$start, $end]")
-////    }
-//    // 5. 查看时间格式
-//    val timeStrings = segmentation.segmentsToTimeString(voiceSegmentsV1)
-//    timeStrings.forEachIndexed { index, timeStr ->
-//      Log.i("wangzixu", "句子 ${index + 1}: $timeStr")
-//    }
-
-//    var list = SentenceFileStoreUtil.loadData(application, key)
-    var list = listOf<Sentence>()
+    var list = SentenceFileStoreUtil.loadData(application, key)
+    //var list = listOf<Sentence>()
     if (list.isNullOrEmpty()) {
       //用于绘制波形的数据
       val time = System.currentTimeMillis()
@@ -136,13 +97,13 @@ class PlayVideoViewModel(application: Application): AndroidViewModel(application
       list = LocalVoiceSentenceDetector().detectSentences(PcmDataUtil.readPcmFile(file), config)
 
       //V2版本
-//      val detectorV2 = VoiceSentenceDetectorV2(application)
-//      list = detectorV2.detectSentences(file, VoiceSentenceDetectorV2.Config())
+      //val detectorV2 = VoiceSentenceDetectorV2(application)
+      //list = detectorV2.detectSentences(file, VoiceSentenceDetectorV2.Config())
 
       SentenceFileStoreUtil.saveData(application, key, list)
       Log.i("wangzixu", "检测句子耗时 ${(System.currentTimeMillis()-time).toFloat()/1000}")
     } else {
-      Log.i("wangzixu", "key: $key 已经存在")
+      Log.i("wangzixu", "key: $key 句子已经存在, 直接使用")
     }
 
     sentencesFlow.value = list
@@ -154,8 +115,8 @@ class PlayVideoViewModel(application: Application): AndroidViewModel(application
   }
 
   suspend fun reloadSentencesAuto() = withContext(Dispatchers.IO) {
-    val file = curFile ?: return@withContext
-    val key = uniqueKey ?: return@withContext
+    val file = curPcmFile ?: return@withContext
+    val key = uniqueKey
     val config = LocalVoiceSentenceDetector.SentenceDetectorConfig()
     val list = LocalVoiceSentenceDetector().detectSentences(PcmDataUtil.readPcmFile(file), config)
     SentenceFileStoreUtil.saveData(application, key, list)
@@ -163,9 +124,13 @@ class PlayVideoViewModel(application: Application): AndroidViewModel(application
   }
 
   suspend fun saveSentenceDataToFile(list : List<Sentence>) = withContext(Dispatchers.IO) {
-    if (uniqueKey.isEmpty() || list.isEmpty()) {
+    if (Md5Util.isRandomKey(uniqueKey)) {
+      withContext(Dispatchers.Main) {
+        ToastUtil.toast("当前的文件key是随机的, 无法存储句子信息")
+      }
       return@withContext
     }
+
     // 按 start 升序排列
     val sorted = list.sortedBy { it.start }
     val merged = mutableListOf<Sentence>()
@@ -187,6 +152,10 @@ class PlayVideoViewModel(application: Application): AndroidViewModel(application
     merged.add(current)
     SentenceFileStoreUtil.saveData(application, uniqueKey, merged)
     Log.i("wangzixu", "saveSentenceDataToFile success")
+
+    withContext(Dispatchers.Main) {
+      ToastUtil.toast("保存成功")
+    }
   }
 
   /**

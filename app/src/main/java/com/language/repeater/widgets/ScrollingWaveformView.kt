@@ -473,12 +473,11 @@ class ScrollingWaveformView @JvmOverloads constructor(
       return
     }
     sentences?.forEach { seg->
+      drawSignPoint(canvas, seg.start, voiceStartPaint)
+      drawSignPoint(canvas, seg.end, voiceEndPaint)
       if (curABSeg == seg) {
         drawAB(canvas, seg.start, "A")
         drawAB(canvas, seg.end, "B")
-      } else {
-        drawSignPoint(canvas, seg.start, voiceStartPaint)
-        drawSignPoint(canvas, seg.end, voiceEndPaint)
       }
     }
   }

@@ -66,7 +66,7 @@ class HeadsetComponent: BaseComponent<PlayVideoFragment>() {
 
     // 4c. 创建 MediaSession 并绑定
     mediaSession = MediaSession.Builder(fragment.requireContext(), myPlayer)
-      .setId("HeadsetComponent")
+      .setId("HeadsetComponent" + System.currentTimeMillis())
       .build()
   }
 }

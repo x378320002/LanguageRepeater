@@ -21,47 +21,55 @@ class LocalVoiceSentenceDetector(
     /** 窗口重叠率(0.0-1.0) */
     val overlapRatio: Float = 0.5f,
 
+    //手动设置的threshold, 优先使用
+    var manualThreshold: Float = 0f,
+
     /** 语音能量阈值(0.0-1.0)，低于此值视为静音 */
     var energyThreshold: Float = 0.02f,
 
     /** 过零率阈值(0.0-1.0)，用于辅助判断 */
-    var zcrThreshold: Float = 0.18f,
+    var zcrThreshold: Float = 0.12f,
 
     /** 最小静音持续时间(毫秒)，低于此值不算句子间隔 */
-    val minSilenceDurationMs: Int = 600,
+    val minSilenceDurationMs: Int = 800,
 
     /** 最小语音持续时间(毫秒)，低于此值不算一句话 */
     val minSpeechDurationMs: Int = 50,
 
     /** 句子前后的额外补偿扩展 */
-    var paddingMs: Int = 60,
+    var paddingMs: Int = 150,
 
     /** 句子前后追加清辅音和低音量的检查计算区间,多少帧 */
-    var expandEdgeCheckCount: Int = 25, //20帧=300ms
+    var expandEdgeStartCount: Int = 15, //20帧=300ms
+    var expandEdgeEndCount: Int = 30, //20帧=300ms
+
+    var expandEdgeCheckEnergyFactor: Float = 0.2f, //20帧=300ms
   )
 
   /**
-   * 能量和过零率数据
+   * 音频的一帧数据
    */
-  private class AudioFeature(
+  private class AudioFrame(
     val sampleIndex: Int,      // 对应的采样点索引
-    val energy: Float,         // 短时能量(0.0-1.0)
-    val zcr: Float,            // 过零率(0.0-1.0)
+    val energy: Float         // 短时能量(0.0-1.0)
   ) {
     var isSpeech: Boolean = false      // 是否为语音
   }
 
+  /**
+   * 多帧数据组成的一个声音片段, 记录了帧的开始和结束为止
+   */
   private data class Segment(
-    var first: Int,
-    var second: Int,
+    var frameStart: Int,
+    var frameEnd: Int,
   )
 
   /**
    * 标记每个句子, 开头和结尾, 采样点坐标
    */
-  private data class Sentence(
-    var start: Int,
-    var end: Int,
+  private data class SentenceBySample(
+    var sampleStart: Int,
+    var sampleEnd: Int,
   )
 
   private var config: SentenceDetectorConfig = SentenceDetectorConfig()
@@ -91,7 +99,7 @@ class LocalVoiceSentenceDetector(
     // 标记语音/静音片段
     markSpeechRegions(features)
 
-    // 中值滤波平滑（去除孤立的噪点）, 复读机的环境没必要开启, ASR看需求
+    // 中值滤波平滑（去除孤立的噪点）, 复读机的环境没必要开启
     //medianFilter(features)
 
     // 分离出语音片段
@@ -105,8 +113,8 @@ class LocalVoiceSentenceDetector(
 
     return sentences.map {
       SentenceByTime(
-        it.start.toFloat() / sampleRate,
-        it.end.toFloat() / sampleRate
+        it.sampleStart.toFloat() / sampleRate,
+        it.sampleEnd.toFloat() / sampleRate
       )
     }
   }
@@ -116,23 +124,23 @@ class LocalVoiceSentenceDetector(
    */
   private fun extractFeatures(
     pcmData: ShortArray,
-  ): List<AudioFeature> {
+  ): List<AudioFrame> {
     val windowSizeSamples = (config.windowSizeMs * sampleRate / 1000)
     val hopSize = (windowSizeSamples * (1 - config.overlapRatio)).toInt()
 
-    val features = mutableListOf<AudioFeature>()
+    val features = mutableListOf<AudioFrame>()
     var position = 0
 
     while (position + windowSizeSamples <= pcmData.size) {
       val window = pcmData.sliceArray(position until position + windowSizeSamples)
 
       val energy = calculateEnergy(window)
-      val zcr = calculateZCR(window)
+      //暂时不需要过零率
+      //val zcr = calculateZCR(window)
       features.add(
-        AudioFeature(
+        AudioFrame(
           sampleIndex = position + windowSizeSamples / 2,
-          energy = energy,
-          zcr = zcr
+          energy = energy
         )
       )
 
@@ -179,13 +187,10 @@ class LocalVoiceSentenceDetector(
   /**
    * 标记语音区域
    */
-  private fun markSpeechRegions(features: List<AudioFeature>) {
+  private fun markSpeechRegions(features: List<AudioFrame>) {
     // 初步标记
     features.forEachIndexed { index, feature ->
-      val isSpeech =
-        (feature.energy > config.energyThreshold) && (feature.zcr < config.zcrThreshold)
-//          || (feature.zcr > config.zcrThreshold && feature.energy < config.energyThreshold / 2)
-      feature.isSpeech = isSpeech
+      feature.isSpeech = feature.energy >= config.energyThreshold
 //      if (isSpeech) {
 //        Log.i(
 //          "wangzixu", "==========markSpeechRegions, energy: ${feature.energy}, zcr:${feature.zcr}"
@@ -202,7 +207,7 @@ class LocalVoiceSentenceDetector(
    * 中值滤波平滑
    */
   private fun medianFilter(
-    features: List<AudioFeature>,
+    features: List<AudioFrame>,
     windowSize: Int = 6,
   ) {
     val halfWindow = windowSize / 2
@@ -216,7 +221,7 @@ class LocalVoiceSentenceDetector(
     }
   }
 
-  private fun extractSegments(features: List<AudioFeature>): List<Segment> {
+  private fun extractSegments(features: List<AudioFrame>): List<Segment> {
     //此处的AudioPoint存的是AudioFeature在features中的坐标
     val segments = mutableListOf<Segment>()
 
@@ -265,41 +270,41 @@ class LocalVoiceSentenceDetector(
    * 计算自适应阈值,
    */
   private fun calculateThreshold(
-    features: List<AudioFeature>,
+    features: List<AudioFrame>,
   ) {
     if (features.isEmpty()) {
       return
     }
+    if (config.manualThreshold > 0.001f) {
+      config.energyThreshold = config.manualThreshold
+      Log.i("wangzixu", "calculateThreshold, use manualThreshold: ${config.energyThreshold}")
+      return
+    }
 
-    val sortedList = features.map { it.energy }.sorted()
-    val averageEnergy = sortedList.subList(0, (sortedList.size * 0.99f).toInt()).average()
-//    val averageEnergy = features.map { it.energy }.average()
+    val energies = features.map { it.energy }.sorted()
+    val averageEnergy = energies
+      .subList(0, (energies.size * 0.99f).toInt())
+      .average()
     config.energyThreshold = averageEnergy.toFloat()
-    Log.i("wangzixu",
-      "⭐⭐⭐⭐⭐⭐ detectSentences calculateThreshold, averageEnergy: $averageEnergy"
-    )
+    Log.i("wangzixu", "calculateThreshold, averageEnergy: $averageEnergy")
   }
 
   private fun expandSegmentEdge(
-    features: List<AudioFeature>,
+    features: List<AudioFrame>,
     segments: List<Segment>,
   ) {
-    //对句子进行前后扩展, 把被过零率过滤掉的再追加加回来, 并附带一些更低音量的片段
-    val energyMin = config.energyThreshold / 4f
-    val zcrMax = 0.6f
-
-    fun isSpeech(feature: AudioFeature): Boolean {
-      return (feature.energy > energyMin && feature.zcr <= zcrMax)
+    fun isSpeech(feature: AudioFrame): Boolean {
+      return  (feature.energy >= config.energyThreshold * config.expandEdgeCheckEnergyFactor)
     }
 
     fun expandBegin(seg: Segment, index: Int) {
-      val begin = (seg.first - config.expandEdgeCheckCount).coerceAtLeast(0)
-      val end = seg.first - 1
+      val begin = (seg.frameStart - config.expandEdgeStartCount).coerceAtLeast(0)
+      val end = seg.frameStart - 1
       for (i in begin..end) {
         val feature = features[i]
         val isSpeech = isSpeech(feature)
         if (isSpeech) {
-          seg.first = i
+          seg.frameStart = i
           break
         }
       }
@@ -307,17 +312,13 @@ class LocalVoiceSentenceDetector(
     }
 
     fun expandEnd(seg: Segment, index: Int) {
-      val begin = seg.second + 1
-      val end = (seg.second + config.expandEdgeCheckCount).coerceAtMost(features.lastIndex)
+      val begin = seg.frameEnd + 1
+      val end = (seg.frameEnd + config.expandEdgeEndCount).coerceAtMost(features.lastIndex)
       for (i in end downTo begin) {
         val feature = features[i]
         val isSpeech = isSpeech(feature)
-        Log.i(
-          "wangzixu",
-          "⭐⭐⭐⭐⭐⭐ expandEnd, index: ${index}, averageEnergy: $${feature.energy}, feature.zcr: ${feature.zcr}"
-        )
         if (isSpeech) {
-          seg.second = i
+          seg.frameEnd = i
           break
         }
       }
@@ -332,42 +333,42 @@ class LocalVoiceSentenceDetector(
   }
 
   private fun convertToSentence(
-    features: List<AudioFeature>,
+    features: List<AudioFrame>,
     segments: List<Segment>,
     maxSampleIndex: Int
-  ): List<Sentence> {
+  ): List<SentenceBySample> {
     var sentences =  segments.map {
-      val start = features[it.first].sampleIndex
-      val end = features[it.second].sampleIndex
-      Sentence(start, end)
+      val start = features[it.frameStart].sampleIndex
+      val end = features[it.frameEnd].sampleIndex
+      SentenceBySample(start, end)
     }
-
-    sentences = mergeSentence(sentences)
 
     val paddingSample = config.paddingMs * sampleRate / 1000
     sentences.forEach {
-      it.start = (it.start - paddingSample).coerceAtLeast(0)
-      it.end = (it.end + paddingSample).coerceAtMost(maxSampleIndex)
+      it.sampleStart = (it.sampleStart - paddingSample / 2).coerceAtLeast(0)
+      it.sampleEnd = (it.sampleEnd + paddingSample).coerceAtMost(maxSampleIndex)
     }
+
+    sentences = mergeSentence(sentences)
     return sentences
   }
 
   /**
    * 合并过近的句子
    */
-  private fun mergeSentence(tempSentences: List<Sentence>): List<Sentence> {
+  private fun mergeSentence(tempSentences: List<SentenceBySample>): List<SentenceBySample> {
     if (tempSentences.isEmpty()) {
       return tempSentences
     }
 
     //再次合并间隔过短的区间
-    val sentences = mutableListOf<Sentence>()
+    val sentences = mutableListOf<SentenceBySample>()
     var last = tempSentences[0]
-    val minGapSample = config.minSilenceDurationMs * sampleRate / 1000
+    //val minGapSample = config.minSilenceDurationMs * sampleRate / 1000
     for (i in 1..tempSentences.lastIndex) {
       val cur = tempSentences[i]
-      if (cur.start <= (last.end + minGapSample)) {
-        last.end = maxOf(cur.end, last.end)
+      if (cur.sampleStart <= last.sampleEnd) {
+        last.sampleEnd = maxOf(cur.sampleEnd, last.sampleEnd)
       } else {
         sentences.add(last)
         last = cur

@@ -1,5 +1,6 @@
 package com.language.repeater.foundation
 
+import android.content.Context
 import android.util.Log
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -24,6 +25,9 @@ open class BaseComponent<F : BaseFragment>: LifecycleEventObserver {
 //    fragment.addComponent(component)
 //  }
 
+  fun requireContext(): Context {
+    return fragment.requireContext()
+  }
   /**
    * 1. 附加到 Fragment
    * 这是您在 Fragment 的 onCreate 中唯一需要调用的方法。
