@@ -1,4 +1,4 @@
-package com.language.repeater.playvideo
+package com.language.repeater.playvideo.components
 
 import android.app.Activity
 import android.content.Intent
@@ -8,6 +8,7 @@ import androidx.activity.result.ActivityResult
 import androidx.activity.result.ActivityResultCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import com.language.repeater.foundation.BaseComponent
+import com.language.repeater.playvideo.PlayVideoFragment
 
 /**
  * Date: 2025-11-17
@@ -18,9 +19,9 @@ class SelectFileComponent : BaseComponent<PlayVideoFragment>() {
   val pickMedia by lazy {
     fragment.registerForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
       if (uri != null) {
-        Log.d(PlayVideoFragment.TAG, "Selected: $uri")
+        Log.d(PlayVideoFragment.Companion.TAG, "Selected: $uri")
       } else {
-        Log.d(PlayVideoFragment.TAG, "No media selected")
+        Log.d(PlayVideoFragment.Companion.TAG, "No media selected")
       }
     }
   }
@@ -33,7 +34,7 @@ class SelectFileComponent : BaseComponent<PlayVideoFragment>() {
           Intent.FLAG_GRANT_READ_URI_PERMISSION
         )
         //这里你可以用 videoUri 播放视频或读取内容
-        Log.d(PlayVideoFragment.TAG, "Selected video uri: $videoUri")
+        Log.d(PlayVideoFragment.Companion.TAG, "Selected video uri: $videoUri")
         fragment.viewModel.parseUriToPcm(videoUri)
       }
     }
@@ -48,7 +49,7 @@ class SelectFileComponent : BaseComponent<PlayVideoFragment>() {
             val videoUri = result.data?.data
             if (videoUri != null) {
               //这里你可以用 videoUri 播放视频或读取内容
-              Log.d(PlayVideoFragment.TAG, "Selected video uri: $videoUri")
+              Log.d(PlayVideoFragment.Companion.TAG, "Selected video uri: $videoUri")
               fragment.viewModel.parseUriToPcm(videoUri)
             }
           }

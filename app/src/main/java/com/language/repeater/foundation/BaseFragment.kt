@@ -2,8 +2,11 @@ package com.language.repeater.foundation
 
 import android.R.attr.fragment
 import android.os.Bundle
+import android.util.Log.v
+import androidx.annotation.MainThread
 import androidx.fragment.app.Fragment
 import com.language.repeater.loading.LoadingDialogFragment
+import kotlin.jvm.java
 
 /**
  * Date: 2025-11-14
@@ -11,15 +14,23 @@ import com.language.repeater.loading.LoadingDialogFragment
  * Description:
  */
 abstract class BaseFragment: Fragment() {
+  private val components = mutableListOf<BaseComponent<*>>()
+
+  @MainThread
   @Suppress("UNCHECKED_CAST")
-  inline fun <reified F: BaseFragment> addComponent(component: BaseComponent<F>) {
-    if (this !is F) {
-      throw IllegalArgumentException("addComponent error, type mismatching! ${this::class.simpleName} add ${component}<${F::class.simpleName}>")
+  fun <F: BaseFragment> addComponent(component: BaseComponent<F>) {
+    for (com in components) {
+      if (com.javaClass == component.javaClass) {
+        throw IllegalArgumentException("addComponent error, $component 已经有同类型的了")
+      }
     }
-    if (component.hasAttached) {
-      throw IllegalArgumentException("addComponent error, has added! ${this::class.simpleName} add ${component}<${F::class.simpleName}>")
-    }
-    component.attach(this) //this as F, as转换失败强制抛出异常
+    components.add(component)
+    component.attach(this as F) //this as F, as转换失败强制抛出异常
+  }
+
+  override fun onDestroy() {
+    super.onDestroy()
+    components.clear()
   }
 
   //region loading dialog

@@ -130,8 +130,17 @@
       android:layout_height="wrap_content"/>
 
     <Button
-      android:id="@+id/cut_off_sentence"
-      android:text="此处分割"
+      android:id="@+id/split_sentence"
+      android:text="分割句子"
+      android:layout_marginStart="5dp"
+      app:layout_constraintTop_toTopOf="parent"
+      app:layout_constraintStart_toStartOf="parent"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"/>
+
+    <Button
+      android:id="@+id/delete_sentence"
+      android:text="删除句子"
       android:layout_marginStart="5dp"
       app:layout_constraintTop_toTopOf="parent"
       app:layout_constraintStart_toStartOf="parent"

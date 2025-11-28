@@ -2,9 +2,11 @@ package com.language.repeater.foundation
 
 import android.content.Context
 import android.util.Log
+import androidx.annotation.MainThread
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.lifecycleScope
 
 /**
  * Date: 2025-11-14
@@ -21,22 +23,30 @@ open class BaseComponent<F : BaseFragment>: LifecycleEventObserver {
   lateinit var fragment: F
   private var viewLifecycleOwner: LifecycleOwner? = null
 
-//  inline fun <reified T: BaseFragment>addComponent(component: BaseComponent<T>) {
-//    fragment.addComponent(component)
-//  }
-
-  fun requireContext(): Context {
-    return fragment.requireContext()
+  @MainThread
+  inline fun <reified T: BaseFragment>addComponent(component: BaseComponent<T>) {
+    fragment.addComponent(component)
   }
+
+  val context: Context
+    get() = fragment.requireContext()
+
+  val uiScope
+    get() = fragment.viewLifecycleOwner.lifecycleScope
+
+  val fScope
+    get() = fragment.lifecycleScope
+
   /**
    * 1. 附加到 Fragment
    * 这是您在 Fragment 的 onCreate 中唯一需要调用的方法。
    */
+  @MainThread
   fun attach(f: F) {
     if (hasAttached) {
-      fragment.lifecycle.removeObserver(this)
-      viewLifecycleOwner?.lifecycle?.removeObserver(this)
+      throw IllegalArgumentException("addComponent attach error, has attached!")
     }
+
     hasAttached = true
     fragment = f
 

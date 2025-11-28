@@ -1,10 +1,11 @@
-package com.language.repeater.playvideo
+package com.language.repeater.playvideo.components
 
 import android.util.Log
 import androidx.media3.common.ForwardingPlayer
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.MediaSession
 import com.language.repeater.foundation.BaseComponent
+import com.language.repeater.playvideo.PlayVideoFragment
 
 /**
  * Date: 2025-11-14
@@ -14,14 +15,14 @@ import com.language.repeater.foundation.BaseComponent
 class HeadsetComponent: BaseComponent<PlayVideoFragment>() {
   private var mediaSession: MediaSession? = null
   companion object {
-    const val TAG = PlayVideoFragment.TAG
+    const val TAG = PlayVideoFragment.Companion.TAG
   }
 
   @UnstableApi
   override fun onCreateView() {
     super.onCreateView()
 
-    val myPlayer = object : ForwardingPlayer(fragment.getPlayer()) {
+    val myPlayer = object : ForwardingPlayer(fragment.playComponent.player) {
       /**
        * 覆写“播放”命令
        */
@@ -50,7 +51,7 @@ class HeadsetComponent: BaseComponent<PlayVideoFragment>() {
         // --- 在这里执行你的自定义“上一首”逻辑 ---
         Log.d(TAG, "seekToNext() 已被拦截！执行自定义操作。")
         //super.seekToNext()
-        fragment.seekToNext()
+        fragment.playComponent.seekToNext()
       }
 
       /**
@@ -60,12 +61,12 @@ class HeadsetComponent: BaseComponent<PlayVideoFragment>() {
         // --- 在这里执行你的自定义“上一首”逻辑 ---
         Log.d(TAG, "seekToPrevious() 已被拦截！执行自定义操作。")
         //super.seekToPrevious()
-        fragment.seekToPrevious()
+        fragment.playComponent.seekToPrevious()
       }
     }
 
     // 4c. 创建 MediaSession 并绑定
-    mediaSession = MediaSession.Builder(fragment.requireContext(), myPlayer)
+    mediaSession = MediaSession.Builder(context, myPlayer)
       .setId("HeadsetComponent" + System.currentTimeMillis())
       .build()
   }

@@ -95,7 +95,7 @@ class PcmToAacEncoder(
    */
   suspend fun encodeSegments(
     pcmByteArray: ByteArray,
-    segments: List<LocalRecordSentenceProcessor.Sentence>,
+    segments: List<LocalRecordSentenceProcessor.SentenceRecord>,
     aacFile: File
   ) {
     if (segments.isEmpty()) {

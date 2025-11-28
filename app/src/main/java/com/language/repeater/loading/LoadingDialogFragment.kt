@@ -1,5 +1,6 @@
 package com.language.repeater.loading
 
+import android.app.Dialog
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle

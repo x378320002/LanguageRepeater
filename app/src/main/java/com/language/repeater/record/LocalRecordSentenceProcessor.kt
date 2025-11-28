@@ -75,7 +75,7 @@ class LocalRecordSentenceProcessor(
   private val sampleRate: Int = PcmConfig.PCM_SAMPLE_RATE  // 采样率
 ) {
 
-  data class Sentence(
+  data class SentenceRecord(
     var start: Int,
     var end: Int
   )
@@ -125,7 +125,7 @@ class LocalRecordSentenceProcessor(
   fun detectSentences(
     pcmData: ShortArray,
     config: SentenceDetectorConfig = SentenceDetectorConfig()
-  ): List<Sentence> {
+  ): List<SentenceRecord> {
 
     if (pcmData.isEmpty()) return emptyList()
 
@@ -147,7 +147,7 @@ class LocalRecordSentenceProcessor(
       val paddingSamples = (config.paddingMs * sampleRate / 1000)
       val realStart = (start - paddingSamples).coerceAtLeast(0)
       val realEnd = (end + paddingSamples).coerceAtMost(pcmData.size - 1)
-      Sentence(realStart, realEnd)
+      SentenceRecord(realStart, realEnd)
     }
   }
 
