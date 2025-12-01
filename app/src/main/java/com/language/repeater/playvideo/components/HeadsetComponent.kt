@@ -1,5 +1,6 @@
 package com.language.repeater.playvideo.components
 
+import android.R.attr.x
 import android.util.Log
 import androidx.media3.common.ForwardingPlayer
 import androidx.media3.common.util.UnstableApi
@@ -29,19 +30,27 @@ class HeadsetComponent: BaseComponent<PlayVideoFragment>() {
       override fun play() {
         // --- 在这里执行你的自定义“播放”逻辑 ---
         Log.d(TAG, "play() 已被拦截！执行自定义操作。")
-        // 如果你还想让真正的播放器播放，就调用 super
-         super.play()
-        // 如果你想完全阻止播放器播放，就什么都不调用
+        //super.play()
+        fragment.playComponent.setRepeat(!fragment.playComponent.repeatable)
       }
 
       /**
        * 覆写“暂停”命令
        */
       override fun pause() {
-        // --- 在这里执行你的自定义“暂停”逻辑 ---
         Log.d(TAG, "pause() 已被拦截！执行自定义操作。")
-        // 如果你还想让真正的播放器暂停，就调用 super
-         super.pause()
+        //super.pause()
+        fragment.playComponent.setRepeat(!fragment.playComponent.repeatable)
+      }
+
+      override fun increaseDeviceVolume(flags: Int) {x
+        super.increaseDeviceVolume(flags)
+        Log.d(TAG, "increaseDeviceVolume。")
+      }
+
+      override fun decreaseDeviceVolume(flags: Int) {
+        super.decreaseDeviceVolume(flags)
+        Log.d(TAG, "decreaseDeviceVolume。")
       }
 
       /**
@@ -63,6 +72,7 @@ class HeadsetComponent: BaseComponent<PlayVideoFragment>() {
         //super.seekToPrevious()
         fragment.playComponent.seekToPrevious()
       }
+
     }
 
     // 4c. 创建 MediaSession 并绑定

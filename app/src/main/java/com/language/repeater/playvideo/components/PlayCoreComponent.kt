@@ -1,5 +1,6 @@
 package com.language.repeater.playvideo.components
 
+import android.util.Log
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
@@ -7,6 +8,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import com.language.repeater.foundation.BaseComponent
 import com.language.repeater.pcm.Sentence
 import com.language.repeater.playvideo.PlayVideoFragment
+import com.language.repeater.playvideo.PlayVideoViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,7 +21,9 @@ class PlayCoreComponent: BaseComponent<PlayVideoFragment>(), Player.Listener {
     const val TAG = PlayVideoFragment.Companion.TAG
   }
 
-  private var repeatable = false
+  var repeatable = false
+    private set
+
   val player: ExoPlayer by lazy {
     ExoPlayer.Builder(context).build().apply {
       repeatMode = Player.REPEAT_MODE_ALL
@@ -61,6 +65,8 @@ class PlayCoreComponent: BaseComponent<PlayVideoFragment>(), Player.Listener {
 
   override fun onDestroy() {
     super.onDestroy()
+    player.stop()
+    player.release()
     player.removeListener(this)
   }
 
@@ -80,18 +86,23 @@ class PlayCoreComponent: BaseComponent<PlayVideoFragment>(), Player.Listener {
     val curSen = curAbSentenceFlow.value
     if (curSen != null) {
       val index = sentences.indexOf(curSen)
-      var target: Sentence? = null
-      if (index >= 0 && index < sentences.lastIndex) {
-        //找到第一个end比自己end大的句子, 因为有可能用户已经拖动了当前句子, 把旁边的句子都盖住了
-        for (i in (index + 1)..sentences.lastIndex) {
-          val sentence = sentences[i]
-          if (sentence.end > curSen.end) {
-            target = sentence
-            break
+
+      if (index == sentences.lastIndex && player.mediaItemCount > 1 && player.hasNextMediaItem()) {
+        player.seekToNextMediaItem()
+      } else {
+        var target: Sentence? = null
+        if (index >= 0 && index < sentences.lastIndex) {
+          //找到第一个end比自己end大的句子, 因为有可能用户已经拖动了当前句子, 把旁边的句子都盖住了
+          for (i in (index + 1)..sentences.lastIndex) {
+            val sentence = sentences[i]
+            if (sentence.end > curSen.end) {
+              target = sentence
+              break
+            }
           }
         }
+        seekToSegment(target ?: sentences.firstOrNull())
       }
-      seekToSegment(target ?: sentences.firstOrNull())
     }
   }
 
@@ -99,18 +110,22 @@ class PlayCoreComponent: BaseComponent<PlayVideoFragment>(), Player.Listener {
     val curSen = curAbSentenceFlow.value
     if (curSen != null) {
       val index = sentences.indexOf(curSen)
-      var target: Sentence? = null
-      if (index > 0) {
-        //找到第一个start比自己start小的句子, 因为有可能用户已经拖动了当前句子, 把旁边的句子都盖住了
-        for (i in (index - 1)downTo 0) {
-          val sentence = sentences[i]
-          if (sentence.start < curSen.start) {
-            target = sentence
-            break
+      if (index == 0 && player.mediaItemCount > 1 && player.hasPreviousMediaItem()) {
+        player.seekToPreviousMediaItem()
+      } else {
+        var target: Sentence? = null
+        if (index > 0) {
+          //找到第一个start比自己start小的句子, 因为有可能用户已经拖动了当前句子, 把旁边的句子都盖住了
+          for (i in (index - 1)downTo 0) {
+            val sentence = sentences[i]
+            if (sentence.start < curSen.start) {
+              target = sentence
+              break
+            }
           }
         }
+        seekToSegment(target ?: sentences.lastOrNull())
       }
-      seekToSegment(target ?: sentences.lastOrNull())
     }
   }
 
@@ -168,6 +183,17 @@ class PlayCoreComponent: BaseComponent<PlayVideoFragment>(), Player.Listener {
   ) {
     super.onPositionDiscontinuity(oldPosition, newPosition, reason)
     curPosSecFlow.value = newPosition.positionMs.toFloat() / 1000
+  }
+
+  override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+    super.onMediaItemTransition(mediaItem, reason)
+    if (mediaItem != null) {
+      val currentUri = mediaItem.localConfiguration?.uri
+      Log.i(TAG, "onMediaItemTransition currentUri: $currentUri")
+//      if (currentUri != null) {
+//        fragment.viewModel.parseUriToPcm(currentUri)
+//      }
+    }
   }
 
   fun updateAbSentence(specificTime: Float? = null) {

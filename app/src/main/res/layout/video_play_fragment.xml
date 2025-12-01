@@ -19,6 +19,16 @@
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"/>
 
+  <Button
+    android:id="@+id/add_file_btn"
+    android:text="添加"
+    app:layout_constraintTop_toTopOf="@id/select_file_btn"
+    app:layout_constraintBottom_toBottomOf="@id/select_file_btn"
+    app:layout_constraintStart_toEndOf="@id/select_file_btn"
+    android:layout_marginStart="5dp"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"/>
+
   <androidx.appcompat.widget.SwitchCompat
     android:id="@+id/voice_repeat_switch"
     android:text="复读"

@@ -3,6 +3,7 @@ package com.language.repeater.utils
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
+import android.text.TextUtils.replace
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -111,7 +112,8 @@ object Md5Util {
     val metadata = getFileMetadata(context, uri)
     val name = metadata?.displayName
       ?.trim()
-      ?.replace(' ', '-')
+      ?.replace(' ', '-') //后续ffmpeg命令里, 文件名不能带空格
+      ?.replace('\'', '-') //不能带'符号
     val size = metadata?.size ?: 0
     if (name == null) {
       Log.e("wangzixu", "Warn! Md5Util.generateFastUniqueKey is null!!")

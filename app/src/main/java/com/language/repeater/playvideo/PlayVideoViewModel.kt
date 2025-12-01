@@ -50,7 +50,8 @@ class PlayVideoViewModel(application: Application) : AndroidViewModel(applicatio
   var curPcmFile: File? = null
 
   fun parseUriToPcm(uri: Uri) = viewModelScope.launch(Dispatchers.IO) {
-    Log.i(TAG, "parseUriToPcm begin: $uri")
+    if (uri == playUriStateFlow.value) return@launch
+    Log.i(TAG, "parseUriToPcm begin: $uri, currentUri:${playUriStateFlow.value}")
     try {
       uniqueKey = Md5Util.generateFastUniqueKey(application, uri)
       val time = System.currentTimeMillis()
@@ -62,21 +63,21 @@ class PlayVideoViewModel(application: Application) : AndroidViewModel(applicatio
         "wangzixu",
         "FFmpegUtil解码耗时 ${(System.currentTimeMillis() - time).toFloat() / 1000}"
       )
-      val file = File(path)
-      curPcmFile = file
-      val pcmLoader = PCMSegmentLoader(file)
+      val pcmFile = File(path)
+      curPcmFile = pcmFile
+      val pcmLoader = PCMSegmentLoader(pcmFile)
 
       launch(Dispatchers.IO) {
-        loadAllWaveData(file)
+        loadAllWaveData(pcmFile)
       }
 
       launch(Dispatchers.IO) {
-        loadSentenceData(file, uniqueKey)
+        loadSentenceData(pcmFile, uniqueKey)
       }
 
       playUriStateFlow.value = uri
       pcmLoaderStateFlow.value = pcmLoader
-      Log.i(TAG, "parseUriToPcm 转换成pcm文件成功:${file.length() / MB} mb")
+      Log.i(TAG, "parseUriToPcm 转换成pcm文件成功:${pcmFile.length() / MB} mb")
     } catch (e: Exception) {
       e.printStackTrace()
       Log.i(TAG, "parseUriToPcm error:$e")

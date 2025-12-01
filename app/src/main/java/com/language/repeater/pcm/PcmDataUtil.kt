@@ -60,7 +60,7 @@ object PcmDataUtil {
 
   fun readAllPcmToWavePoint(file: File, targetSize: Int): List<WaveformPoint> {
     val total = file.length() / PcmConfig.BYTES_PER_SAMPLE
-    val step = total / targetSize
+    val step = (total / targetSize).coerceAtLeast(1)
 
     val samples = ShortArray(step.toInt())
     val buffer = ByteArray(step.toInt() * 2)
@@ -86,8 +86,8 @@ object PcmDataUtil {
     val totalSamples = (file.length() / PcmConfig.BYTES_PER_SAMPLE).toInt()
     val arr = ShortArray(totalSamples)
     var index = 0
+    val buffer = ByteArray(2)
     FileInputStream(file).buffered().use { input ->
-      val buffer = ByteArray(2)
       while (input.read(buffer) != -1) {
         // s16le -> 2字节小端
         val byteIndex = 0
