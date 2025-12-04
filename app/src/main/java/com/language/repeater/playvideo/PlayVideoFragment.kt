@@ -21,6 +21,7 @@ import com.language.repeater.playvideo.components.PlayAllWaveComponent
 import com.language.repeater.playvideo.components.PlayCoreComponent
 import com.language.repeater.playvideo.components.PlayUIActComponent
 import com.language.repeater.playvideo.components.PlayScrollWaveComponent
+import com.language.repeater.playvideo.components.PlayViewComponent
 import com.language.repeater.playvideo.components.SelectFileComponent
 
 
@@ -40,6 +41,7 @@ class PlayVideoFragment: BaseFragment(), Player.Listener  {
     Log.i(TAG, "$TAG onCreate")
     addComponent(playComponent)
     addComponent(SelectFileComponent())
+    addComponent(PlayViewComponent())
     addComponent(HeadsetComponent())
     addComponent(PlayScrollWaveComponent())
     addComponent(PlayAllWaveComponent())
@@ -65,8 +67,6 @@ class PlayVideoFragment: BaseFragment(), Player.Listener  {
       v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
       insets
     }
-
-    binding.exoVideoView.player = playComponent.player
 
     bindClickAction()
   }

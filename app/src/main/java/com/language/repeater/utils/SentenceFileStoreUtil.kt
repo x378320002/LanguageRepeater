@@ -1,10 +1,9 @@
 package com.language.repeater.utils
 
-import android.R.attr.data
 import android.content.Context
 import com.google.common.hash.Hashing.md5
 import com.language.repeater.pcm.Sentence
-import com.language.repeater.utils.Md5Util.isRandomKey
+import com.language.repeater.utils.FileUriUtil.isRandomKey
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json

@@ -20,14 +20,15 @@
     android:layout_height="wrap_content"/>
 
   <Button
-    android:id="@+id/add_file_btn"
-    android:text="添加"
+    android:id="@+id/select_subtitle"
+    android:text="设置字幕"
     app:layout_constraintTop_toTopOf="@id/select_file_btn"
     app:layout_constraintBottom_toBottomOf="@id/select_file_btn"
     app:layout_constraintStart_toEndOf="@id/select_file_btn"
     android:layout_marginStart="5dp"
     android:layout_width="wrap_content"
-    android:layout_height="wrap_content"/>
+    android:layout_height="wrap_content"
+    tools:ignore="HardcodedText" />
 
   <androidx.appcompat.widget.SwitchCompat
     android:id="@+id/voice_repeat_switch"
@@ -45,15 +46,16 @@
 
   <androidx.media3.ui.PlayerView
     android:id="@+id/exo_video_view"
-    app:shutter_background_color="@android:color/holo_blue_bright"
+    app:shutter_background_color="@color/PastelGreen"
     android:background="@android:color/black"
     app:surface_type="texture_view"
     app:show_buffering="always"
-    app:auto_show="true"
-    app:show_timeout="0"
-    app:show_next_button="false"
+    app:auto_show="false"
+    app:show_subtitle_button="true"
+    app:show_timeout="3000"
+    app:show_next_button="true"
     app:use_controller="true"
-    app:show_previous_button="false"
+    app:show_previous_button="true"
     app:layout_constraintTop_toBottomOf="@id/select_file_btn"
     app:layout_constraintStart_toStartOf="parent"
     app:layout_constraintEnd_toEndOf="parent"
@@ -165,7 +167,16 @@
       app:layout_constraintStart_toStartOf="parent"
       android:layout_width="wrap_content"
       android:layout_height="wrap_content"/>
+
+    <Button
+      android:id="@+id/select_subtitle_dir"
+      android:text="设置字幕文件夹"
+      android:layout_marginStart="5dp"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"/>
   </com.google.android.flexbox.FlexboxLayout>
+
+
 
 <!--  <com.lottiefiles.dotlottie.core.widget.DotLottieAnimation-->
 <!--    android:id="@+id/lottie"-->

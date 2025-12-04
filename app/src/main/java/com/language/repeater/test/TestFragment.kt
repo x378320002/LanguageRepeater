@@ -110,22 +110,26 @@ class TestFragment: BaseFragment() {
         val size1 = file.length() / 1024
         binding.aacFileSize.text = "录音文件大小:$size1 kb, 时长:${duration.toFloat()/1000} 秒"
 
-        viewModel.parseUriToPcm(Uri.fromFile(file))
+        //viewModel.parseUriToPcm(Uri.fromFile(file))
       }
     })
 
+    var text = "12"
     binding.beginRecord.setOnClickListener {
       // 检查权限
-      when {
-        ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED -> {
-          // 权限已有，开始录音
-          startRecording()
-        }
-        else -> {
-          // 请求权限
-          requestPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-        }
-      }
+//      when {
+//        ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED -> {
+//          // 权限已有，开始录音
+//          startRecording()
+//        }
+//        else -> {
+//          // 请求权限
+//          requestPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+//        }
+//      }
+
+      text = text + text
+      binding.startEllipsize.text = text
     }
 
     binding.finishRecord.setOnClickListener {

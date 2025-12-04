@@ -1,14 +1,23 @@
 package com.language.repeater.playvideo.components
 
+import android.R.attr.repeatMode
+import android.net.Uri
 import android.util.Log
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
+import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
+import androidx.media3.common.Timeline
+import androidx.media3.common.TrackSelectionParameters
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.trackselection.TrackSelector
 import com.language.repeater.foundation.BaseComponent
 import com.language.repeater.pcm.Sentence
 import com.language.repeater.playvideo.PlayVideoFragment
 import com.language.repeater.playvideo.PlayVideoViewModel
+import com.language.repeater.utils.MyFileInfo
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -40,6 +49,7 @@ class PlayCoreComponent: BaseComponent<PlayVideoFragment>(), Player.Listener {
   val curPosSecFlow = MutableStateFlow<Float>(0f)
 
   private var loopProgressJob: Job? = null
+  private var subtitleAutoLoader: SubtitleAutoLoader? = null
 
   override fun onCreate() {
     super.onCreate()
@@ -50,21 +60,13 @@ class PlayCoreComponent: BaseComponent<PlayVideoFragment>(), Player.Listener {
       updateAbSentence()
     }.launchIn(fScope)
 
-    fragment.viewModel.playUriStateFlow.onEach {
-      if (it != null) {
-        val mediaItem = MediaItem.fromUri(it)
-        player.setMediaItem(mediaItem)
-        player.seekTo(0)
-        player.prepare()
-        if (fragment.isResumed) {
-          player.play()
-        }
-      }
-    }.launchIn(fScope)
+    subtitleAutoLoader = SubtitleAutoLoader(context, player, fScope)
   }
 
   override fun onDestroy() {
     super.onDestroy()
+    subtitleAutoLoader?.release()
+    subtitleAutoLoader = null
     player.stop()
     player.release()
     player.removeListener(this)
@@ -73,6 +75,51 @@ class PlayCoreComponent: BaseComponent<PlayVideoFragment>(), Player.Listener {
   @UnstableApi
   override fun onCreateView() {
     super.onCreateView()
+  }
+
+  fun addPlayUri(list: List<MyFileInfo>, isReplace: Boolean = false) {
+    if (list.isEmpty()) return
+
+    val items = list.map {
+      val builder = MediaItem
+        .Builder()
+        .setUri(it.uri)
+        .setMediaId(it.id)
+        .setMediaMetadata(MediaMetadata.Builder().setTitle(it.name).build())
+
+      val subtitleUri = it.subUri
+      if (subtitleUri != null) {
+        val subtitleConfig = MediaItem.SubtitleConfiguration.Builder(subtitleUri)
+          .setMimeType(MimeTypes.APPLICATION_SUBRIP) //.srt
+          .setLanguage("en")
+          .setSelectionFlags(C.SELECTION_FLAG_DEFAULT)
+          .build()
+        builder.setSubtitleConfigurations(listOf(subtitleConfig))
+      }
+
+      builder.build()
+    }
+
+    if (isReplace) {
+      player.setMediaItems(items)
+    } else {
+      player.addMediaItems(items)
+    }
+
+    if (!player.isPlaying) {
+      player.prepare()
+      if (fragment.isResumed) {
+        player.play()
+      }
+    }
+  }
+
+  fun updateCurrentItemSubtitle(uri: Uri) {
+    subtitleAutoLoader?.updateCurrentItemSubtitle(uri)
+  }
+
+  fun remove(index: Int) {
+    player.removeMediaItem(index)
   }
 
   fun setRepeat(repeat: Boolean) {
@@ -136,17 +183,6 @@ class PlayCoreComponent: BaseComponent<PlayVideoFragment>(), Player.Listener {
     }
   }
 
-  override fun onIsPlayingChanged(isPlaying: Boolean) {
-    super.onIsPlayingChanged(isPlaying)
-    //Log.i(TAG, "$TAG onIsPlayingChanged $isPlaying")
-    if (isPlaying) {
-      startLoopPos()
-    } else {
-      loopProgressJob?.cancel()
-      loopProgressJob = null
-    }
-  }
-
   private fun startLoopPos() {
     loopProgressJob?.cancel()
     loopProgressJob = fScope.launch {
@@ -176,6 +212,18 @@ class PlayCoreComponent: BaseComponent<PlayVideoFragment>(), Player.Listener {
     }
   }
 
+  //region Play.Listener
+  override fun onIsPlayingChanged(isPlaying: Boolean) {
+    super.onIsPlayingChanged(isPlaying)
+    //Log.i(TAG, "$TAG onIsPlayingChanged $isPlaying")
+    if (isPlaying) {
+      startLoopPos()
+    } else {
+      loopProgressJob?.cancel()
+      loopProgressJob = null
+    }
+  }
+
   override fun onPositionDiscontinuity(
     oldPosition: Player.PositionInfo,
     newPosition: Player.PositionInfo,
@@ -188,13 +236,16 @@ class PlayCoreComponent: BaseComponent<PlayVideoFragment>(), Player.Listener {
   override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
     super.onMediaItemTransition(mediaItem, reason)
     if (mediaItem != null) {
-      val currentUri = mediaItem.localConfiguration?.uri
-      Log.i(TAG, "onMediaItemTransition currentUri: $currentUri")
-//      if (currentUri != null) {
-//        fragment.viewModel.parseUriToPcm(currentUri)
-//      }
+      Log.i(TAG, "onMediaItemTransition current: ${mediaItem.mediaMetadata.title}")
+      fragment.viewModel.parseUriToPcm(mediaItem)
     }
   }
+
+  override fun onTimelineChanged(timeline: Timeline, reason: Int) {
+    super.onTimelineChanged(timeline, reason)
+    Log.i(TAG, "onTimelineChanged reason:$reason")
+  }
+  //endregion
 
   fun updateAbSentence(specificTime: Float? = null) {
     if (repeatable && sentences.isNotEmpty()) {

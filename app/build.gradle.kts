@@ -47,6 +47,7 @@ dependencies {
   implementation(libs.material)
   implementation(libs.androidx.activity)
   implementation(libs.androidx.constraintlayout)
+  implementation(libs.androidx.documentfile)
   testImplementation(libs.junit)
   androidTestImplementation(libs.androidx.junit)
   androidTestImplementation(libs.androidx.espresso.core)
@@ -61,4 +62,7 @@ dependencies {
   implementation(libs.kotlinx.serialization.json)
   implementation(libs.lottie)
   implementation(libs.google.flexbox)
+  implementation(libs.coil)
+  implementation(libs.coil.video)
+  implementation(libs.datastore.preference)
 }

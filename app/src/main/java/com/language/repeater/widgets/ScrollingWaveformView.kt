@@ -44,7 +44,7 @@ class ScrollingWaveformView @JvmOverloads constructor(
    * 每秒音频对应的像素宽度
    * 这个数字越大, 整体波形越长, 播放时移动的越快
    */
-  val pixelsPerSecond: Float = 80f
+  val pixelsPerSecond: Float = 50f
 
   /** 背景颜色 */
   val waveBackgroundColor: Int = 0xFFF5F5F5.toInt()

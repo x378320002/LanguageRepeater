@@ -17,8 +17,11 @@ ffmpegKitX6kb = "6.0.0"
 exoplayer = "1.8.0"
 vad = "2.0.10"
 
-lottie="0.5.0"
-flexbox="3.0.0"
+lottie = "0.12.5"
+flexbox = "3.0.0"
+documentfile = "1.1.0"
+coil = "3.3.0"
+datastore = "1.2.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -29,15 +32,15 @@ androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 androidx-activity = { group = "androidx.activity", name = "activity", version.ref = "activity" }
 androidx-constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }
-androidx-navigation-fragment = {group = "androidx.navigation", name = "navigation-fragment", version.ref ="navVersion"}
-androidx-navigation-ui = {group = "androidx.navigation", name = "navigation-ui", version.ref ="navVersion"}
-androidx-exoplayer = { group = "androidx.media3", name = "media3-exoplayer", version.ref ="exoplayer" }
-androidx-exoplayer-ui = { group = "androidx.media3", name = "media3-ui", version.ref ="exoplayer" }
-androidx-exoplayer-session = { group = "androidx.media3", name = "media3-session", version.ref ="exoplayer" }
+androidx-navigation-fragment = { group = "androidx.navigation", name = "navigation-fragment", version.ref = "navVersion" }
+androidx-navigation-ui = { group = "androidx.navigation", name = "navigation-ui", version.ref = "navVersion" }
+androidx-exoplayer = { group = "androidx.media3", name = "media3-exoplayer", version.ref = "exoplayer" }
+androidx-exoplayer-ui = { group = "androidx.media3", name = "media3-ui", version.ref = "exoplayer" }
+androidx-exoplayer-session = { group = "androidx.media3", name = "media3-session", version.ref = "exoplayer" }
 
 ffmpeg-kit-x6kb = { module = "com.moizhassan.ffmpeg:ffmpeg-kit-16kb", version.ref = "ffmpegKitX6kb" }
-vad-webrtc = { group = "com.github.gkonovalov.android-vad", name = "webrtc", version.ref ="vad" }
-vad-silero = { group = "com.github.gkonovalov.android-vad", name = "silero", version.ref ="vad" }
+vad-webrtc = { group = "com.github.gkonovalov.android-vad", name = "webrtc", version.ref = "vad" }
+vad-silero = { group = "com.github.gkonovalov.android-vad", name = "silero", version.ref = "vad" }
 
 # kotlinx-serialization-json 依赖
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinJson" }
@@ -47,9 +50,17 @@ lottie = { module = "com.github.LottieFiles:dotlottie-android", version.ref = "l
 
 #flexbox
 google-flexbox = { module = "com.google.android.flexbox:flexbox", version.ref = "flexbox" }
+androidx-documentfile = { group = "androidx.documentfile", name = "documentfile", version.ref = "documentfile" }
+
+#image load
+coil-video = { group = "io.coil-kt.coil3", name = "coil-video", version.ref = "coil" }
+coil = { group = "io.coil-kt.coil3", name = "coil", version.ref = "coil" }
+
+#data-preference
+datastore-preference = { group = "androidx.datastore", name = "datastore-preferences", version.ref ="datastore" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
-jetbrains-kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlinSerialization"}
+jetbrains-kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlinSerialization" }
 

@@ -1,5 +1,5 @@
 <resources>
   <string name="app_name">复读机-View</string>
 
-  <string name="select_file">浏览</string>
+  <string name="select_file">选择视频</string>
 </resources>
