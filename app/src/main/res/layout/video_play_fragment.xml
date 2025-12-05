@@ -64,7 +64,7 @@
     android:layout_width="0dp"
     android:layout_height="0dp" />
 
-  <com.language.repeater.widgets.AudioWaveformView
+  <com.language.repeater.widgets.AllWaveformView
     android:id="@+id/audio_wave_view"
     app:layout_constraintStart_toStartOf="parent"
     app:layout_constraintEnd_toEndOf="parent"
@@ -73,7 +73,7 @@
     android:layout_width="0dp"
     android:layout_height="100dp"/>
 
-  <com.language.repeater.widgets.ScrollingWaveformView
+  <com.language.repeater.widgets.ScrollWaveformView
     android:id="@+id/audio_progress_wave_view"
     app:layout_constraintStart_toStartOf="parent"
     app:layout_constraintEnd_toEndOf="parent"

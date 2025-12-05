@@ -1,20 +1,17 @@
 package com.language.repeater.widgets
 
-import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Path
-import android.graphics.PointF
 import android.util.AttributeSet
 import android.view.View
-import com.google.common.collect.Multimaps.index
 import com.language.repeater.pcm.WaveformPoint
 
 /**
  * 一个用于绘制音频PCM数据波形图的自定义View。
  */
-class AudioWaveformView @JvmOverloads constructor(
+class AllWaveformView @JvmOverloads constructor(
   context: Context,
   attrs: AttributeSet? = null,
   defStyleAttr: Int = 0

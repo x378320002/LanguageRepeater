@@ -4,16 +4,16 @@ import android.util.Log
 import androidx.media3.common.util.UnstableApi
 import com.language.repeater.foundation.BaseComponent
 import com.language.repeater.playvideo.PlayVideoFragment
-import com.language.repeater.widgets.ScrollingWaveformView
-import com.language.repeater.widgets.ScrollingWaveformView.ABHitResult
-import com.language.repeater.widgets.ScrollingWaveformView.OnSeekListener
+import com.language.repeater.widgets.ScrollWaveformView
+import com.language.repeater.widgets.ScrollWaveformView.ABHitResult
+import com.language.repeater.widgets.ScrollWaveformView.OnSeekListener
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 
 /**
  * Date: 2025-11-14
  * Time: 16:21
- * Description: 耳机播控处理逻辑
+ * Description: 可以拖动的波形图控件组件, 这个空间可能非常复杂, 单独开一个组件
  */
 class PlayScrollWaveComponent: BaseComponent<PlayVideoFragment>() {
   companion object {
@@ -29,19 +29,22 @@ class PlayScrollWaveComponent: BaseComponent<PlayVideoFragment>() {
   val viewModel
     get() = fragment.viewModel
 
+  val waveformView
+    get() = fragment.binding.audioProgressWaveView
+
   @UnstableApi
   override fun onCreateView() {
     super.onCreateView()
     //滚动波形图句子数据填充
     viewModel.sentencesFlow.onEach {
-      binding.audioProgressWaveView.setSentenceData(it)
+      waveformView.setSentenceData(it)
     }.launchIn(uiScope)
 
     //滚动波形图数据填充
     viewModel.pcmLoaderStateFlow.onEach {loader ->
       if (loader != null) {
         // 加载PCM文件
-        binding.audioProgressWaveView.setPCMLoader(loader, 0) {
+        waveformView.setPCMLoader(loader, 0) {
           Log.i(PlayVideoFragment.Companion.TAG, "audioProgressWaveView loadWindow $it")
         }
       }
@@ -49,18 +52,27 @@ class PlayScrollWaveComponent: BaseComponent<PlayVideoFragment>() {
 
     //波形图ab句子更新
     playComponent.curAbSentenceFlow.onEach {
-      binding.audioProgressWaveView.curABSeg = it
-      binding.audioProgressWaveView.invalidate()
+      waveformView.curABSeg = it
+      waveformView.invalidate()
     }.launchIn(uiScope)
 
     //波形进度的更新
     playComponent.curPosSecFlow.onEach {
       //处理波形图的更新
       if (it >= 0) {
-        binding.audioProgressWaveView.updatePosition(it)
+        waveformView.updatePosition(it)
       }
     }.launchIn(uiScope)
 
+
+    waveformView.setOnCustomClickListener {
+      val isPlaying = playComponent.player.isPlaying
+      if (isPlaying) {
+        playComponent.player.pause()
+      } else {
+        playComponent.player.play()
+      }
+    }
     handleDrag()
   }
 
@@ -69,7 +81,7 @@ class PlayScrollWaveComponent: BaseComponent<PlayVideoFragment>() {
     val player = playComponent.player
 
     //拖动波形图的逻辑
-    fragment.binding.audioProgressWaveView.setOnSeekListener(object : OnSeekListener {
+    waveformView.setOnSeekListener(object : OnSeekListener {
       var isPlayWhenStart = false
       override fun onSeekStart() {
         isPlayWhenStart = player.isPlaying
@@ -91,7 +103,7 @@ class PlayScrollWaveComponent: BaseComponent<PlayVideoFragment>() {
     })
 
     //拖动AB边界的逻辑
-    fragment.binding.audioProgressWaveView.setOnABChangeListener(object : ScrollingWaveformView.OnABChangeListener{
+    waveformView.setOnABChangeListener(object : ScrollWaveformView.OnABChangeListener{
       var isPlayWhenStart = false
       override fun onABDragStart(dragAbResult: ABHitResult?) {
         isPlayWhenStart = player.isPlaying

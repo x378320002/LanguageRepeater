@@ -7,6 +7,7 @@ import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.Typeface
 import android.util.AttributeSet
+import android.util.Log
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.View
@@ -32,11 +33,15 @@ import kotlin.math.min
  * 4. 预加载和缓存机制
  * 5. 支持手势拖动调整播放进度
  */
-class ScrollingWaveformView @JvmOverloads constructor(
+class ScrollWaveformView @JvmOverloads constructor(
   context: Context,
   attrs: AttributeSet? = null,
   defStyleAttr: Int = 0
 ) : View(context, attrs, defStyleAttr) {
+
+  companion object {
+    const val TAG = "ScrollingWaveformView"
+  }
 
   // ========== 配置参数 ==========
 
@@ -50,7 +55,13 @@ class ScrollingWaveformView @JvmOverloads constructor(
   val waveBackgroundColor: Int = 0xFFF5F5F5.toInt()
 
   // ========== 拖动相关接口 ==========
-  
+
+  /** 拖动监听器 */
+  private var onSeekListener: OnSeekListener? = null
+  /** AB边界变化监听器 */
+  private var onABChangeListener: OnABChangeListener? = null
+  private var onCustomClickListener: OnClickListener? = null
+
   /**
    * 拖动监听器
    */
@@ -73,8 +84,7 @@ class ScrollingWaveformView @JvmOverloads constructor(
     fun onSeekEnd(position: Float)
   }
   
-  /** 拖动监听器 */
-  private var onSeekListener: OnSeekListener? = null
+
 
   /** AB边界变化监听器 */
   interface OnABChangeListener {
@@ -84,9 +94,6 @@ class ScrollingWaveformView @JvmOverloads constructor(
 
     fun onABDragEnd(dragAbResult: ABHitResult?)
   }
-  
-  /** AB边界变化监听器 */
-  private var onABChangeListener: OnABChangeListener? = null
 
   // ========== 画笔 ==========
   //未播放画笔
@@ -193,14 +200,7 @@ class ScrollingWaveformView @JvmOverloads constructor(
 
   private var dragABResult: ABHitResult? = null
 
-  /** 当前拖动的AB边界类型 ("A" 或 "B") */
-  private var draggingABType: String? = null
-
-  /** 拖动开始时的AB边界时间 */
-  private var dragABStartTime = 0f
-
   // ========== 公共方法 ==========
-
   /**
    * 设置拖动监听器
    */
@@ -213,6 +213,10 @@ class ScrollingWaveformView @JvmOverloads constructor(
    */
   fun setOnABChangeListener(listener: OnABChangeListener?) {
     onABChangeListener = listener
+  }
+
+  fun setOnCustomClickListener(listener: OnClickListener?) {
+    onCustomClickListener = listener
   }
 
   /**
@@ -360,6 +364,12 @@ class ScrollingWaveformView @JvmOverloads constructor(
         onABChangeListener?.onABDragStart(this)
       }
       return true
+    }
+
+    override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
+      Log.i(TAG, "onSingleTapConfirmed")
+      onCustomClickListener?.onClick(this@ScrollWaveformView)
+      return onCustomClickListener != null
     }
 
     override fun onScroll(
