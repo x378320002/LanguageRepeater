@@ -15,7 +15,6 @@ import com.language.repeater.pcm.PCMSegmentLoader
 import com.language.repeater.pcm.PcmDataUtil
 import com.language.repeater.pcm.Sentence
 import com.language.repeater.pcm.WaveformPoint
-import com.language.repeater.utils.FileUriUtil
 import com.language.repeater.utils.ScreenUtil
 import com.language.repeater.utils.SentenceFileStoreUtil
 import kotlinx.coroutines.Dispatchers
@@ -31,7 +30,7 @@ import java.io.File
  */
 class PlayVideoViewModel(application: Application) : AndroidViewModel(application) {
   companion object {
-    private const val TAG = "wangzixu"
+    private const val TAG = "PlayVideoViewModel"
     private const val MB = 1024.0 * 1024.0
   }
 
@@ -138,13 +137,6 @@ class PlayVideoViewModel(application: Application) : AndroidViewModel(applicatio
     if (list.isEmpty()) {
       withContext(Dispatchers.Main) {
         ToastUtil.toast("句子列表为空, 无法存储句子信息")
-      }
-      return@withContext
-    }
-
-    if (FileUriUtil.isRandomKey(currentId)) {
-      withContext(Dispatchers.Main) {
-        ToastUtil.toast("当前的文件key是随机的, 无法存储句子信息")
       }
       return@withContext
     }

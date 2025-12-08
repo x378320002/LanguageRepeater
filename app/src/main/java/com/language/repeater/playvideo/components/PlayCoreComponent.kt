@@ -1,23 +1,23 @@
 package com.language.repeater.playvideo.components
 
-import android.R.attr.repeatMode
 import android.net.Uri
 import android.util.Log
+import androidx.core.net.toUri
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.MimeTypes
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.common.Player.TIMELINE_CHANGE_REASON_PLAYLIST_CHANGED
 import androidx.media3.common.Timeline
-import androidx.media3.common.TrackSelectionParameters
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.exoplayer.trackselection.TrackSelector
 import com.language.repeater.foundation.BaseComponent
 import com.language.repeater.pcm.Sentence
 import com.language.repeater.playvideo.PlayVideoFragment
-import com.language.repeater.playvideo.PlayVideoViewModel
-import com.language.repeater.utils.MyFileInfo
+import com.language.repeater.playvideo.model.VideoEntity
+import com.language.repeater.playvideo.playlist.PlaylistManager
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -77,7 +77,7 @@ class PlayCoreComponent: BaseComponent<PlayVideoFragment>(), Player.Listener {
     super.onCreateView()
   }
 
-  fun addPlayUri(list: List<MyFileInfo>, isReplace: Boolean = false) {
+  fun addPlayUri(list: List<VideoEntity>, isReplace: Boolean = false) {
     if (list.isEmpty()) return
 
     val items = list.map {
@@ -87,7 +87,7 @@ class PlayCoreComponent: BaseComponent<PlayVideoFragment>(), Player.Listener {
         .setMediaId(it.id)
         .setMediaMetadata(MediaMetadata.Builder().setTitle(it.name).build())
 
-      val subtitleUri = it.subUri
+      val subtitleUri = it.subUri?.toUri()
       if (subtitleUri != null) {
         val subtitleConfig = MediaItem.SubtitleConfiguration.Builder(subtitleUri)
           .setMimeType(MimeTypes.APPLICATION_SUBRIP) //.srt
@@ -244,6 +244,21 @@ class PlayCoreComponent: BaseComponent<PlayVideoFragment>(), Player.Listener {
   override fun onTimelineChanged(timeline: Timeline, reason: Int) {
     super.onTimelineChanged(timeline, reason)
     Log.i(TAG, "onTimelineChanged reason:$reason")
+    if (reason == TIMELINE_CHANGE_REASON_PLAYLIST_CHANGED) {
+      fScope.launch {
+        val currentItems = ArrayList<MediaItem>()
+        for (i in 0 until player.mediaItemCount) {
+          currentItems.add(player.getMediaItemAt(i))
+        }
+        Log.i(TAG, "onTimelineChanged 0, save: currentItems:${currentItems.size}")
+        PlaylistManager.saveCurrentPlaylist(context, currentItems)
+      }
+    }
+  }
+
+
+  override fun onPlayerError(error: PlaybackException) {
+    Log.i(TAG, "播放器报错: ${error.message}", error)
   }
   //endregion
 

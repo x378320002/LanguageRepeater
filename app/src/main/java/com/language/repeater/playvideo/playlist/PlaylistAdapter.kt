@@ -42,15 +42,24 @@ class PlaylistAdapter(
     init {
       // --- 5. 点击事件 ---
       binding.root.setOnClickListener(this)
+      binding.btnDelete.setOnClickListener(this)
     }
 
     override fun onClick(v: View?) {
-      if (bindingAdapterPosition == currentPlayingIndex) {
-        if (player.isPlaying) player.pause() else player.play()
-      } else {
-        player.seekToDefaultPosition(bindingAdapterPosition)
-        //player.prepare()
-        //player.play()
+      if (v == binding.root) {
+        if (bindingAdapterPosition == currentPlayingIndex) {
+          if (player.isPlaying) player.pause() else player.play()
+        } else {
+          player.seekToDefaultPosition(bindingAdapterPosition)
+          //player.prepare()
+          //player.play()
+        }
+      } else if (v == binding.btnDelete) {
+        // 获取当前的绝对位置 (防止列表刷新后位置不对)
+        val currentPos = bindingAdapterPosition
+        if (currentPos != RecyclerView.NO_POSITION && currentPos in 0 until player.mediaItemCount) {
+          player.removeMediaItem(currentPos)
+        }
       }
     }
   }
@@ -136,8 +145,6 @@ class PlaylistAdapter(
     if (isCurrentItem) {
       // 高亮状态
       binding.tvTitle.setTextColor(ResourcesUtil.getColor(R.color.PlayListTextColorSelected))
-      //binding.tvTitle.setTypeface(null, Typeface.BOLD)
-      //binding.root.setBackgroundColor(Color.parseColor("#10000000"))
       binding.ivPlayState.visibility = View.VISIBLE
       if (isPlayerPlaying) {
         binding.ivPlayState.setImageResource(androidx.media3.session.R.drawable.media3_icon_play)
@@ -147,7 +154,6 @@ class PlaylistAdapter(
     } else {
       // 普通状态
       binding.tvTitle.setTextColor(ResourcesUtil.getColor(R.color.PlayListTextColor))
-      //binding.tvTitle.setTypeface(null, Typeface.NORMAL)
       binding.ivPlayState.visibility = View.INVISIBLE
     }
   }

@@ -14,9 +14,10 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import com.language.repeater.dataStore
 import com.language.repeater.subtitleStore
-import com.language.repeater.utils.DataStoreKey.SUBTITLE_FOLDER_KEY
+import com.language.repeater.utils.DataStoreKey.KEY_SUBTITLE_FOLDER
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
@@ -31,7 +32,7 @@ class SubtitleAutoLoader(
   private val context: Context,
   private val player: Player,
   private val scope: CoroutineScope, // 传入 lifecycleScope 或 viewModelScope
-) : Player.Listener {
+) {
   companion object {
     const val TAG = "wangzixu-SubtitleAutoLoader"
 
@@ -70,12 +71,11 @@ class SubtitleAutoLoader(
   var subtitleFold: String? = null
   init {
     // 初始化时就把自己注册进去
-    player.addListener(this)
-    context.dataStore.data.map { it[SUBTITLE_FOLDER_KEY] }.onEach {
-      //Log.i(TAG, "$TAG 字幕文件夹更新 $it")
-      subtitleFold = it
-
-      if (it != null && it.isNotEmpty() && player.mediaItemCount > 0) {
+    context.dataStore.data.map { it[KEY_SUBTITLE_FOLDER] }.distinctUntilChanged().onEach {
+      Log.d(TAG, "$TAG 字幕文件夹更新 $it")
+      val first = subtitleFold == null
+      subtitleFold = it ?: ""
+      if (!first && it != null && it.isNotEmpty() && player.mediaItemCount > 0) {
         scope.launch(Dispatchers.IO) {
           tryLoadAllSubtitle()
         }
@@ -85,34 +85,12 @@ class SubtitleAutoLoader(
 
   // 销毁时记得移除监听
   fun release() {
-    player.removeListener(this)
   }
 
   private fun checkHasSubtitle(mediaItem: MediaItem): Boolean {
     // 1. 检查当前 Item 是否已经配置了字幕
     return mediaItem.localConfiguration?.subtitleConfigurations?.isNotEmpty() == true
   }
-
-  override fun onPlayerError(error: PlaybackException) {
-    Log.i(TAG, "播放器报错: ${error.message}", error)
-  }
-
-  // 2. 监听轨道变化：看看播放器到底有没有识别出“Text”轨道
-//  override fun onTracksChanged(tracks: Tracks) {
-//    var hasTextTrack = false
-//    for (group in tracks.groups) {
-//      if (group.type == C.TRACK_TYPE_TEXT) {
-//        hasTextTrack = true
-//        val isSupported = group.isSupported
-//        val isSelected = group.isSelected
-//        Log.i(TAG, "发现字幕轨道! 支持状态: $isSupported, 选中状态: $isSelected")
-//      }
-//    }
-//    if (!hasTextTrack) {
-//      Log.i(TAG, "当前没有发现任何字幕轨道 (CC按钮变灰的原因)")
-//    }
-//  }
-
 
   private suspend fun tryLoadAllSubtitle() {
     // 只有当 mediaItem 不为空，且没有字幕时, 才我们预期的切换时才处理

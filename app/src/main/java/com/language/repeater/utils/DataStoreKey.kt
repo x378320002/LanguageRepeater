@@ -1,11 +1,10 @@
 package com.language.repeater.utils
 
-import android.content.Context
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
 
 object DataStoreKey {
-  val SUBTITLE_FOLDER_KEY = stringPreferencesKey("subtitle_folder_uri")
+  val KEY_SUBTITLE_FOLDER = stringPreferencesKey("subtitle_folder_uri")
+
+  val KEY_CURRENT_PLAYLIST = stringPreferencesKey("key_current_playlist")
+  val KEY_CURRENT_PLAY_INFO = stringPreferencesKey("key_current_play_info")
 }

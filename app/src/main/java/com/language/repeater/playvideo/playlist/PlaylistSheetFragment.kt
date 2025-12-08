@@ -7,6 +7,7 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.lifecycle.lifecycleScope
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.Player.TIMELINE_CHANGE_REASON_PLAYLIST_CHANGED
@@ -19,11 +20,17 @@ import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.language.repeater.R
 import com.language.repeater.databinding.PlaylistSheetFragmentBinding
+import com.language.repeater.playvideo.PlayVideoFragment
+import kotlinx.coroutines.launch
 
 @SuppressLint("SetTextI18n")
 class PlaylistSheetFragment(
   private val player: Player
 ) : BottomSheetDialogFragment() {
+
+  companion object {
+    const val TAG = PlayVideoFragment.TAG
+  }
 
   // ViewBinding 变量
   private var _binding: PlaylistSheetFragmentBinding? = null
@@ -46,7 +53,7 @@ class PlaylistSheetFragment(
     override fun onIsPlayingChanged(isPlaying: Boolean) {
       val isPlayingState = playingState()
       if (adapter.isPlayerPlaying != isPlayingState) {
-        Log.i("PlaylistSheetFragment", "onIsPlayingChanged isPlayingState:$isPlayingState")
+        Log.i(TAG, "onIsPlayingChanged isPlayingState:$isPlayingState")
         adapter.isPlayerPlaying = isPlayingState
         val currentIndex = adapter.currentPlayingIndex
         if (currentIndex != -1) {
@@ -58,12 +65,11 @@ class PlaylistSheetFragment(
     @SuppressLint("NotifyDataSetChanged")
     override fun onTimelineChanged(timeline: Timeline, reason: Int) {
       if (reason == TIMELINE_CHANGE_REASON_PLAYLIST_CHANGED) {
-        Log.i("PlaylistSheetFragment", "onTimelineChanged TIMELINE_CHANGE_REASON_PLAYLIST_CHANGED")
         "(${player.mediaItemCount})".also { binding.tvCount.text = it }
         adapter.notifyDataSetChanged()
       } else if (reason == TIMELINE_CHANGE_REASON_SOURCE_UPDATE) {
         //当前条目本来没有时间信息, 解析完获取到时间信息时, 会回调这个方法
-        Log.i("PlaylistSheetFragment", "onTimelineChanged TIMELINE_CHANGE_REASON_SOURCE_UPDATE")
+        Log.i(TAG, "onTimelineChanged TIMELINE_CHANGE_REASON_SOURCE_UPDATE")
         val currentIndex = adapter.currentPlayingIndex
         if (currentIndex != -1) {
           adapter.notifyItemChanged(currentIndex, PlaylistAdapter.PAYLOAD_PLAY_STATE)

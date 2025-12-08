@@ -52,7 +52,7 @@ class PlayVideoFragment: BaseFragment(), Player.Listener  {
     container: ViewGroup?,
     savedInstanceState: Bundle?,
   ): View {
-    Log.i(TAG, "$TAG onCreateView")
+    //Log.i(TAG, "$TAG onCreateView")
     binding = VideoPlayFragmentBinding.inflate(inflater, container, false)
     return binding.root
   }
@@ -77,35 +77,5 @@ class PlayVideoFragment: BaseFragment(), Player.Listener  {
 
     binding.testAction.setOnClickListener {
     }
-  }
-
-  override fun onPause() {
-    super.onPause()
-    Log.i(TAG, "$TAG onPause")
-  }
-
-  override fun onResume() {
-    super.onResume()
-    Log.i(TAG, "$TAG onResume")
-  }
-
-  override fun onStart() {
-    super.onStart()
-    Log.i(TAG, "$TAG onStart")
-  }
-
-  override fun onStop() {
-    super.onStop()
-    Log.i(TAG, "$TAG onStop")
-  }
-
-  override fun onDestroyView() {
-    super.onDestroyView()
-    Log.i(TAG, "$TAG onDestroyView")
-  }
-
-  override fun onDestroy() {
-    super.onDestroy()
-    Log.i(TAG, "$TAG onDestroy")
   }
 }

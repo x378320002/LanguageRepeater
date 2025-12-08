@@ -4,6 +4,8 @@
   <color name="white">#FFFFFFFF</color>
   <color name="white_20">#33FFFFFF</color>
 
+  <color name="green1">#008577</color>
+
   <color name="transparent">#00000000</color>
   <color name="main_background">#FFFFFFFF</color>
   <color name="exo_bottom_bar_background" tools:ignore="PrivateResource">#00000000</color>

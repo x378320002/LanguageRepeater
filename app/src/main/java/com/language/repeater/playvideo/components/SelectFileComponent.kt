@@ -10,15 +10,19 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.net.toUri
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.media3.common.C
 import com.language.repeater.dataStore
 import com.language.repeater.foundation.BaseComponent
 import com.language.repeater.playvideo.PlayVideoFragment
+import com.language.repeater.playvideo.model.CurrentPlayVideoEntity
 import com.language.repeater.subtitleStore
 import com.language.repeater.utils.DataStoreKey
-import com.language.repeater.utils.DataStoreKey.SUBTITLE_FOLDER_KEY
-import com.language.repeater.utils.FileUriUtil
+import com.language.repeater.utils.DataStoreKey.KEY_SUBTITLE_FOLDER
+import com.language.repeater.playvideo.playlist.PlaylistManager
+import com.language.repeater.utils.DataStoreKey.KEY_CURRENT_PLAY_INFO
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -34,17 +38,18 @@ class SelectFileComponent : BaseComponent<PlayVideoFragment>() {
       Log.d(PlayVideoFragment.TAG, "OpenMultipleDocuments uris size = ${it.size}")
       fragment.showLoading()
       fScope.launch {
-        val preferences = context.subtitleStore.data.first()
+        val preferences = context.subtitleStore.data.firstOrNull()
 
         //转成info给视频播放器
         var needToCheckSubFolder = false
         val infos = it.map { uri ->
           takePersistablePermission(uri)
-          val info = FileUriUtil.getFileInfo(context, uri)
+
+          val info = PlaylistManager.getFileInfo(context, uri)
           val prefKey = stringPreferencesKey(info.id)
-          val sub = preferences[prefKey]
+          val sub = preferences?.get(prefKey)
           if (!sub.isNullOrEmpty()) {
-            info.subUri = sub.toUri()
+            info.subUri = sub
           } else {
             needToCheckSubFolder = true
           }
@@ -54,7 +59,7 @@ class SelectFileComponent : BaseComponent<PlayVideoFragment>() {
 
         //去文件夹寻找字幕
         if (needToCheckSubFolder) {
-          val folder = context.dataStore.data.map { p -> p[SUBTITLE_FOLDER_KEY] }.first()?.toUri()
+          val folder = context.dataStore.data.map { p -> p[KEY_SUBTITLE_FOLDER] }.firstOrNull()?.toUri()
           Log.d(PlayVideoFragment.TAG, "needToCheckSubFolder folder: $folder")
           val map = SubtitleAutoLoader.loadAllSub(context, folder)
           if (!map.isNullOrEmpty()) {
@@ -62,7 +67,7 @@ class SelectFileComponent : BaseComponent<PlayVideoFragment>() {
               if (info.subUri == null) {
                 val key = info.name.substringBeforeLast(".")
                 val tempUri = map[key]
-                info.subUri = tempUri
+                info.subUri = tempUri.toString()
                 if (tempUri != null) {
                   val prefKey = stringPreferencesKey(info.id)
                   context.subtitleStore.edit { sp-> sp[prefKey] = tempUri.toString() }
@@ -87,7 +92,7 @@ class SelectFileComponent : BaseComponent<PlayVideoFragment>() {
         takePersistablePermission(uri)
         fScope.launch {
           context.dataStore.edit {
-            it[DataStoreKey.SUBTITLE_FOLDER_KEY] = uri.toString()
+            it[DataStoreKey.KEY_SUBTITLE_FOLDER] = uri.toString()
           }
         }
       }
@@ -160,6 +165,19 @@ class SelectFileComponent : BaseComponent<PlayVideoFragment>() {
     fragment.binding.selectSubtitle.setOnClickListener {
       openSubtitleLauncher.launch(arrayOf("text/.srt"))
     }
+
+    //加载上次的播放列表
+    uiScope.launch {
+      val list = PlaylistManager.loadLastPlaylist(context)
+      Log.d(PlayVideoFragment.TAG, "load playlist :${list.size}")
+      if (list.isNotEmpty()) {
+        val indexInfo = PlaylistManager.loadCurrentPlayIndex(context)
+        fragment.playComponent.addPlayUri(list, true)
+        if (indexInfo != null) {
+          fragment.playComponent.player.seekTo(indexInfo.index, indexInfo.positionMs)
+        }
+      }
+    }
   }
 
   // 核心方法：申请持久权限
@@ -176,6 +194,18 @@ class SelectFileComponent : BaseComponent<PlayVideoFragment>() {
       e.printStackTrace()
       // 某些特殊云端文件可能不支持持久权限，这里要做异常处理
       Log.d(PlayVideoFragment.TAG, "takePersistablePermission failed:${e.message}, uri: $uri")
+    }
+  }
+
+  override fun onStop() {
+    super.onStop()
+    fScope.launch {
+      val curIndex = fragment.playComponent.player.currentMediaItemIndex
+      val curPos = fragment.playComponent.player.currentPosition
+      if (curIndex != C.INDEX_UNSET) {
+        Log.d(PlayVideoFragment.TAG, "save current curIndex:$curIndex, curPos: $curPos")
+        PlaylistManager.saveCurrentPlayIndex(context, CurrentPlayVideoEntity(curIndex, curPos))
+      }
     }
   }
 }
