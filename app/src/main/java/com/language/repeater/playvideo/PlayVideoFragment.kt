@@ -30,8 +30,7 @@ class PlayVideoFragment: BaseFragment(), Player.Listener  {
     const val TAG = "wangzixu"
   }
 
-  private var _binding: VideoPlayFragmentBinding? = null
-  val binding get() = _binding!!
+  lateinit var binding: VideoPlayFragmentBinding
   val viewModel: PlayVideoViewModel by activityViewModels()
 
   var playComponent = PlayCoreComponent()
@@ -54,9 +53,8 @@ class PlayVideoFragment: BaseFragment(), Player.Listener  {
     savedInstanceState: Bundle?,
   ): View {
     Log.i(TAG, "$TAG onCreateView")
-    _binding = VideoPlayFragmentBinding.inflate(inflater, container, false)
-    val view = binding.root
-    return view
+    binding = VideoPlayFragmentBinding.inflate(inflater, container, false)
+    return binding.root
   }
 
   @OptIn(UnstableApi::class)

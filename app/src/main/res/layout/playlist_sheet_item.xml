@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+  xmlns:app="http://schemas.android.com/apk/res-auto"
+  xmlns:tools="http://schemas.android.com/tools"
+  android:layout_width="match_parent"
+  android:layout_height="wrap_content"
+  android:orientation="horizontal"
+  android:gravity="center_vertical"
+  android:paddingHorizontal="15dp"
+  android:paddingVertical="8dp"
+  android:background="@drawable/bg_playlist_item">
+
+  <!-- 1. 封面区域 (包含时长角标) -->
+  <!-- 使用 FrameLayout 包裹，以便叠加时长文字 -->
+  <FrameLayout
+    android:layout_width="90dp"
+    android:layout_height="50dp">
+
+    <!-- 封面图 -->
+    <ImageView
+      android:id="@+id/iv_cover"
+      android:layout_width="match_parent"
+      android:layout_height="match_parent"
+      android:scaleType="fitCenter"
+      android:background="#F0F0F0"
+      android:src="@drawable/media_session_service_notification_ic_music_note"
+      tools:ignore="ContentDescription" />
+
+    <!-- 时长角标 (浮在右下角) -->
+    <TextView
+      android:id="@+id/tv_duration"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:layout_gravity="bottom|end"
+      android:layout_margin="2dp"
+      android:background="@drawable/bg_duration_badge"
+      android:paddingHorizontal="4dp"
+      android:paddingVertical="1dp"
+      android:textSize="10sp"
+      android:textColor="#FFFFFF"
+      android:textStyle="bold"
+      android:visibility="gone"
+      tools:text="04:20"
+      tools:visibility="visible"
+      tools:ignore="SmallSp" />
+    <!-- visibility="gone" 默认隐藏，有数据才显示 -->
+    <!-- bg_duration_badge 是一个半透明黑色圆角背景，见下方说明 -->
+
+  </FrameLayout>
+
+  <!-- 2. 信息区域 -->
+  <LinearLayout
+    android:layout_width="0dp"
+    android:layout_height="wrap_content"
+    android:layout_weight="1"
+    android:orientation="vertical"
+    android:layout_marginStart="12dp"
+    android:layout_marginEnd="6dp">
+
+    <!-- 标题 -->
+    <TextView
+      android:id="@+id/tv_title"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:textSize="15sp"
+      android:textColor="#333333"
+      android:maxLines="2"
+      android:ellipsize="end"
+      android:lineSpacingExtra="2dp"
+      tools:text="这是一个非常长的视频标题示例用于测试布局效果.mp4" />
+  </LinearLayout>
+
+  <!-- 3. 播放状态图标 -->
+  <ImageView
+    android:id="@+id/iv_play_state"
+    android:layout_width="24dp"
+    android:layout_height="24dp"
+    android:src="@drawable/media3_icon_play"
+    android:visibility="gone"
+    app:tint="#008577"
+    tools:visibility="visible"
+    tools:ignore="ContentDescription" />
+
+</LinearLayout>

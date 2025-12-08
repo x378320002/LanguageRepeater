@@ -7,6 +7,7 @@ import android.graphics.Path
 import android.util.AttributeSet
 import android.view.View
 import com.language.repeater.pcm.WaveformPoint
+import com.language.repeater.utils.ResourcesUtil.toDp
 
 /**
  * 一个用于绘制音频PCM数据波形图的自定义View。
@@ -18,8 +19,7 @@ class AllWaveformView @JvmOverloads constructor(
 ) : View(context, attrs, defStyleAttr) {
 
   // 1. 将绘图对象作为成员变量，避免在 onDraw 中重复创建
-  private var pcmData: List<WaveformPoint> = listOf()
-//  private var pathPoints: Array<PointF>? = null
+  private var pathPoint: List<WaveformPoint> = listOf()
   // 复用 Path 对象
   private val path = Path()
 
@@ -44,8 +44,14 @@ class AllWaveformView @JvmOverloads constructor(
   }
 
   private val playedPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-    color = 0x20000000.toInt() // 对应 Color.LightGray.copy(alpha = 0.5f)
+    color = 0x20000000 // 对应 Color.LightGray.copy(alpha = 0.5f)
     style = Paint.Style.FILL
+  }
+
+  private val indicatorPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    color = 0xFFFFFFFF.toInt()
+    style = Paint.Style.FILL
+    strokeWidth = 1f.toDp()
   }
 
   /**
@@ -53,8 +59,8 @@ class AllWaveformView @JvmOverloads constructor(
    * @param data 原始PCM数据数组（通常是16-bit，范围从 -32768 到 32767）。
    */
   fun setPcmData(data: List<WaveformPoint>) {
-    if (data != this.pcmData) {
-      this.pcmData = data
+    if (data != this.pathPoint) {
+      this.pathPoint = data
 //      pathPoints = null
       // 请求重新绘制 View
       invalidate()
@@ -69,7 +75,7 @@ class AllWaveformView @JvmOverloads constructor(
     // 背景色建议通过 XML 的 android:background 属性设置，这里不再绘制
     // canvas.drawColor(0xFFFFF3E0.toInt()) // 对应 PastelOrange
 
-    if (pcmData.isEmpty()) {
+    if (pathPoint.isEmpty()) {
       return
     }
 
@@ -84,7 +90,7 @@ class AllWaveformView @JvmOverloads constructor(
     path.moveTo(0f, centerY)
 
     // 计算每个数据点在X轴上的步长
-    val xStep = canvasWidth / (pcmData.size - 1).coerceAtLeast(1)
+    val xStep = canvasWidth / (pathPoint.size - 1).coerceAtLeast(1)
 //    if (pathPoints.isNullOrEmpty()) {
 //      @SuppressLint("DrawAllocation")
 //      pathPoints = Array(pcmData.size) {index ->
@@ -98,15 +104,15 @@ class AllWaveformView @JvmOverloads constructor(
 //    }
 //    val points = pathPoints ?: return
 
-    for (i in pcmData.indices) {
-      val p = pcmData[i]
+    for (i in pathPoint.indices) {
+      val p = pathPoint[i]
       val x = i * xStep
       val y = centerY - (p.max / 32768f) * availableHeight
       path.lineTo(x, y)
     }
     path.lineTo(canvasWidth, centerY) // 连接到右下角
-    for (i in pcmData.lastIndex downTo 0) {
-      val p = pcmData[i]
+    for (i in pathPoint.lastIndex downTo 0) {
+      val p = pathPoint[i]
       val x = i * xStep
       val y = centerY - (p.min / 32768f) * availableHeight
       path.lineTo(x, y)
@@ -121,7 +127,10 @@ class AllWaveformView @JvmOverloads constructor(
     // 5. 绘制中心线
     canvas.drawLine(0f, centerY, canvasWidth, centerY, centerLinePaint)
 
-    canvas.drawRect(0f, 0f, canvasWidth * currentProgress, canvasHeight, playedPaint)
+    val current = canvasWidth * currentProgress
+    canvas.drawRect(0f, 0f, current, canvasHeight, playedPaint)
+    canvas.drawLine(current, 0f, current, canvasHeight, indicatorPaint)
+//    canvas.drawCircle(current, centerY, 10f, indicatorPaint)
   }
 
   var currentProgress = 0f

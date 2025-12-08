@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<set xmlns:android="http://schemas.android.com/apk/res/android"
+  android:shareInterpolator="false">
+
+  <!-- 【关键修改】只保留位移，删除了 <alpha> 标签 -->
+  <!-- 这样点击背景关闭时，列表会实实在在地滑下去，不会变成半透明 -->
+  <translate
+    android:fromYDelta="0%"
+    android:toYDelta="100%"
+    android:duration="250"
+    android:interpolator="@android:anim/accelerate_interpolator" />
+</set>

@@ -31,7 +31,7 @@ object PcmDataUtil {
     if (samplesPerPoint <= 0) {
       samples.forEachIndexed {i, v ->
         val time = startTime + i * perPointTime
-        result.add(WaveformPoint(time, v.toInt(), v.toInt()))
+        result.add(WaveformPoint(time, v, v))
       }
       return result
     }
@@ -52,7 +52,7 @@ object PcmDataUtil {
       }
 
       val time = startTime + i * perPointTime
-      result.add(WaveformPoint(time, min.toInt(), max.toInt()))
+      result.add(WaveformPoint(time, min, max))
     }
 
     return result
@@ -69,13 +69,20 @@ object PcmDataUtil {
     FileInputStream(file).use { input ->
       var bytesRead: Int
       while (input.read(buffer).also { bytesRead = it } != -1) {
+        //把读出来的byte转成short数组, 再计算这个数组的最大最小值或者平均值, 转成WaveformPoint
+        var max = Short.MIN_VALUE
+        var min = Short.MAX_VALUE
+
         // s16le -> 2字节小端
         val count = bytesRead / 2
         for (i in 0 until count) {
           val byteIndex = i * 2
-          samples[i] = ((buffer[byteIndex + 1].toInt() shl 8) or (buffer[byteIndex].toInt() and 0xFF)).toShort()
+          val value= ((buffer[byteIndex + 1].toInt() shl 8) or (buffer[byteIndex].toInt() and 0xFF)).toShort()
+          samples[i] = value
+          if (value > max) max = value
+          if (value < min) min = value
         }
-        result.addAll(downsampleToWaveform(samples, 1, 0f, 0f))
+        result.add(WaveformPoint(0f, min, max))
       }
     }
     return result

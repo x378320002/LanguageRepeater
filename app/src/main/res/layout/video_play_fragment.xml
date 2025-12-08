@@ -71,7 +71,7 @@
     app:layout_constraintTop_toBottomOf="@id/exo_video_view"
     android:background="@color/PastelOrange"
     android:layout_width="0dp"
-    android:layout_height="100dp"/>
+    android:layout_height="30dp"/>
 
   <com.language.repeater.widgets.ScrollWaveformView
     android:id="@+id/audio_progress_wave_view"
@@ -82,6 +82,19 @@
     android:layout_width="0dp"
     android:layout_height="100dp"
     />
+
+  <ImageView
+    android:id="@+id/play_list"
+    app:layout_constraintBottom_toBottomOf="@id/audio_progress_wave_view"
+    app:layout_constraintEnd_toEndOf="@id/audio_progress_wave_view"
+    android:src="@drawable/media3_icon_playlist_add"
+    app:tint="@color/design_default_color_secondary_variant"
+    android:padding="8dp"
+    android:paddingEnd="18dp"
+    android:paddingStart="18dp"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    tools:ignore="ContentDescription" />
 
 
   <com.google.android.flexbox.FlexboxLayout

@@ -14,8 +14,8 @@ import android.view.View
 import com.language.repeater.pcm.PCMSegmentLoader
 import com.language.repeater.pcm.Sentence
 import com.language.repeater.pcm.WaveformPoint
-import com.language.repeater.utils.CommonUtil
-import com.language.repeater.utils.CommonUtil.toDp
+import com.language.repeater.utils.ResourcesUtil.toDp
+import com.language.repeater.utils.TimeFormatUtil
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -599,7 +599,7 @@ class ScrollWaveformView @JvmOverloads constructor(
     val textSize = timeTextPaint.textSize
     timeTextPaint.textAlign = Paint.Align.CENTER
     canvas.drawText(
-      CommonUtil.formatTimeFloat(currentTime),
+      TimeFormatUtil.formatTimeFloat(currentTime),
       width / 2f,
       textSize,
       timeTextPaint
@@ -607,7 +607,7 @@ class ScrollWaveformView @JvmOverloads constructor(
 
     timeTextPaint.textAlign = Paint.Align.LEFT
     canvas.drawText(
-      CommonUtil.formatTime(0f),
+      TimeFormatUtil.formatTime(0f),
       0f,
       textSize,
       timeTextPaint
@@ -615,7 +615,7 @@ class ScrollWaveformView @JvmOverloads constructor(
 
     timeTextPaint.textAlign = Paint.Align.RIGHT
     canvas.drawText(
-      CommonUtil.formatTime(totalDuration),
+      TimeFormatUtil.formatTime(totalDuration),
       width.toFloat(),
       textSize,
       timeTextPaint
