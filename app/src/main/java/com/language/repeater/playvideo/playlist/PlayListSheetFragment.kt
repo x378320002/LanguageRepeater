@@ -156,6 +156,44 @@ class PlaylistSheetFragment(
       behavior.state = BottomSheetBehavior.STATE_EXPANDED
       behavior.skipCollapsed = true
       behavior.isHideable = true
+
+      behavior.addBottomSheetCallback(object : BottomSheetBehavior.BottomSheetCallback() {
+        // 监听状态变化
+        override fun onStateChanged(bottomSheet: View, newState: Int) {
+          if (newState == BottomSheetBehavior.STATE_HIDDEN) {
+            // 【关键步骤】
+            // 如果进入了 HIDDEN 状态，说明用户已经通过滑动把列表拖出去了。
+            // 此时我们需要关闭 Dialog，但必须先【禁用】掉系统自带的退出动画。
+            // 否则就会出现“列表没了，背景还在慢慢淡出”的怪异现象。
+            dialog.window?.setWindowAnimations(0) // 0 表示无动画
+            dismiss()
+          }
+        }
+
+        // 监听滑动进度 (实时改变背景透明度)
+        override fun onSlide(bottomSheet: View, slideOffset: Float) {
+          // slideOffset 含义:
+          // > 0: 从折叠态(collapsed)向上拖到展开态(expanded)
+          // 0: 折叠态
+          // < 0: 从折叠态向下拖到隐藏(hidden) (-1 表示完全隐藏)
+
+          // 我们只关心向下拖拽的过程 (slideOffset < 0)
+          if (slideOffset < 0) {
+            // 默认的背景遮罩透明度通常是 0.6f (或者你主题里设置的值)
+            val baseDimAmount = 0.4f
+
+            // 计算新的透明度：随着 offset 变小(-1)，dim 也变小(0)
+            // 1 + (-0.5) = 0.5 -> 剩一半透明度
+            val newDim = baseDimAmount * (1 + slideOffset)
+
+            // 实时设置给 Window，让背景跟着手指变淡
+            // 注意：这就实现了“列表滑多少，背景就淡多少”的丝滑效果
+            if (newDim >= 0) {
+              dialog.window?.setDimAmount(newDim)
+            }
+          }
+        }
+      })
     }
     return dialog
   }
