@@ -4,6 +4,7 @@ plugins {
   alias(libs.plugins.android.application)
   alias(libs.plugins.kotlin.android)
   alias(libs.plugins.jetbrains.kotlin.serialization)
+  alias(libs.plugins.ksp)
 }
 
 android {
@@ -65,4 +66,11 @@ dependencies {
   implementation(libs.coil)
   implementation(libs.coil.video)
   implementation(libs.datastore.preference)
+
+  //room
+  ksp(libs.androidx.room.compiler)
+  // 2. Room 核心库
+  implementation(libs.androidx.room.runtime)
+  // 3. Room KTX (支持协程和 Flow)
+  implementation(libs.androidx.room.ktx)
 }

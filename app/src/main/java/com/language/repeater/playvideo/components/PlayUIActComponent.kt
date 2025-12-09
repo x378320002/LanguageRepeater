@@ -6,6 +6,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.media3.common.util.UnstableApi
 import com.language.repeater.foundation.BaseComponent
 import com.language.repeater.playvideo.PlayVideoFragment
+import com.language.repeater.playvideo.history.HistorySheetFragment
 import com.language.repeater.playvideo.playlist.PlaylistSheetFragment
 import com.language.repeater.utils.ToastUtil
 import kotlinx.coroutines.launch
@@ -40,13 +41,19 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
     fragment.binding.saveSentence.setOnClickListener(this)
     fragment.binding.splitSentence.setOnClickListener(this)
     fragment.binding.deleteSentence.setOnClickListener(this)
+    fragment.binding.historyList.setOnClickListener(this)
   }
 
   override fun onClick(v: View?) {
     when (v) {
       fragment.binding.playList -> {
-        val sheet = PlaylistSheetFragment(fragment.playComponent.player)
+        val sheet = PlaylistSheetFragment(fragment, fragment.playComponent.player)
         sheet.show(fragment.childFragmentManager, "PlaylistSheet")
+      }
+
+      fragment.binding.historyList -> {
+        val sheet = HistorySheetFragment(fragment, fragment.playComponent.player)
+        sheet.show(fragment.childFragmentManager, "HistorySheet")
       }
 
       fragment.binding.voiceNext -> {

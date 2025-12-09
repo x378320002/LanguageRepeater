@@ -179,6 +179,61 @@
             </LeetcodeEditor>
           </value>
         </entry>
+        <entry key="$PROJECT_DIR$/../leetcode/src/leetcode/editor/cn/[面试题 16.11]跳水板.kt">
+          <value>
+            <LeetcodeEditor>
+              <option name="contentPath" value="$PROJECT_DIR$/../leetcode/src/leetcode/editor/cn/doc/content/[面试题 16.11]跳水板.md" />
+              <option name="frontendQuestionId" value="leetcode.cn面试题 16.11" />
+              <option name="host" value="leetcode.cn" />
+              <option name="path" value="$PROJECT_DIR$/../leetcode/src/leetcode/editor/cn/[面试题 16.11]跳水板.kt" />
+              <option name="titleSlug" value="diving-board-lcci" />
+            </LeetcodeEditor>
+          </value>
+        </entry>
+        <entry key="$PROJECT_DIR$/../leetcode/src/leetcode/editor/cn/[面试题 16.13]平分正方形.kt">
+          <value>
+            <LeetcodeEditor>
+              <option name="contentPath" value="$PROJECT_DIR$/../leetcode/src/leetcode/editor/cn/doc/content/[面试题 16.13]平分正方形.md" />
+              <option name="frontendQuestionId" value="leetcode.cn面试题 16.13" />
+              <option name="host" value="leetcode.cn" />
+              <option name="path" value="$PROJECT_DIR$/../leetcode/src/leetcode/editor/cn/[面试题 16.13]平分正方形.kt" />
+              <option name="titleSlug" value="bisect-squares-lcci" />
+            </LeetcodeEditor>
+          </value>
+        </entry>
+        <entry key="$PROJECT_DIR$/../leetcode/src/leetcode/editor/cn/[面试题 16.14]最佳直线.kt">
+          <value>
+            <LeetcodeEditor>
+              <option name="contentPath" value="$PROJECT_DIR$/../leetcode/src/leetcode/editor/cn/doc/content/[面试题 16.14]最佳直线.md" />
+              <option name="frontendQuestionId" value="leetcode.cn面试题 16.14" />
+              <option name="host" value="leetcode.cn" />
+              <option name="path" value="$PROJECT_DIR$/../leetcode/src/leetcode/editor/cn/[面试题 16.14]最佳直线.kt" />
+              <option name="titleSlug" value="best-line-lcci" />
+            </LeetcodeEditor>
+          </value>
+        </entry>
+        <entry key="$PROJECT_DIR$/../leetcode/src/leetcode/editor/cn/[面试题 16.15]珠玑妙算.kt">
+          <value>
+            <LeetcodeEditor>
+              <option name="contentPath" value="$PROJECT_DIR$/../leetcode/src/leetcode/editor/cn/doc/content/[面试题 16.15]珠玑妙算.md" />
+              <option name="frontendQuestionId" value="leetcode.cn面试题 16.15" />
+              <option name="host" value="leetcode.cn" />
+              <option name="path" value="$PROJECT_DIR$/../leetcode/src/leetcode/editor/cn/[面试题 16.15]珠玑妙算.kt" />
+              <option name="titleSlug" value="master-mind-lcci" />
+            </LeetcodeEditor>
+          </value>
+        </entry>
+        <entry key="$PROJECT_DIR$/../leetcode/src/leetcode/editor/cn/[面试题 17.01]不用加号的加法.kt">
+          <value>
+            <LeetcodeEditor>
+              <option name="contentPath" value="$PROJECT_DIR$/../leetcode/src/leetcode/editor/cn/doc/content/[面试题 17.01]不用加号的加法.md" />
+              <option name="frontendQuestionId" value="leetcode.cn面试题 17.01" />
+              <option name="host" value="leetcode.cn" />
+              <option name="path" value="$PROJECT_DIR$/../leetcode/src/leetcode/editor/cn/[面试题 17.01]不用加号的加法.kt" />
+              <option name="titleSlug" value="add-without-plus-lcci" />
+            </LeetcodeEditor>
+          </value>
+        </entry>
       </map>
     </option>
   </component>

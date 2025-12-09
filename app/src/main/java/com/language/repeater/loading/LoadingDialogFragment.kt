@@ -1,6 +1,7 @@
 package com.language.repeater.loading
 
 import android.app.Dialog
+import android.content.DialogInterface
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
@@ -56,5 +57,10 @@ class LoadingDialogFragment : DialogFragment() {
     binding.lottieAnimation.play()
 
     return binding.root
+  }
+
+  override fun onDismiss(dialog: DialogInterface) {
+    super.onDismiss(dialog)
+    binding.lottieAnimation.stop()
   }
 }

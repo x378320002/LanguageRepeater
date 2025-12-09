@@ -1,56 +1,68 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout
+  xmlns:android="http://schemas.android.com/apk/res/android"
   xmlns:app="http://schemas.android.com/apk/res-auto"
   xmlns:tools="http://schemas.android.com/tools"
   android:layout_width="match_parent"
-  android:layout_height="500dp"
-  android:orientation="vertical"
-  android:background="@drawable/bg_bottom_sheet">
-  <!-- bg_bottom_sheet 是一个只有左上右上圆角的白色背景 -->
-
-  <!-- 顶部拖拽条 (Handle) -->
-  <View
-    android:layout_width="40dp"
-    android:layout_height="4dp"
-    android:layout_gravity="center_horizontal"
-    android:layout_marginTop="12dp"
-    android:background="#E0E0E0"
-    android:backgroundTint="#CCCCCC" />
-
-  <!-- 标题栏 -->
-  <RelativeLayout
+  android:layout_height="500dp">
+  <LinearLayout
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:padding="16dp">
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/bg_bottom_sheet">
+    <!-- bg_bottom_sheet 是一个只有左上右上圆角的白色背景 -->
 
-    <TextView
-      android:id="@+id/tv_sheet_title"
-      android:layout_width="wrap_content"
+    <!-- 顶部拖拽条 (Handle) -->
+    <View
+      android:layout_width="40dp"
+      android:layout_height="4dp"
+      android:layout_gravity="center_horizontal"
+      android:layout_marginTop="12dp"
+      android:background="#E0E0E0"
+      android:backgroundTint="#CCCCCC" />
+
+    <!-- 标题栏 -->
+    <LinearLayout
+      android:layout_width="match_parent"
       android:layout_height="wrap_content"
-      android:text="播放列表"
-      android:textSize="18sp"
-      android:textStyle="bold"
-      android:textColor="#333333"
-      tools:ignore="HardcodedText" />
+      android:padding="16dp">
 
-    <TextView
-      android:id="@+id/tv_count"
-      android:layout_width="wrap_content"
-      android:layout_height="wrap_content"
-      android:layout_toEndOf="@id/tv_sheet_title"
-      android:layout_alignBaseline="@id/tv_sheet_title"
-      android:layout_marginStart="8dp"
-      android:textSize="14sp"
-      android:textColor="#999999"
-      tools:text="(5)" />
-  </RelativeLayout>
+      <TextView
+        android:id="@+id/tv_sheet_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="播放列表"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:textColor="#333333"
+        tools:ignore="HardcodedText" />
 
-  <!-- 列表 -->
-  <androidx.recyclerview.widget.RecyclerView
-    android:id="@+id/rv_playlist"
-    android:layout_weight="1"
-    android:layout_width="match_parent"
-    android:layout_height="0dp"
-    android:clipToPadding="false"
-    />
-</LinearLayout>
+      <TextView
+        android:id="@+id/tv_count"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:textSize="14sp"
+        android:textColor="#999999"
+        tools:text="(5)" />
+    </LinearLayout>
+
+    <!-- 列表 -->
+    <androidx.recyclerview.widget.RecyclerView
+      android:id="@+id/rv_playlist"
+      android:layout_weight="1"
+      android:layout_width="match_parent"
+      android:layout_height="0dp"
+      android:clipToPadding="false"
+      />
+  </LinearLayout>
+
+  <com.lottiefiles.dotlottie.core.widget.DotLottieAnimation
+    android:id="@+id/lottie_animation"
+    android:visibility="gone"
+    app:dotLottie_autoplay="true"
+    app:dotLottie_loop="true"
+    app:dotLottie_src="material_wave_loading.json"
+    android:layout_width="100dp"
+    android:layout_height="100dp"/>
+</FrameLayout>

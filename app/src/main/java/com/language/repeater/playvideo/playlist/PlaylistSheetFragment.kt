@@ -20,17 +20,15 @@ import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.language.repeater.R
 import com.language.repeater.databinding.PlaylistSheetFragmentBinding
+import com.language.repeater.playvideo.BasePlaySheetFragment
 import com.language.repeater.playvideo.PlayVideoFragment
 import kotlinx.coroutines.launch
 
 @SuppressLint("SetTextI18n")
 class PlaylistSheetFragment(
+  private val playVideoFragment: PlayVideoFragment,
   private val player: Player
-) : BottomSheetDialogFragment() {
-
-  companion object {
-    const val TAG = PlayVideoFragment.TAG
-  }
+) : BasePlaySheetFragment(player) {
 
   // ViewBinding 变量
   private var _binding: PlaylistSheetFragmentBinding? = null
@@ -93,14 +91,6 @@ class PlaylistSheetFragment(
 
     // 初始化 Adapter
     adapter = PlaylistAdapter(player)
-
-    //设置界面高度
-    val displayMetrics = resources.displayMetrics
-    val fixedHeight = (displayMetrics.heightPixels * 0.55f).toInt()
-    val layoutParams = binding.root.layoutParams
-    layoutParams.height = fixedHeight
-    binding.root.layoutParams = layoutParams
-
     binding.rvPlaylist.setHasFixedSize(true)
     // 这样即使调用不带 payload 的 notifyItemChanged，也不会有闪烁（Cross-fade）效果
     (binding.rvPlaylist.itemAnimator as? SimpleItemAnimator)?.supportsChangeAnimations = false
@@ -153,58 +143,5 @@ class PlaylistSheetFragment(
     player.removeListener(playerListener)
     // 释放 binding，防止 Fragment 视图销毁但对象残留导致的内存泄漏
     _binding = null
-  }
-
-  override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
-    val dialog = super.onCreateDialog(savedInstanceState) as BottomSheetDialog
-    dialog.setOnShowListener {
-      val behavior = dialog.behavior
-      behavior.state = BottomSheetBehavior.STATE_EXPANDED
-      behavior.skipCollapsed = true
-      behavior.isHideable = true
-
-      behavior.addBottomSheetCallback(object : BottomSheetBehavior.BottomSheetCallback() {
-        // 监听状态变化
-        override fun onStateChanged(bottomSheet: View, newState: Int) {
-          if (newState == BottomSheetBehavior.STATE_HIDDEN) {
-            // 【关键步骤】
-            // 如果进入了 HIDDEN 状态，说明用户已经通过滑动把列表拖出去了。
-            // 此时我们需要关闭 Dialog，但必须先【禁用】掉系统自带的退出动画。
-            // 否则就会出现“列表没了，背景还在慢慢淡出”的怪异现象。
-            dialog.window?.setWindowAnimations(0) // 0 表示无动画
-            dismiss()
-          }
-        }
-
-        // 监听滑动进度 (实时改变背景透明度)
-        override fun onSlide(bottomSheet: View, slideOffset: Float) {
-          // slideOffset 含义:
-          // > 0: 从折叠态(collapsed)向上拖到展开态(expanded)
-          // 0: 折叠态
-          // < 0: 从折叠态向下拖到隐藏(hidden) (-1 表示完全隐藏)
-
-          // 我们只关心向下拖拽的过程 (slideOffset < 0)
-          if (slideOffset < 0) {
-            // 默认的背景遮罩透明度通常是 0.6f (或者你主题里设置的值)
-            val baseDimAmount = 0.4f
-
-            // 计算新的透明度：随着 offset 变小(-1)，dim 也变小(0)
-            // 1 + (-0.5) = 0.5 -> 剩一半透明度
-            val newDim = baseDimAmount * (1 + slideOffset)
-
-            // 实时设置给 Window，让背景跟着手指变淡
-            // 注意：这就实现了“列表滑多少，背景就淡多少”的丝滑效果
-            if (newDim >= 0) {
-              dialog.window?.setDimAmount(newDim)
-            }
-          }
-        }
-      })
-    }
-    return dialog
-  }
-
-  override fun getTheme(): Int {
-    return R.style.CustomBottomSheetDialogTheme
   }
 }

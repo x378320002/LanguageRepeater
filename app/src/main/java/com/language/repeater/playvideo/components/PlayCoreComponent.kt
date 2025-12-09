@@ -16,8 +16,10 @@ import androidx.media3.exoplayer.ExoPlayer
 import com.language.repeater.foundation.BaseComponent
 import com.language.repeater.pcm.Sentence
 import com.language.repeater.playvideo.PlayVideoFragment
+import com.language.repeater.playvideo.history.HistoryManager
 import com.language.repeater.playvideo.model.VideoEntity
 import com.language.repeater.playvideo.playlist.PlaylistManager
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -238,6 +240,19 @@ class PlayCoreComponent: BaseComponent<PlayVideoFragment>(), Player.Listener {
     if (mediaItem != null) {
       Log.i(TAG, "onMediaItemTransition current: ${mediaItem.mediaMetadata.title}")
       fragment.viewModel.parseUriToPcm(mediaItem)
+
+      val entity = VideoEntity(
+        id = mediaItem.mediaId, // 确保这个 ID 是唯一的
+        uri = mediaItem.localConfiguration?.uri.toString(),
+        name = mediaItem.mediaMetadata.title.toString(),
+        positionMs = player.currentPosition,
+        subUri = mediaItem.localConfiguration?.subtitleConfigurations?.firstOrNull()?.uri?.toString()
+      )
+
+      // 保存到数据库 (必须在协程中调用)
+      fScope.launch(Dispatchers.IO) {
+        HistoryManager.addHistory(context, entity)
+      }
     }
   }
 
