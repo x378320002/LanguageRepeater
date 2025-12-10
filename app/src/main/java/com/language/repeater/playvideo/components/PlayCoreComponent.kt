@@ -18,6 +18,7 @@ import com.language.repeater.pcm.Sentence
 import com.language.repeater.playvideo.PlayVideoFragment
 import com.language.repeater.playvideo.history.HistoryManager
 import com.language.repeater.playvideo.model.VideoEntity
+import com.language.repeater.playvideo.model.toMediaItem
 import com.language.repeater.playvideo.playlist.PlaylistManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -83,23 +84,7 @@ class PlayCoreComponent: BaseComponent<PlayVideoFragment>(), Player.Listener {
     if (list.isEmpty()) return
 
     val items = list.map {
-      val builder = MediaItem
-        .Builder()
-        .setUri(it.uri)
-        .setMediaId(it.id)
-        .setMediaMetadata(MediaMetadata.Builder().setTitle(it.name).build())
-
-      val subtitleUri = it.subUri?.toUri()
-      if (subtitleUri != null) {
-        val subtitleConfig = MediaItem.SubtitleConfiguration.Builder(subtitleUri)
-          .setMimeType(MimeTypes.APPLICATION_SUBRIP) //.srt
-          .setLanguage("en")
-          .setSelectionFlags(C.SELECTION_FLAG_DEFAULT)
-          .build()
-        builder.setSubtitleConfigurations(listOf(subtitleConfig))
-      }
-
-      builder.build()
+      it.toMediaItem()
     }
 
     if (isReplace) {

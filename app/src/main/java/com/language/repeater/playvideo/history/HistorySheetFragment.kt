@@ -82,7 +82,9 @@ class HistorySheetFragment(
       withContext(Dispatchers.IO) {
         HistoryManager.observeHistory(requireContext()).collect {
           Log.i(TAG, "loadHistory size = ${it.size}")
-          adapter.setData(it)
+          withContext(Dispatchers.Main) {
+            adapter.setData(it)
+          }
           cancel()
         }
       }
