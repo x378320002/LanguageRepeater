@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+  android:layout_width="match_parent"
+  android:layout_height="wrap_content"
+  android:orientation="vertical"
+  android:background="@drawable/bg_bottom_sheet"
+  android:paddingBottom="24dp">
+
+  <!-- 顶部拖拽条 -->
+  <View
+    android:layout_width="40dp"
+    android:layout_height="4dp"
+    android:layout_gravity="center_horizontal"
+    android:layout_marginTop="12dp"
+    android:layout_marginBottom="20dp"
+    android:background="#E0E0E0" />
+
+  <TextView
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:text="@string/sleep_time_title"
+    android:gravity="center"
+    android:textSize="20sp"
+    android:textStyle="bold"
+    android:textColor="#333333"
+    android:layout_marginBottom="20dp"/>
+
+  <!-- 当前倒计时显示 (默认隐藏，开启时显示) -->
+  <TextView
+    android:id="@+id/tv_countdown_status"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center"
+    android:text="将在 15:00 后暂停播放"
+    android:textColor="@color/green1"
+    android:textSize="16sp"
+    android:visibility="gone"
+    android:layout_marginBottom="16dp"/>
+
+  <!-- 选项列表 -->
+  <!-- 1. 不开启 -->
+  <TextView
+    android:id="@+id/btn_off"
+    style="@style/SleepTimerItemStyle"
+    android:text="不开启 / 关闭定时" />
+
+  <!-- 2. 10分钟 -->
+  <TextView
+    android:id="@+id/btn_10_min"
+    style="@style/SleepTimerItemStyle"
+    android:text="10 分钟" />
+
+  <!-- 3. 30分钟 -->
+  <TextView
+    android:id="@+id/btn_20_min"
+    style="@style/SleepTimerItemStyle"
+    android:text="20 分钟" />
+
+  <!-- 3. 30分钟 -->
+  <TextView
+    android:id="@+id/btn_30_min"
+    style="@style/SleepTimerItemStyle"
+    android:text="30 分钟" />
+
+  <!-- 4. 60分钟 -->
+  <TextView
+    android:id="@+id/btn_60_min"
+    style="@style/SleepTimerItemStyle"
+    android:text="60 分钟" />
+
+  <!-- 5. 播完当前首 -->
+  <TextView
+    android:id="@+id/btn_end_of_track"
+    style="@style/SleepTimerItemStyle"
+    android:text="播放完当前视频后" />
+</LinearLayout>

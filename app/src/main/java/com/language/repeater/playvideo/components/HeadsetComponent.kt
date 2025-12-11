@@ -1,6 +1,5 @@
 package com.language.repeater.playvideo.components
 
-import android.R.attr.x
 import android.util.Log
 import androidx.media3.common.ForwardingPlayer
 import androidx.media3.common.util.UnstableApi
@@ -32,6 +31,7 @@ class HeadsetComponent: BaseComponent<PlayVideoFragment>() {
         Log.d(TAG, "play() 已被拦截！执行自定义操作。")
         //super.play()
         fragment.playComponent.setRepeat(!fragment.playComponent.repeatable)
+        fragment.binding.voiceRepeatSwitch.isChecked = fragment.playComponent.repeatable
       }
 
       /**
@@ -41,38 +41,34 @@ class HeadsetComponent: BaseComponent<PlayVideoFragment>() {
         Log.d(TAG, "pause() 已被拦截！执行自定义操作。")
         //super.pause()
         fragment.playComponent.setRepeat(!fragment.playComponent.repeatable)
+        fragment.binding.voiceRepeatSwitch.isChecked = fragment.playComponent.repeatable
       }
 
-      override fun increaseDeviceVolume(flags: Int) {x
-        super.increaseDeviceVolume(flags)
+      override fun increaseDeviceVolume(flags: Int) {
+        //super.increaseDeviceVolume(flags)
         Log.d(TAG, "increaseDeviceVolume。")
+        fragment.playComponent.seekToNextSentence()
       }
 
       override fun decreaseDeviceVolume(flags: Int) {
-        super.decreaseDeviceVolume(flags)
+        //super.decreaseDeviceVolume(flags)
         Log.d(TAG, "decreaseDeviceVolume。")
+        fragment.playComponent.seekToPreviousSentence()
       }
 
       /**
        * 覆写“下一首”命令
        */
       override fun seekToNext() {
-        // --- 在这里执行你的自定义“上一首”逻辑 ---
-        Log.d(TAG, "seekToNext() 已被拦截！执行自定义操作。")
-        //super.seekToNext()
-        fragment.playComponent.seekToNext()
+        super.seekToNext()
       }
 
       /**
        * 覆写“上一首”命令
        */
       override fun seekToPrevious() {
-        // --- 在这里执行你的自定义“上一首”逻辑 ---
-        Log.d(TAG, "seekToPrevious() 已被拦截！执行自定义操作。")
-        //super.seekToPrevious()
-        fragment.playComponent.seekToPrevious()
+        super.seekToPrevious()
       }
-
     }
 
     // 4c. 创建 MediaSession 并绑定

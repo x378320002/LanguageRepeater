@@ -33,6 +33,7 @@ class PlayVideoFragment: BaseFragment(), Player.Listener  {
   lateinit var binding: VideoPlayFragmentBinding
   val viewModel: PlayVideoViewModel by activityViewModels()
 
+  @UnstableApi
   var playComponent = PlayCoreComponent()
 
   override fun onCreate(savedInstanceState: Bundle?) {

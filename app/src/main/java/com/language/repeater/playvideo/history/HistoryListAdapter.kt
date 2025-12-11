@@ -91,7 +91,7 @@ class HistoryListAdapter(
         binding.ivCover.tag = uri // 记录当前加载的 URI
         binding.ivCover.load(uri) {
           crossfade(true)
-          placeholder(R.color.PastelOrange)
+          placeholder(R.color.PastelGreen)
           error(androidx.media3.session.R.drawable.media_session_service_notification_ic_music_note)
           transformations(RoundedCornersTransformation(COVER_RADIUS))
           scale(Scale.FILL)

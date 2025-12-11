@@ -2,17 +2,18 @@ package com.language.repeater.playvideo.components
 
 import android.net.Uri
 import android.util.Log
-import androidx.core.net.toUri
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
-import androidx.media3.common.MediaMetadata
-import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.Player.TIMELINE_CHANGE_REASON_PLAYLIST_CHANGED
 import androidx.media3.common.Timeline
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.DefaultLoadControl
+import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
+import androidx.media3.exoplayer.upstream.DefaultAllocator
 import com.language.repeater.foundation.BaseComponent
 import com.language.repeater.pcm.Sentence
 import com.language.repeater.playvideo.PlayVideoFragment
@@ -37,8 +38,10 @@ class PlayCoreComponent: BaseComponent<PlayVideoFragment>(), Player.Listener {
     private set
 
   val player: ExoPlayer by lazy {
-    ExoPlayer.Builder(context).build().apply {
-      repeatMode = Player.REPEAT_MODE_ALL
+    ExoPlayer
+      .Builder(context)
+      .build().apply {
+      this.repeatMode = Player.REPEAT_MODE_ONE
     }
   }
 
@@ -116,7 +119,7 @@ class PlayCoreComponent: BaseComponent<PlayVideoFragment>(), Player.Listener {
     }
   }
 
-  fun seekToNext() {
+  fun seekToNextSentence() {
     val curSen = curAbSentenceFlow.value
     if (curSen != null) {
       val index = sentences.indexOf(curSen)
@@ -140,7 +143,7 @@ class PlayCoreComponent: BaseComponent<PlayVideoFragment>(), Player.Listener {
     }
   }
 
-  fun seekToPrevious() {
+  fun seekToPreviousSentence() {
     val curSen = curAbSentenceFlow.value
     if (curSen != null) {
       val index = sentences.indexOf(curSen)
@@ -259,6 +262,10 @@ class PlayCoreComponent: BaseComponent<PlayVideoFragment>(), Player.Listener {
 
   override fun onPlayerError(error: PlaybackException) {
     Log.i(TAG, "播放器报错: ${error.message}", error)
+  }
+
+  override fun onRepeatModeChanged(repeatMode: Int) {
+    super.onRepeatModeChanged(repeatMode)
   }
   //endregion
 

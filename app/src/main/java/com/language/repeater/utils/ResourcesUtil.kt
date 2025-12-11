@@ -1,6 +1,7 @@
 package com.language.repeater.utils
 
 import androidx.annotation.ColorRes
+import androidx.annotation.StringRes
 import com.language.repeater.MyApp
 
 /**
@@ -16,5 +17,9 @@ object ResourcesUtil {
 
   fun getColor(@ColorRes colorRes: Int) : Int {
     return MyApp.instance.resources.getColor(colorRes, null)
+  }
+
+  fun getString(@StringRes str: Int) : String {
+    return MyApp.instance.resources.getString(str)
   }
 }

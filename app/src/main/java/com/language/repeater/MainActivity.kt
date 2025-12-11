@@ -3,6 +3,7 @@ package com.language.repeater
 import android.graphics.Color
 import android.os.Bundle
 import android.util.Log
+import android.view.KeyEvent
 import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
@@ -19,9 +20,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.supervisorScope
@@ -45,6 +48,11 @@ val defaultNavOptions = NavOptions.Builder()
   .build()
 
 class MainActivity : AppCompatActivity() {
+  val volumeFlow = MutableSharedFlow<Int>(
+    extraBufferCapacity = 2,
+    onBufferOverflow = BufferOverflow.DROP_OLDEST
+  )
+
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     enableEdgeToEdge(
@@ -65,100 +73,16 @@ class MainActivity : AppCompatActivity() {
       }
       //Add other fragment destinations similarly.
     }
-
-    //test()
-    //test2()
   }
 
-  fun test2() {
-    val handler = CoroutineExceptionHandler {_, e->
-      Log.i("wangzixu", "CoroutineExceptionHandler ${e.message}")
+  override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+    if (keyCode == KeyEvent.KEYCODE_VOLUME_UP) {
+      volumeFlow.tryEmit(1)
+      return true
+    } else if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
+      volumeFlow.tryEmit(0)
+      return true
     }
-    val handler2 = CoroutineExceptionHandler {_, e->
-      Log.i("wangzixu", "CoroutineExceptionHandler222 ${e.message}")
-    }
-    val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
-    scope.launch(handler) {
-      // supervisorScope 会挂起，直到它内部都完成
-      // 并且它会用 SupervisorJob 来管理它内部的协程
-      launch(handler2 + SupervisorJob()) {
-        supervisorScope {
-          launch {
-            delay(1000)
-            throw IOException("子 A 失败")
-          }
-          launch {
-            try {
-              delay(2000)
-              Log.i("wangzixu", "子 B 完成") // 仍然会执行
-            } catch (e: Exception) {
-              Log.i("wangzixu", "子 B 取消") // 仍然会执行
-            }
-          }
-        }
-      }
-    }
-  }
-
-  fun test() {
-    val handler = CoroutineExceptionHandler {_, e->
-      Log.i("wangzixu", "CoroutineExceptionHandler ${e.message}")
-    }
-    val job1 = GlobalScope.launch(handler) {
-      var success = false
-      try {
-        t1()
-        Log.i("wangzixu", "t1过后")
-        success = true
-      } catch (cancel: CancellationException) {
-        Log.i("wangzixu", "test 被取消了:${cancel.message}, success:$success")
-        Log.i("wangzixu", "test cancel withContext前")
-        withContext(Dispatchers.Main + NonCancellable) {
-          Log.i("wangzixu", "====test cancel withContext===")
-        }
-        Log.i("wangzixu", "test cancel withContext后")
-      } catch (e: Exception) {
-        Log.i("wangzixu", "test Exception:${e.message}, success:$success")
-        withContext(Dispatchers.Main) {
-          Log.i("wangzixu", "====test Exception withContext===")
-        }
-      } finally {
-        Log.i("wangzixu", "test finally called")
-        t2()
-//        withContext(Dispatchers.Main + NonCancellable) {
-//          Log.i("wangzixu", "====test finally withContext===")
-//        }
-        Log.i("wangzixu", "====test finally withContext=== 后")
-      }
-    }
-
-    job1.invokeOnCompletion { e->
-      Log.i("wangzixu", "invokeOnCompletion ${e?.message}")
-    }
-
-    GlobalScope.launch {
-      delay(1500)
-      Log.i("wangzixu", "调用了取消")
-      job1.cancel()
-    }
-  }
-
-  suspend fun t2() {
-    withContext(Dispatchers.Main + NonCancellable) {
-      Log.i("wangzixu", "====test finally withContext===")
-    }
-  }
-
-  suspend fun t1() {
-    var i = 0
-    while (i < 3) {
-      i++
-      //repeat(100000000) {i = i + 1.0}
-      //Log.i("wangzixu", "t1 检查ensureActive")
-      delay(1000)
-//      if (i == 1) {
-//        throw CancellationException("t1 自己抛出异常")
-//      }
-    }
+    return super.onKeyDown(keyCode, event)
   }
 }

@@ -111,8 +111,7 @@ class PlaylistAdapter(
         binding.ivCover.tag = uri // 记录当前加载的 URI
         binding.ivCover.load(uri) {
           crossfade(true)
-          placeholder(R.color.PastelOrange)
-          error(androidx.media3.session.R.drawable.media_session_service_notification_ic_music_note)
+          placeholder(R.color.PastelGreen)
           transformations(RoundedCornersTransformation(COVER_RADIUS))
           scale(Scale.FILL)
         }

@@ -7,4 +7,10 @@
   <string name="history_item_play_next">下一个播放</string>
   <string name="history_item_add_more">追加到播放列表</string>
   <string name="history_item_delete">删除记录</string>
+
+  <string name="repeat_one">单曲循环</string>
+  <string name="repeat_all">列表循环</string>
+  <string name="sleep_time_btn">定时关闭</string>
+  <string name="sleep_time">倒计时: %1$s</string>
+  <string name="sleep_time_title">定时器</string>
 </resources>

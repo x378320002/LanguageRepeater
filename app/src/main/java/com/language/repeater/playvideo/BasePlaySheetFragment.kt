@@ -34,7 +34,6 @@ open class BasePlaySheetFragment(
     const val TAG = PlayVideoFragment.TAG
   }
 
-
   override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
     super.onViewCreated(view, savedInstanceState)
 

@@ -223,6 +223,17 @@
             </LeetcodeEditor>
           </value>
         </entry>
+        <entry key="$PROJECT_DIR$/../leetcode/src/leetcode/editor/cn/[面试题 16.16]部分排序.kt">
+          <value>
+            <LeetcodeEditor>
+              <option name="contentPath" value="$PROJECT_DIR$/../leetcode/src/leetcode/editor/cn/doc/content/[面试题 16.16]部分排序.md" />
+              <option name="frontendQuestionId" value="leetcode.cn面试题 16.16" />
+              <option name="host" value="leetcode.cn" />
+              <option name="path" value="$PROJECT_DIR$/../leetcode/src/leetcode/editor/cn/[面试题 16.16]部分排序.kt" />
+              <option name="titleSlug" value="sub-sort-lcci" />
+            </LeetcodeEditor>
+          </value>
+        </entry>
         <entry key="$PROJECT_DIR$/../leetcode/src/leetcode/editor/cn/[面试题 17.01]不用加号的加法.kt">
           <value>
             <LeetcodeEditor>

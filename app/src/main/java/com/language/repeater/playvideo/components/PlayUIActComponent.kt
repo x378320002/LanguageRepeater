@@ -2,13 +2,19 @@ package com.language.repeater.playvideo.components
 
 import android.view.View
 import androidx.appcompat.app.AlertDialog
-import androidx.lifecycle.lifecycleScope
+import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import com.language.repeater.MainActivity
+import com.language.repeater.R
 import com.language.repeater.foundation.BaseComponent
 import com.language.repeater.playvideo.PlayVideoFragment
 import com.language.repeater.playvideo.history.HistorySheetFragment
 import com.language.repeater.playvideo.playlist.PlaylistSheetFragment
+import com.language.repeater.playvideo.sleeptimer.SleepTimerSheetFragment
+import com.language.repeater.utils.ResourcesUtil
 import com.language.repeater.utils.ToastUtil
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 
 /**
@@ -28,13 +34,20 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
   override fun onCreateView() {
     super.onCreateView()
 
+    val activity = (fragment.activity as? MainActivity)
+    activity?.volumeFlow?.onEach {
+      if (it == 1) {
+        playComponent.seekToNextSentence()
+      } else {
+        playComponent.seekToPreviousSentence()
+      }
+    }?.launchIn(uiScope)
 
     playComponent.setRepeat(fragment.binding.voiceRepeatSwitch.isChecked)
     fragment.binding.voiceRepeatSwitch.setOnCheckedChangeListener { _, checked ->
       playComponent.setRepeat(fragment.binding.voiceRepeatSwitch.isChecked)
     }
 
-    fragment.binding.playList.setOnClickListener(this)
     fragment.binding.voiceNext.setOnClickListener(this)
     fragment.binding.voicePrevious.setOnClickListener(this)
     fragment.binding.reloadSentence.setOnClickListener(this)
@@ -42,10 +55,28 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
     fragment.binding.splitSentence.setOnClickListener(this)
     fragment.binding.deleteSentence.setOnClickListener(this)
     fragment.binding.historyList.setOnClickListener(this)
+    fragment.binding.playList.setOnClickListener(this)
+    fragment.binding.repeatMode.setOnClickListener(this)
+    fragment.binding.sleepTimeBtn.setOnClickListener(this)
   }
 
   override fun onClick(v: View?) {
     when (v) {
+      fragment.binding.sleepTimeBtn -> {
+        val sheet = SleepTimerSheetFragment(playComponent.player)
+        sheet.show(fragment.childFragmentManager, "SleepTimer")
+      }
+
+      fragment.binding.repeatMode -> {
+        if (playComponent.player.repeatMode == Player.REPEAT_MODE_ONE) {
+          playComponent.player.repeatMode = Player.REPEAT_MODE_ALL
+          fragment.binding.repeatMode.text = ResourcesUtil.getString(R.string.repeat_all)
+        } else {
+          playComponent.player.repeatMode = Player.REPEAT_MODE_ONE
+          fragment.binding.repeatMode.text = ResourcesUtil.getString(R.string.repeat_one)
+        }
+      }
+
       fragment.binding.playList -> {
         val sheet = PlaylistSheetFragment(fragment, fragment.playComponent.player)
         sheet.show(fragment.childFragmentManager, "PlaylistSheet")
@@ -57,11 +88,11 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
       }
 
       fragment.binding.voiceNext -> {
-        playComponent.seekToNext()
+        playComponent.seekToNextSentence()
       }
 
       fragment.binding.voicePrevious -> {
-        playComponent.seekToPrevious()
+        playComponent.seekToPreviousSentence()
       }
 
       fragment.binding.reloadSentence -> {
