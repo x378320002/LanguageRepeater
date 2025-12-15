@@ -74,15 +74,4 @@ class MainActivity : AppCompatActivity() {
       //Add other fragment destinations similarly.
     }
   }
-
-  override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
-    if (keyCode == KeyEvent.KEYCODE_VOLUME_UP) {
-      volumeFlow.tryEmit(1)
-      return true
-    } else if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
-      volumeFlow.tryEmit(0)
-      return true
-    }
-    return super.onKeyDown(keyCode, event)
-  }
 }

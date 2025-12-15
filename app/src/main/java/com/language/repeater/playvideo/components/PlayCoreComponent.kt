@@ -93,7 +93,8 @@ class PlayCoreComponent: BaseComponent<PlayVideoFragment>(), Player.Listener {
     if (isReplace) {
       player.setMediaItems(items)
     } else {
-      player.addMediaItems(items)
+      player.addMediaItems(0, items)
+      player.seekTo(0,  C.TIME_UNSET)
     }
 
     if (!player.isPlaying) {

@@ -6,7 +6,7 @@ import kotlin.collections.lastIndex
 import kotlin.collections.map
 import kotlin.math.sqrt
 
-typealias SentenceByTime = Sentence
+private typealias SentenceByTime = Sentence
 
 class LocalVoiceSentenceDetector(
   private val sampleRate: Int = PcmConfig.PCM_SAMPLE_RATE,  // 采样率

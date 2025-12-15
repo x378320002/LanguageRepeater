@@ -1,5 +1,8 @@
 package com.language.repeater.widgets
 
+import android.R.attr.height
+import android.R.attr.path
+import android.R.attr.width
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Canvas
@@ -485,10 +488,10 @@ class ScrollWaveformView @JvmOverloads constructor(
     sentences?.forEach { seg->
       drawSignPoint(canvas, seg.start, voiceStartPaint)
       drawSignPoint(canvas, seg.end, voiceEndPaint)
-      if (curABSeg == seg) {
-        drawAB(canvas, seg.start, "A")
-        drawAB(canvas, seg.end, "B")
-      }
+    }
+    curABSeg?.also {
+      drawAB(canvas, it.start, "A")
+      drawAB(canvas, it.end, "B")
     }
   }
 

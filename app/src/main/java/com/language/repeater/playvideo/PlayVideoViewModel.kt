@@ -14,9 +14,11 @@ import com.language.repeater.utils.ToastUtil
 import com.language.repeater.pcm.PCMSegmentLoader
 import com.language.repeater.pcm.PcmDataUtil
 import com.language.repeater.pcm.Sentence
+import com.language.repeater.pcm.SentenceByTime
 import com.language.repeater.pcm.WaveformPoint
 import com.language.repeater.utils.ScreenUtil
 import com.language.repeater.utils.SentenceFileStoreUtil
+import com.language.repeater.utils.SrtParser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -30,7 +32,7 @@ import java.io.File
  */
 class PlayVideoViewModel(application: Application) : AndroidViewModel(application) {
   companion object {
-    private const val TAG = "PlayVideoViewModel"
+    private const val TAG = "wangzixu"
     private const val MB = 1024.0 * 1024.0
   }
 
@@ -52,7 +54,6 @@ class PlayVideoViewModel(application: Application) : AndroidViewModel(applicatio
     val key = item.mediaId
     currentUri = item.localConfiguration?.uri
     subTitleUri = item.localConfiguration?.subtitleConfigurations?.firstOrNull()?.uri
-
     if (key == currentId) return@launch
     currentId = key
 
@@ -65,7 +66,7 @@ class PlayVideoViewModel(application: Application) : AndroidViewModel(applicatio
       //通过ffmpeg把视频文件解析成原始音频文件
       val path = FFmpegUtil.extractPcmFileByFFmpeg(application, uri, currentId)
 
-      Log.i("wangzixu", "FFmpegUtil解码耗时 ${(System.currentTimeMillis() - time).toFloat() / 1000}")
+      Log.i(TAG, "FFmpegUtil解码耗时 ${(System.currentTimeMillis() - time).toFloat() / 1000}")
       val pcmFile = File(path)
       curPcmFile = pcmFile
       val pcmLoader = PCMSegmentLoader(pcmFile)
@@ -75,7 +76,13 @@ class PlayVideoViewModel(application: Application) : AndroidViewModel(applicatio
       }
 
       launch(Dispatchers.IO) {
-        loadSentenceData(pcmFile, currentId)
+        val list = SentenceFileStoreUtil.loadData(application, key)
+        if (list.isNullOrEmpty()) {
+          loadSentenceData()
+        } else {
+          sentencesFlow.value = list
+          Log.i(TAG, "key: $key 句子已经存在, 直接使用")
+        }
       }
 
       pcmLoaderStateFlow.value = pcmLoader
@@ -92,44 +99,34 @@ class PlayVideoViewModel(application: Application) : AndroidViewModel(applicatio
     allWaveDataFlow.value = data
   }
 
-  private suspend fun loadSentenceData(file: File, key: String) {
-    var list = SentenceFileStoreUtil.loadData(application, key)
-    //var list = listOf<Sentence>()
-    if (list.isNullOrEmpty()) {
-      //用于绘制波形的数据
-      val time = System.currentTimeMillis()
 
-      list = LocalVoiceSentenceDetector().detectSentences(PcmDataUtil.readPcmFile(file))
-      // TODO wangzixu: 字幕分割
-      if (subTitleUri == null) {
-        //创建VAD分离器
-      } else {
-        //基于字幕做分割
-      }
-
-      SentenceFileStoreUtil.saveData(application, key, list)
-      Log.i("wangzixu", "检测句子耗时 ${(System.currentTimeMillis() - time).toFloat() / 1000}")
-    } else {
-      Log.i("wangzixu", "key: $key 句子已经存在, 直接使用")
-    }
-
-    sentencesFlow.value = list
-    Log.i("wangzixu", "V2检测到 ${list.size} 句话:")
-//    val timeStringsV2 = sentenceToTimeString(list)
-//    timeStringsV2.forEachIndexed { index, timeStr ->
-//      Log.i("wangzixu", "句子 ${index + 1}: $timeStr")
-//    }
-  }
-
-  suspend fun reloadSentencesAuto() = withContext(Dispatchers.IO) {
+  suspend fun loadSentenceData() = withContext(Dispatchers.IO) {
     val file = curPcmFile ?: return@withContext
     val key = currentId
 
-    // TODO wangzixu: 字幕分割
-    val list = LocalVoiceSentenceDetector().detectSentences(PcmDataUtil.readPcmFile(file))
+    val time = System.currentTimeMillis()
+    val list = if (subTitleUri == null) {
+      //创建VAD分离器
+      Log.i("wangzixu", "loadSentenceData 自动分割句子")
+      LocalVoiceSentenceDetector().detectSentences(PcmDataUtil.readPcmFile(file))
+    } else {
+      //基于字幕做分割
+      Log.i("wangzixu", "loadSentenceData 字幕分割: $subTitleUri")
+      val subList = SrtParser.parse(application, subTitleUri!!)
+      subList.map {
+        Sentence(it.startTime.toFloat() / 1000, it.endTime.toFloat() / 1000)
+      }
+    }
 
     SentenceFileStoreUtil.saveData(application, key, list)
+    Log.i("wangzixu", "检测句子耗时 ${(System.currentTimeMillis() - time).toFloat() / 1000}")
+
     sentencesFlow.value = list
+    Log.i("wangzixu", "V2检测到 ${list.size} 句话:")
+    val timeStringsV2 = sentenceToTimeString(list)
+    timeStringsV2.forEachIndexed { index, timeStr ->
+      Log.i("wangzixu", "句子 ${index + 1}: $timeStr")
+    }
   }
 
   suspend fun saveSentenceDataToFile() = withContext(Dispatchers.IO) {

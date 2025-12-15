@@ -98,7 +98,7 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
       fragment.binding.reloadSentence -> {
         uiScope.launch {
           fragment.showLoading()
-          fragment.viewModel.reloadSentencesAuto()
+          fragment.viewModel.loadSentenceData()
           fragment.hideLoading()
         }
       }
