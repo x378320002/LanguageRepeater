@@ -1,8 +1,6 @@
 package com.language.repeater.test
 
-import android.Manifest
 import android.annotation.SuppressLint
-import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
@@ -11,17 +9,16 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.activityViewModels
 import androidx.media3.exoplayer.ExoPlayer
 import com.language.repeater.databinding.TestFragmentBinding
 import com.language.repeater.foundation.BaseFragment
-import com.language.repeater.playvideo.PlayVideoViewModel
-import com.language.repeater.record.LocalRecordManager
+import com.language.repeater.playvideo.PlayerViewModel
 import com.language.repeater.record.IAudioRecordListener
 import com.language.repeater.record.IAudioRecordManger
+import com.language.repeater.record.LocalRecordManager
 import java.io.File
 
 
@@ -44,7 +41,7 @@ class TestFragment: BaseFragment() {
       }
     }
 
-  private val viewModel: PlayVideoViewModel by activityViewModels()
+  private val viewModel: PlayerViewModel by activityViewModels()
   private lateinit var audioRecorderManager: IAudioRecordManger
   private var exoPlayer: ExoPlayer? = null
   private var aacFilePath: String? = null

@@ -18,7 +18,6 @@ import com.language.repeater.databinding.VideoPlayFragmentBinding
 import com.language.repeater.defaultNavOptions
 import com.language.repeater.foundation.BaseFragment
 import com.language.repeater.playvideo.components.PlayAllWaveComponent
-import com.language.repeater.playvideo.components.PlayCoreComponent
 import com.language.repeater.playvideo.components.PlayScrollWaveComponent
 import com.language.repeater.playvideo.components.PlayUIActComponent
 import com.language.repeater.playvideo.components.PlayViewComponent
@@ -32,9 +31,6 @@ class PlayVideoFragment: BaseFragment(), Player.Listener  {
 
   lateinit var binding: VideoPlayFragmentBinding
   val viewModel: PlayerViewModel by activityViewModels()
-
-  //@UnstableApi
-  //var playComponent = PlayCoreComponent()
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
