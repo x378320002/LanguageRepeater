@@ -1,6 +1,6 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
   <!-- Base application theme. -->
-<!--  <style name="Base.Theme.LanguageRepeater" parent="Theme.AppCompat.Light.NoActionBar">-->
+  <!--  <style name="Base.Theme.LanguageRepeater" parent="Theme.AppCompat.Light.NoActionBar">-->
   <style name="ActivityAnimation" parent="@android:style/Animation.Activity">
     <item name="android:activityOpenEnterAnimation">@anim/slide_in_right</item>
     <item name="android:activityOpenExitAnimation">@anim/slide_out_hold</item>
@@ -25,8 +25,8 @@
     <item name="windowActionBar">false</item>
     <item name="android:windowContentOverlay">@null</item>
   </style>
-<!--  Dialog背景是否变暗 -->
-<!--  <item name="android:backgroundDimEnabled">false</item>-->
+  <!--  Dialog背景是否变暗 -->
+  <!--  <item name="android:backgroundDimEnabled">false</item>-->
 
 
   <!-- 底部弹出的dialog列表相关的主题 -->
@@ -35,7 +35,7 @@
     <item name="android:windowExitAnimation">@anim/sheet_exit</item>
   </style>
 
-  <!-- 定义一个透明背景的 BottomSheet 样式 -->
+  <!-- 定义一个透明背景的 BottomSheet 样式, 给Dialog 主题 用的-->
   <style name="TransparentBottomSheetStyle" parent="Widget.Design.BottomSheet.Modal">
     <!-- 关键：把父容器背景设为透明 -->
     <item name="android:background">@null</item>
@@ -45,13 +45,13 @@
   <style name="CustomBottomSheetDialogTheme" parent="ThemeOverlay.Material3.BottomSheetDialog">
     <!-- 应用动画 -->
     <item name="android:windowAnimationStyle">@style/BottomSheetAnimation</item>
-        <item name="android:backgroundDimAmount">0.4</item>
-    <!--    <item name="bottomSheetStyle">@style/TransparentBottomSheetStyle</item>-->
+    <item name="android:backgroundDimAmount">0.4</item>
+    <!--<item name="bottomSheetStyle">@style/TransparentBottomSheetStyle</item>-->
     <!-- 5. 【关键修改】开启浅色导航栏模式 (让图标变黑) -->
     <!-- 注意：此属性仅在 API 27 (Android 8.1) 及以上生效 -->
     <item name="android:windowLightNavigationBar" tools:ignore="NewApi">true</item>
     <!-- 4. 【关键修改】设置底部导航栏背景为白色 -->
-<!--    <item name="android:navigationBarColor">@color/white</item>-->
+    <!--<item name="android:navigationBarColor">@color/white</item>-->
   </style>
 
 </resources>

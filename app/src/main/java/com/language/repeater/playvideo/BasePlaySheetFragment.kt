@@ -26,12 +26,10 @@ import com.language.repeater.playvideo.playlist.PlaylistAdapter
 import kotlinx.coroutines.launch
 
 @SuppressLint("SetTextI18n")
-open class BasePlaySheetFragment(
-  private val player: Player
-) : BottomSheetDialogFragment() {
+open class BasePlaySheetFragment : BottomSheetDialogFragment() {
 
   companion object {
-    const val TAG = PlayVideoFragment.TAG
+    const val TAG = "wangzixu_BasePlaySheetFragment"
   }
 
   override fun onViewCreated(view: View, savedInstanceState: Bundle?) {

@@ -115,15 +115,6 @@
       android:layout_height="wrap_content"/>
 
     <Button
-      android:id="@+id/save_sentence"
-      android:text="保存"
-      android:layout_marginStart="5dp"
-      app:layout_constraintTop_toTopOf="parent"
-      app:layout_constraintStart_toStartOf="parent"
-      android:layout_width="wrap_content"
-      android:layout_height="wrap_content"/>
-
-    <Button
       android:id="@+id/reload_sentence"
       android:text="自动分割"
       android:layout_marginStart="5dp"

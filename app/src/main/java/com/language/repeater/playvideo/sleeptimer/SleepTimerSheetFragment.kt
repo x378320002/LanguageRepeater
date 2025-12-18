@@ -4,19 +4,19 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Toast
+import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
-import androidx.media3.common.Player
 import com.language.repeater.R
 import com.language.repeater.databinding.LayoutSleepTimerSheetBinding
 import com.language.repeater.playvideo.BasePlaySheetFragment
+import com.language.repeater.playvideo.PlayerViewModel
+import com.language.repeater.utils.ToastUtil
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
-class SleepTimerSheetFragment(
-  private val player: Player
-) : BasePlaySheetFragment(player) {
+class SleepTimerSheetFragment : BasePlaySheetFragment() {
 
+  private val viewModel: PlayerViewModel by activityViewModels()
   private var _binding: LayoutSleepTimerSheetBinding? = null
   private val binding get() = _binding!!
 
@@ -31,62 +31,58 @@ class SleepTimerSheetFragment(
 
   override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
     super.onViewCreated(view, savedInstanceState)
-
     setupClickListeners()
     observeTimerState()
   }
 
   private fun setupClickListeners() {
-    // 关闭定时
     binding.btnOff.setOnClickListener {
-      SleepTimerManager.stopTimer()
+      viewModel.stopSleepTimer()
       dismiss()
-      Toast.makeText(context, "定时已关闭", Toast.LENGTH_SHORT).show()
+      ToastUtil.toast("定时已关闭")
     }
 
-    // 10 分钟
     binding.btn10Min.setOnClickListener { startTimer(10 * 60) }
-
-    // 20 分钟
     binding.btn20Min.setOnClickListener { startTimer(20 * 60) }
-
-    // 30 分钟
     binding.btn30Min.setOnClickListener { startTimer(30 * 60) }
-
-    // 60 分钟
     binding.btn60Min.setOnClickListener { startTimer(60 * 60) }
 
-    // 播完当前首 (高级功能)
+    // 播完当前首
     binding.btnEndOfTrack.setOnClickListener {
-      // 计算当前视频剩余多少秒
+      // 获取 Player 信息依然通过 ViewModel (或 connection) 的状态流，或者 ViewModel 的 getPlayer()
+      // 这里为了计算时长，短暂获取一下 player 是可以的，但不传给 Manager
+      val player = viewModel.getPlayer()
+      if (player == null) {
+        ToastUtil.toast("当前播放器未就绪")
+        return@setOnClickListener
+      }
+
       val duration = player.duration
       val current = player.currentPosition
       if (duration > 0 && current >= 0) {
         val remainingMillis = duration - current
-        // 向上取整转为分钟，加 1 分钟缓冲防止提前一点点关
-        val seconds = remainingMillis / 1000
+        // 向上取整转为秒，加 2 秒缓冲
+        val seconds = (remainingMillis / 1000) + 2
         startTimer(seconds)
       } else {
-        Toast.makeText(context, "无法获取当前时长", Toast.LENGTH_SHORT).show()
+        ToastUtil.toast("无法获取当前时长")
       }
     }
   }
 
   private fun startTimer(seconds: Long) {
-    SleepTimerManager.startTimer(seconds, player)
+    // 直接调用 ViewModel，不传 Player
+    viewModel.startSleepTimer(seconds)
     dismiss()
-    Toast.makeText(context, "将在 ${SleepTimerManager.formatTime(seconds)} 分钟后停止播放", Toast.LENGTH_SHORT).show()
+    ToastUtil.toast("将在 ${SleepTimerManager.formatTime(seconds)} 后停止播放")
   }
 
-  // 监听倒计时，如果用户再次打开这个弹窗，能看到还剩多久
   private fun observeTimerState() {
     viewLifecycleOwner.lifecycleScope.launch {
       SleepTimerManager.remainingSeconds.collectLatest { seconds ->
         if (seconds > 0) {
           binding.tvCountdownStatus.visibility = View.VISIBLE
           binding.tvCountdownStatus.text = getString(R.string.sleep_time, SleepTimerManager.formatTime(seconds))
-
-          // 高亮显示"关闭定时"按钮，提示用户可以取消
           binding.btnOff.text = "关闭定时 (运行中)"
         } else {
           binding.tvCountdownStatus.visibility = View.GONE

@@ -38,6 +38,13 @@ android {
   buildFeatures {
     viewBinding = true
   }
+
+  packaging {
+    jniLibs {
+      // 遇到 libc++_shared.so 冲突时，优先选取第一个
+      pickFirst("lib/**/libc++_shared.so")
+    }
+  }
 }
 
 dependencies {

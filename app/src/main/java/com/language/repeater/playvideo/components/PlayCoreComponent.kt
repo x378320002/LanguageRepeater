@@ -1,7 +1,9 @@
 package com.language.repeater.playvideo.components
 
+import android.content.ComponentName
 import android.net.Uri
 import android.util.Log
+import androidx.core.content.ContextCompat
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
@@ -9,14 +11,12 @@ import androidx.media3.common.Player
 import androidx.media3.common.Player.TIMELINE_CHANGE_REASON_PLAYLIST_CHANGED
 import androidx.media3.common.Timeline
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.exoplayer.DefaultLoadControl
-import androidx.media3.exoplayer.DefaultRenderersFactory
-import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
-import androidx.media3.exoplayer.upstream.DefaultAllocator
+import androidx.media3.session.MediaController
+import androidx.media3.session.SessionToken
 import com.language.repeater.foundation.BaseComponent
 import com.language.repeater.pcm.Sentence
 import com.language.repeater.playvideo.PlayVideoFragment
+import com.language.repeater.playvideo.PlaybackService
 import com.language.repeater.playvideo.history.HistoryManager
 import com.language.repeater.playvideo.model.VideoEntity
 import com.language.repeater.playvideo.model.toMediaItem
@@ -28,6 +28,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import java.util.concurrent.ExecutionException
+
 
 class PlayCoreComponent: BaseComponent<PlayVideoFragment>(), Player.Listener {
   companion object {
@@ -37,13 +39,14 @@ class PlayCoreComponent: BaseComponent<PlayVideoFragment>(), Player.Listener {
   var repeatable = false
     private set
 
-  val player: ExoPlayer by lazy {
-    ExoPlayer
-      .Builder(context)
-      .build().apply {
-      this.repeatMode = Player.REPEAT_MODE_ONE
-    }
-  }
+  //val player: ExoPlayer by lazy {
+  //  ExoPlayer
+  //    .Builder(context)
+  //    .build().apply {
+  //    this.repeatMode = Player.REPEAT_MODE_ONE
+  //  }
+  //}
+  var player: Player? = null
 
   //当前所有的语音片段
   private var sentences = listOf<Sentence>()
@@ -57,34 +60,51 @@ class PlayCoreComponent: BaseComponent<PlayVideoFragment>(), Player.Listener {
   private var loopProgressJob: Job? = null
   private var subtitleAutoLoader: SubtitleAutoLoader? = null
 
-  override fun onCreate() {
-    super.onCreate()
-    player.addListener(this)
+  override fun onDestroyView() {
+    super.onDestroyView()
+    subtitleAutoLoader?.release()
+    subtitleAutoLoader = null
+    player?.stop()
+    player?.release()
+    player?.removeListener(this)
+    player = null
+  }
+
+  @UnstableApi
+  override fun onCreateView() {
+    super.onCreateView()
+
+    // 1. 制作一个令牌 (Token)，指向刚才写的 Service
+    val sessionToken = SessionToken(context, ComponentName(context, PlaybackService::class.java))
+
+    // 2. 异步构建 Controller
+    val controllerFuture = MediaController.Builder(context, sessionToken).buildAsync()
+    controllerFuture.addListener({
+      try {
+        val controller: MediaController? = controllerFuture.get()
+        player = controller
+        onPlayerCreate()
+      } catch (e: ExecutionException) {
+        e.printStackTrace()
+      }
+    }, ContextCompat.getMainExecutor(context))
+  }
+
+  private fun onPlayerCreate() {
+    val p = player ?: return
+    p.addListener(this)
+    subtitleAutoLoader = SubtitleAutoLoader(context, p, fScope)
 
     fragment.viewModel.sentencesFlow.onEach {
       sentences = it
       updateAbSentence()
     }.launchIn(fScope)
 
-    subtitleAutoLoader = SubtitleAutoLoader(context, player, fScope)
-  }
-
-  override fun onDestroy() {
-    super.onDestroy()
-    subtitleAutoLoader?.release()
-    subtitleAutoLoader = null
-    player.stop()
-    player.release()
-    player.removeListener(this)
-  }
-
-  @UnstableApi
-  override fun onCreateView() {
-    super.onCreateView()
   }
 
   fun addPlayUri(list: List<VideoEntity>, isReplace: Boolean = false) {
     if (list.isEmpty()) return
+    val player = player ?: return
 
     val items = list.map {
       it.toMediaItem()
@@ -110,6 +130,7 @@ class PlayCoreComponent: BaseComponent<PlayVideoFragment>(), Player.Listener {
   }
 
   fun remove(index: Int) {
+    val player = player ?: return
     player.removeMediaItem(index)
   }
 
@@ -121,6 +142,7 @@ class PlayCoreComponent: BaseComponent<PlayVideoFragment>(), Player.Listener {
   }
 
   fun seekToNextSentence() {
+    val player = player ?: return
     val curSen = curAbSentenceFlow.value
     if (curSen != null) {
       val index = sentences.indexOf(curSen)
@@ -145,6 +167,7 @@ class PlayCoreComponent: BaseComponent<PlayVideoFragment>(), Player.Listener {
   }
 
   fun seekToPreviousSentence() {
+    val player = player ?: return
     val curSen = curAbSentenceFlow.value
     if (curSen != null) {
       val index = sentences.indexOf(curSen)
@@ -169,6 +192,7 @@ class PlayCoreComponent: BaseComponent<PlayVideoFragment>(), Player.Listener {
 
   fun seekToSegment(sentence: Sentence?) {
     curAbSentenceFlow.value = sentence
+    val player = player ?: return
     if (sentence != null) {
       player.seekTo((sentence.start * 1000).toLong())
     }
@@ -176,6 +200,7 @@ class PlayCoreComponent: BaseComponent<PlayVideoFragment>(), Player.Listener {
 
   private fun startLoopPos() {
     loopProgressJob?.cancel()
+    val player = player ?: return
     loopProgressJob = fScope.launch {
       while (true) {
         if (player.isPlaying) {
@@ -218,7 +243,7 @@ class PlayCoreComponent: BaseComponent<PlayVideoFragment>(), Player.Listener {
   override fun onPositionDiscontinuity(
     oldPosition: Player.PositionInfo,
     newPosition: Player.PositionInfo,
-    reason: Int
+    reason: Int,
   ) {
     super.onPositionDiscontinuity(oldPosition, newPosition, reason)
     curPosSecFlow.value = newPosition.positionMs.toFloat() / 1000
@@ -226,9 +251,10 @@ class PlayCoreComponent: BaseComponent<PlayVideoFragment>(), Player.Listener {
 
   override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
     super.onMediaItemTransition(mediaItem, reason)
+    val player = player ?: return
     if (mediaItem != null) {
       Log.i(TAG, "onMediaItemTransition current: ${mediaItem.mediaMetadata.title}")
-      fragment.viewModel.parseUriToPcm(mediaItem)
+      //====fragment.viewModel.parseUriToPcm(mediaItem)====//
 
       val entity = VideoEntity(
         id = mediaItem.mediaId, // 确保这个 ID 是唯一的
@@ -247,6 +273,7 @@ class PlayCoreComponent: BaseComponent<PlayVideoFragment>(), Player.Listener {
 
   override fun onTimelineChanged(timeline: Timeline, reason: Int) {
     super.onTimelineChanged(timeline, reason)
+    val player = player ?: return
     Log.i(TAG, "onTimelineChanged reason:$reason")
     if (reason == TIMELINE_CHANGE_REASON_PLAYLIST_CHANGED) {
       fScope.launch {
@@ -271,6 +298,7 @@ class PlayCoreComponent: BaseComponent<PlayVideoFragment>(), Player.Listener {
   //endregion
 
   fun updateAbSentence(specificTime: Float? = null) {
+    val player = player ?: return
     if (repeatable && sentences.isNotEmpty()) {
       var targetSentence: Sentence = sentences.first()
       val timeSec = specificTime ?: (player.currentPosition.toFloat() / 1000)
@@ -291,6 +319,7 @@ class PlayCoreComponent: BaseComponent<PlayVideoFragment>(), Player.Listener {
    * 当前正在复读的句子用 curAbSentenceFlow获取
    */
   fun findCurSentence(): Sentence? {
+    val player = player ?: return null
     var targetSentence: Sentence? = null
     if (sentences.isNotEmpty()) {
       val timeSec = (player.currentPosition.toFloat() / 1000)

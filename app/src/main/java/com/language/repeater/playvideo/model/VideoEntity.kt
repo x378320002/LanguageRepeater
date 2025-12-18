@@ -29,7 +29,10 @@ fun VideoEntity.toMediaItem(): MediaItem {
     .Builder()
     .setUri(it.uri)
     .setMediaId(it.id)
-    .setMediaMetadata(MediaMetadata.Builder().setTitle(it.name).build())
+    .setMediaMetadata(MediaMetadata.Builder()
+      .setTitle(it.name)
+      .setArtworkUri(it.uri.toUri())
+      .build())
 
   val subtitleUri = it.subUri?.toUri()
   if (subtitleUri != null) {

@@ -23,9 +23,6 @@ class PlayScrollWaveComponent: BaseComponent<PlayVideoFragment>() {
   val binding
     get() = fragment.binding
 
-  val playComponent
-    get() = fragment.playComponent
-
   val viewModel
     get() = fragment.viewModel
 
@@ -35,29 +32,27 @@ class PlayScrollWaveComponent: BaseComponent<PlayVideoFragment>() {
   @UnstableApi
   override fun onCreateView() {
     super.onCreateView()
-    //滚动波形图句子数据填充
+    //滚动波形图总句子
     viewModel.sentencesFlow.onEach {
       waveformView.setSentenceData(it)
+    }.launchIn(uiScope)
+
+    //波形图ab句子
+    viewModel.curAbSentenceFlow.onEach {
+      waveformView.curABSeg = it
+      waveformView.invalidate()
     }.launchIn(uiScope)
 
     //滚动波形图数据填充
     viewModel.pcmLoaderStateFlow.onEach {loader ->
       if (loader != null) {
         // 加载PCM文件
-        waveformView.setPCMLoader(loader, 0) {
-          Log.i(PlayVideoFragment.Companion.TAG, "audioProgressWaveView loadWindow $it")
-        }
+        waveformView.setPCMLoader(loader)
       }
     }.launchIn(uiScope)
 
-    //波形图ab句子更新
-    playComponent.curAbSentenceFlow.onEach {
-      waveformView.curABSeg = it
-      waveformView.invalidate()
-    }.launchIn(uiScope)
-
     //波形进度的更新
-    playComponent.curPosSecFlow.onEach {
+    viewModel.currentPositionSeconds.onEach {
       //处理波形图的更新
       if (it >= 0) {
         waveformView.updatePosition(it)
@@ -66,27 +61,20 @@ class PlayScrollWaveComponent: BaseComponent<PlayVideoFragment>() {
 
 
     waveformView.setOnCustomClickListener {
-      val isPlaying = playComponent.player.isPlaying
-      if (isPlaying) {
-        playComponent.player.pause()
-      } else {
-        playComponent.player.play()
-      }
+      viewModel.togglePlayPause()
     }
     handleDrag()
   }
 
   private fun handleDrag() {
-    val playComponent = fragment.playComponent
-    val player = playComponent.player
-
     //拖动波形图的逻辑
     waveformView.setOnSeekListener(object : OnSeekListener {
       var isPlayWhenStart = false
       override fun onSeekStart() {
-        isPlayWhenStart = player.isPlaying
+        viewModel.getPlayer() ?: return
+        isPlayWhenStart = viewModel.isUiPlaying.value
         if (isPlayWhenStart) {
-          player.pause()
+          viewModel.pause()
         }
       }
 
@@ -94,10 +82,11 @@ class PlayScrollWaveComponent: BaseComponent<PlayVideoFragment>() {
       }
 
       override fun onSeekEnd(position: Float) {
-        playComponent.updateAbSentence(position)
+        val player = viewModel.getPlayer() ?: return
+        viewModel.updateAbSentence(position)
         player.seekTo((position * 1000).toLong())
         if (isPlayWhenStart) {
-          player.play()
+          viewModel.play()
         }
       }
     })
@@ -106,9 +95,10 @@ class PlayScrollWaveComponent: BaseComponent<PlayVideoFragment>() {
     waveformView.setOnABChangeListener(object : ScrollWaveformView.OnABChangeListener{
       var isPlayWhenStart = false
       override fun onABDragStart(dragAbResult: ABHitResult?) {
-        isPlayWhenStart = player.isPlaying
+        viewModel.getPlayer() ?: return
+        isPlayWhenStart = viewModel.isUiPlaying.value
         if (isPlayWhenStart) {
-          player.pause()
+          viewModel.pause()
         }
       }
 
@@ -116,9 +106,11 @@ class PlayScrollWaveComponent: BaseComponent<PlayVideoFragment>() {
       }
 
       override fun onABDragEnd(dragAbResult: ABHitResult?) {
+        viewModel.getPlayer() ?: return
         if (isPlayWhenStart) {
-          player.play()
+          viewModel.play()
         }
+        viewModel.onSentenceDragEnd()
       }
     })
   }

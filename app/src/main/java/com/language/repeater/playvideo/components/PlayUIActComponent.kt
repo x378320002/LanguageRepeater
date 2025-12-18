@@ -1,5 +1,6 @@
 package com.language.repeater.playvideo.components
 
+import android.R.attr.repeatMode
 import android.view.View
 import androidx.appcompat.app.AlertDialog
 import androidx.media3.common.Player
@@ -27,72 +28,71 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
     const val TAG = PlayVideoFragment.Companion.TAG
   }
 
-  val playComponent
-    get() = fragment.playComponent
-
   @UnstableApi
   override fun onCreateView() {
     super.onCreateView()
-
-    val activity = (fragment.activity as? MainActivity)
-    activity?.volumeFlow?.onEach {
-      if (it == 1) {
-        playComponent.seekToNextSentence()
-      } else {
-        playComponent.seekToPreviousSentence()
-      }
-    }?.launchIn(uiScope)
-
-    playComponent.setRepeat(fragment.binding.voiceRepeatSwitch.isChecked)
     fragment.binding.voiceRepeatSwitch.setOnCheckedChangeListener { _, checked ->
-      playComponent.setRepeat(fragment.binding.voiceRepeatSwitch.isChecked)
+      fragment.viewModel.toggleRepeat()
     }
-
     fragment.binding.voiceNext.setOnClickListener(this)
     fragment.binding.voicePrevious.setOnClickListener(this)
     fragment.binding.reloadSentence.setOnClickListener(this)
-    fragment.binding.saveSentence.setOnClickListener(this)
     fragment.binding.splitSentence.setOnClickListener(this)
     fragment.binding.deleteSentence.setOnClickListener(this)
     fragment.binding.historyList.setOnClickListener(this)
     fragment.binding.playList.setOnClickListener(this)
     fragment.binding.repeatMode.setOnClickListener(this)
     fragment.binding.sleepTimeBtn.setOnClickListener(this)
+
+    fragment.viewModel.repeatable.onEach {
+      fragment.binding.voiceRepeatSwitch.isChecked = it
+    }.launchIn(uiScope)
+
+    fragment.viewModel.playerRepeatMode.onEach {
+      val text = when (it) {
+        Player.REPEAT_MODE_ONE -> {
+          ResourcesUtil.getString(R.string.repeat_one)
+        }
+
+        Player.REPEAT_MODE_ALL -> {
+          ResourcesUtil.getString(R.string.repeat_all)
+        }
+
+        else -> {
+          ResourcesUtil.getString(R.string.repeat_off)
+        }
+      }
+      fragment.binding.repeatMode.text = text
+    }.launchIn(uiScope)
   }
 
   override fun onClick(v: View?) {
     when (v) {
       fragment.binding.sleepTimeBtn -> {
-        val sheet = SleepTimerSheetFragment(playComponent.player)
+        val sheet = SleepTimerSheetFragment()
         sheet.show(fragment.childFragmentManager, "SleepTimer")
       }
 
       fragment.binding.repeatMode -> {
-        if (playComponent.player.repeatMode == Player.REPEAT_MODE_ONE) {
-          playComponent.player.repeatMode = Player.REPEAT_MODE_ALL
-          fragment.binding.repeatMode.text = ResourcesUtil.getString(R.string.repeat_all)
-        } else {
-          playComponent.player.repeatMode = Player.REPEAT_MODE_ONE
-          fragment.binding.repeatMode.text = ResourcesUtil.getString(R.string.repeat_one)
-        }
+        fragment.viewModel.togglePlayerRepeatMode()
       }
 
       fragment.binding.playList -> {
-        val sheet = PlaylistSheetFragment(fragment, fragment.playComponent.player)
+        val sheet = PlaylistSheetFragment()
         sheet.show(fragment.childFragmentManager, "PlaylistSheet")
       }
 
       fragment.binding.historyList -> {
-        val sheet = HistorySheetFragment(fragment, fragment.playComponent.player)
+        val sheet = HistorySheetFragment()
         sheet.show(fragment.childFragmentManager, "HistorySheet")
       }
 
       fragment.binding.voiceNext -> {
-        playComponent.seekToNextSentence()
+        fragment.viewModel.seekToNextSentence()
       }
 
       fragment.binding.voicePrevious -> {
-        playComponent.seekToPreviousSentence()
+        fragment.viewModel.seekToPreviousSentence()
       }
 
       fragment.binding.reloadSentence -> {
@@ -103,45 +103,53 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
         }
       }
 
-      fragment.binding.saveSentence -> {
-        uiScope.launch {
-          fragment.showLoading()
-          fragment.viewModel.saveSentenceDataToFile()
-          fragment.hideLoading()
-        }
-      }
-
       fragment.binding.splitSentence -> {
-        AlertDialog.Builder(context)
-          .setTitle("确认拆分")
-          .setMessage("确定要拆分当前句子吗？")
-          .setPositiveButton("确认") { _, _ ->
-            val sentence = playComponent.findCurSentence()
-            if (sentence != null) {
-              fragment.viewModel.splitSentence(sentence, playComponent.curPosSecFlow.value)
-            } else {
-              ToastUtil.toast("当前没有没有句子可供拆分")
-            }
-          }
-          .setNegativeButton("取消", null)
-          .show()
+        splitCurSen()
       }
 
       fragment.binding.deleteSentence -> {
-        AlertDialog.Builder(context)
-          .setTitle("确认删除")
-          .setMessage("确定要删除当前AB句吗？")
-          .setPositiveButton("删除") { _, _ ->
-            val sentence = playComponent.curAbSentenceFlow.value
-            if (sentence != null) {
-              fragment.viewModel.deleteSentence(sentence)
-            } else {
-              ToastUtil.toast("当前没有没有句子可删除")
-            }
-          }
-          .setNegativeButton("取消", null)
-          .show()
+        deleteCurSen()
       }
+    }
+  }
+
+  private fun splitCurSen() {
+    val isPlaying = fragment.viewModel.isUiPlaying.value
+    AlertDialog.Builder(context)
+      .setTitle("确认拆分")
+      .setMessage("确定要拆分当前句子吗？")
+      .setPositiveButton("确认") { _, _ ->
+        fragment.viewModel.splitCurrentSentence()
+      }
+      .setNegativeButton("取消", null)
+      .setOnDismissListener {
+        if (isPlaying) {
+          fragment.viewModel.play()
+        }
+      }
+      .show()
+    if (isPlaying) {
+      fragment.viewModel.pause()
+    }
+  }
+
+  private fun deleteCurSen() {
+    val isPlaying = fragment.viewModel.isUiPlaying.value
+    AlertDialog.Builder(context)
+      .setTitle("确认删除")
+      .setMessage("确定要删除当前AB句吗？")
+      .setPositiveButton("删除") { _, _ ->
+        fragment.viewModel.deleteCurrentSentence()
+      }
+      .setNegativeButton("取消", null)
+      .setOnDismissListener {
+        if (isPlaying) {
+          fragment.viewModel.play()
+        }
+      }
+      .show()
+    if (isPlaying) {
+      fragment.viewModel.pause()
     }
   }
 }

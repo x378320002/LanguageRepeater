@@ -1,0 +1,739 @@
+package com.language.repeater.playvideo
+
+import android.annotation.SuppressLint
+import kotlin.collections.first
+import kotlin.collections.firstOrNull
+import kotlin.collections.isNotEmpty
+import kotlin.collections.lastIndex
+import android.content.ComponentName
+import android.content.Context
+import android.net.Uri
+import android.util.Log
+import androidx.media3.common.C
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
+import androidx.media3.common.Timeline
+import androidx.media3.session.MediaController
+import androidx.media3.session.SessionToken
+import com.google.common.util.concurrent.ListenableFuture
+import com.google.common.util.concurrent.MoreExecutors
+import com.language.repeater.pcm.LocalVoiceSentenceDetector
+import com.language.repeater.pcm.PCMSegmentLoader
+import com.language.repeater.pcm.PcmDataUtil
+import com.language.repeater.pcm.Sentence
+import com.language.repeater.pcm.WaveformPoint
+import com.language.repeater.playvideo.components.SubtitleAutoLoader
+import com.language.repeater.playvideo.history.HistoryManager
+import com.language.repeater.playvideo.model.CurrentPlayVideoEntity
+import com.language.repeater.playvideo.model.VideoEntity
+import com.language.repeater.playvideo.model.toMediaItem
+import com.language.repeater.playvideo.playlist.PlaylistManager
+import com.language.repeater.utils.FFmpegUtil
+import com.language.repeater.utils.SentenceFileStoreUtil
+import com.language.repeater.utils.SrtParser
+import com.language.repeater.utils.ToastUtil
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
+import kotlin.math.max
+
+/**
+ * 播放连接管理器 (单例)
+ * 职责：
+ * 1. 连接 MediaSessionService
+ * 2. 管理播放状态流 (isPlaying, position...)
+ * 3. 管理媒体附属数据 (PCM, Waveform, Sentences) -> 解析一次，全局复用
+ * 4. 提供高级播放控制 (上一句, 下一句, AB复读)
+ */
+class PlaybackConnection(private val context: Context) {
+
+  private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
+  // 私有组件：字幕自动加载器
+  private var subtitleAutoLoader: SubtitleAutoLoader? = null
+
+  // null = 未连接/断开, 非null = 已连接
+  private val _playerState = MutableStateFlow<Player?>(null)
+  val playerState = _playerState.asStateFlow()
+
+  private val _isPlaying = MutableStateFlow(false)
+  val isPlaying = _isPlaying.asStateFlow()
+
+  private val _playWhenReady = MutableStateFlow(false)
+  val playWhenReady = _playWhenReady.asStateFlow()
+
+  private val _currentMediaItem = MutableStateFlow<MediaItem?>(null)
+  val currentMediaItem = _currentMediaItem.asStateFlow()
+
+  private val _playbackState = MutableStateFlow(Player.STATE_IDLE)
+  val playbackState = _playbackState.asStateFlow()
+
+  private val _currentPosition = MutableStateFlow(0L)
+  val currentPosition = _currentPosition.asStateFlow()
+
+  private val _currentPositionSeconds = MutableStateFlow(0f)
+  val currentPositionSeconds = _currentPositionSeconds.asStateFlow()
+
+  private val _mediaItemCount = MutableStateFlow(0)
+  val mediaItemCount = _mediaItemCount.asStateFlow()
+
+  private val _playlistRefreshEvent = MutableSharedFlow<Unit>(replay = 1)
+  val playlistRefreshEvent = _playlistRefreshEvent.asSharedFlow()
+
+  // --- 业务数据 (下沉到单例，保证唯一性) ---
+  private val _pcmLoaderStateFlow = MutableStateFlow<PCMSegmentLoader?>(null)
+  val pcmLoaderStateFlow = _pcmLoaderStateFlow.asStateFlow()
+
+  private val _allWaveDataFlow = MutableStateFlow<List<WaveformPoint>>(emptyList())
+  val allWaveDataFlow = _allWaveDataFlow.asStateFlow()
+
+  private val _sentencesFlow = MutableStateFlow<List<Sentence>>(emptyList())
+  val sentencesFlow = _sentencesFlow.asStateFlow()
+
+  // --- 复读控制状态 ---
+  private val _repeatable = MutableStateFlow(false)
+  val repeatable = _repeatable.asStateFlow()
+
+  private val _curAbSentenceFlow = MutableStateFlow<Sentence?>(null)
+  val curAbSentenceFlow = _curAbSentenceFlow.asStateFlow()
+
+  // 播放模式状态流 (默认为不循环)
+  private val _playerRepeatMode = MutableStateFlow(Player.REPEAT_MODE_OFF)
+  val playerRepeatMode = _playerRepeatMode.asStateFlow()
+
+  // --- 内部变量 ---
+  private var currentId: String = ""
+  private var parseJob: Job? = null
+  // 新增：用于防抖的保存任务 Job
+  private var saveStateJob: Job? = null
+
+  // 【关键变量】用于标记是否正在连接或已连接
+  private var mediaController: MediaController? = null
+  private var controllerFuture: ListenableFuture<MediaController>? = null
+
+  companion object {
+    const val TAG = "wangzixu_PlaybackConnection"
+
+    @SuppressLint("StaticFieldLeak")
+    @Volatile
+    private var instance: PlaybackConnection? = null
+    fun getInstance(context: Context): PlaybackConnection {
+      return instance ?: synchronized(this) {
+        instance ?: PlaybackConnection(context.applicationContext).also { instance = it }
+      }
+    }
+  }
+
+  init {
+    setupBusinessLogic()
+  }
+
+  // 连接逻辑，但只为了启动 Service
+  fun connect() {
+    // 如果已经连接或正在连接，直接返回，防止重复调用
+    if (mediaController != null || controllerFuture != null) {
+      return
+    }
+
+    val sessionToken = SessionToken(context, ComponentName(context, PlaybackService::class.java))
+    val future = MediaController.Builder(context, sessionToken).buildAsync()
+    controllerFuture = future
+
+    future.addListener({
+      try {
+        // 我们拿到了 Controller，但我们主要用它来保持连接
+        // 真正的控制还是走 setPlayer 进来的那个对象
+        mediaController = future.get()
+        // Controller 连接成功，说明 Service 已经起来了
+        // 接下来等待 Service 调用 setPlayer 把真身传给我们
+        Log.d(TAG, "MediaController connected")
+      } catch (e: Exception) {
+        e.printStackTrace()
+      }
+    }, MoreExecutors.directExecutor())
+  }
+
+  /**
+   * 【核心方法】由 PlaybackService 调用
+   * 注入真正的 Player 实例
+   */
+  fun initPlayer(newPlayer: Player?) {
+    val oldPlayer = _playerState.value
+    if (oldPlayer == newPlayer) return
+
+    // 1. 清理旧的
+    oldPlayer?.removeListener(playerListener)
+    subtitleAutoLoader?.release()
+    subtitleAutoLoader = null
+
+    // 2. 更新引用
+    _playerState.value = newPlayer
+
+    // 3. 设置新的
+    if (newPlayer != null) {
+      newPlayer.addListener(playerListener)
+
+      // 初始化字幕加载器
+      subtitleAutoLoader = SubtitleAutoLoader(context, newPlayer, scope)
+
+      // 立即同步一次状态
+      syncState()
+
+      // 启动进度轮询
+      startProgressTicker()
+
+      // 尝试恢复上次会话 (仅当 Service 空闲时)
+      restoreLastSessionIfNeeded()
+    } else {
+      release()
+    }
+  }
+
+  private fun release() {
+    controllerFuture?.let {
+      MediaController.releaseFuture(it)
+    }
+    mediaController = null
+    controllerFuture = null
+  }
+
+  /**
+   * 使用 PlaylistManager 恢复上次会话
+   */
+  private fun restoreLastSessionIfNeeded() {
+    val player = _playerState.value ?: return
+
+    // 如果 Service 已经在运行且有数据（比如后台播放中），则不恢复
+    if (player.mediaItemCount > 0) {
+      Log.d(TAG, "Service is active. Skip restore.")
+      return
+    }
+
+    scope.launch {
+      // 1. 读取列表 (返回 List<VideoEntity>)
+      val videoEntities = PlaylistManager.loadLastPlaylist(context)
+      if (videoEntities.isNotEmpty()) {
+        // 2. 转换为 MediaItem
+        val mediaItems = videoEntities.map { it.toMediaItem() }
+
+        // 3. 读取上次播放位置 (VideoEntity -> Index/Pos)
+        val playInfo = PlaylistManager.loadCurrentPlayIndex(context)
+
+        val startIndex = playInfo?.index ?: 0
+        val startPos = playInfo?.positionMs ?: C.TIME_UNSET
+
+        withContext(Dispatchers.Main) {
+          Log.i(TAG, "Restoring playlist: ${mediaItems.size} items, index: $startIndex")
+          player.playWhenReady = false // 恢复时不自动播放
+          player.setMediaItems(mediaItems, startIndex, startPos)
+          player.prepare()
+        }
+      }
+    }
+  }
+
+  // 设置业务逻辑监听 (复读检测、自动解析)
+  private fun setupBusinessLogic() {
+    // 复读循环核心逻辑
+    // 只要 播放中 + 开启复读 + 有目标句子，就检测是否越界
+    combine(
+      _isPlaying,
+      _currentPositionSeconds,
+      _repeatable,
+      _curAbSentenceFlow
+    ) { isPlaying, posSec, isRepeat, abSentence ->
+      if (isPlaying && isRepeat && abSentence != null) {
+        if (posSec >= abSentence.end) {
+          // 越界：跳回开始
+          seekTo((abSentence.start * 1000).toLong())
+        }
+      }
+      // 非复读模式下，如果有 UI 需要高亮当前句子，可以在这里计算并暴露 flow
+    }.launchIn(scope)
+  }
+
+  // --- 核心业务：媒体切换处理 ---
+  private fun handleMediaItemTransition(item: MediaItem) {
+    val key = item.mediaId
+    // 【关键修复】如果 ID 没变，说明是同源切换(比如加字幕)，不要重新解析 PCM
+    if (key == currentId && _sentencesFlow.value.isNotEmpty()) return
+
+    currentId = key
+    Log.i(TAG, "Media Transition: ${item.mediaMetadata.title}, ID: $key")
+
+    val entity = VideoEntity(
+      id = item.mediaId,
+      uri = item.localConfiguration?.uri.toString(),
+      name = item.mediaMetadata.title.toString(),
+      positionMs = _playerState.value?.currentPosition ?: 0L,
+      subUri = item.localConfiguration?.subtitleConfigurations?.firstOrNull()?.uri?.toString()
+    )
+    // 1. 保存历史记录
+    scope.launch(Dispatchers.IO) {
+      HistoryManager.addHistory(context, entity)
+    }
+
+    // 2. 开始解析数据 (取消上一次的解析)
+    parseJob?.cancel()
+    parseJob = parseUriToPcm(item)
+  }
+
+  // --- 核心业务：PCM 与句子解析 ---
+  private fun parseUriToPcm(item: MediaItem) = scope.launch(Dispatchers.IO) {
+    // 清空旧数据，避免 UI 显示错误的波形
+    _pcmLoaderStateFlow.value = null
+    _allWaveDataFlow.value = emptyList()
+    _sentencesFlow.value = emptyList()
+    _curAbSentenceFlow.value = null
+
+    val uri = item.localConfiguration?.uri ?: return@launch
+    try {
+      Log.i(TAG, "Start parsing: $currentId")
+      // 提取 PCM 文件
+      val path = FFmpegUtil.extractPcmFileByFFmpeg(context, uri, currentId)
+      val pcmFile = File(path)
+      _pcmLoaderStateFlow.value = PCMSegmentLoader(pcmFile)
+
+      // 加载波形 (并行)
+      //launch {
+      //  val waveData = PcmDataUtil.readAllPcmToWavePoint(pcmFile, ScreenUtil.getScreenSize().width)
+      //  _allWaveDataFlow.value = waveData
+      //}
+
+      // 加载句子 (优先缓存)
+      launch {
+        val cachedSentences = SentenceFileStoreUtil.loadData(context, currentId)
+        if (!cachedSentences.isNullOrEmpty()) {
+          _sentencesFlow.value = cachedSentences
+          Log.i(TAG, "Loaded cached sentences: ${cachedSentences.size}")
+        } else {
+          loadSentences(item)
+        }
+      }
+
+      withContext(Dispatchers.Main) {
+        updatePosition()
+      }
+    } catch (e: Exception) {
+      Log.e(TAG, "Parse error", e)
+      withContext(Dispatchers.Main) {
+        ToastUtil.toast("解析音频数据失败")
+      }
+    }
+  }
+
+  private suspend fun loadSentences(item: MediaItem?) = withContext(Dispatchers.IO) {
+    if (item == null) return@withContext
+
+    val uri = item.localConfiguration?.uri ?: return@withContext
+    val subUri = item.localConfiguration?.subtitleConfigurations?.firstOrNull()?.uri
+
+    val newSentences = if (subUri == null) {
+      val path = FFmpegUtil.extractPcmFileByFFmpeg(context, uri, currentId)
+      val pcmFile = File(path)
+      LocalVoiceSentenceDetector().detectSentences(PcmDataUtil.readPcmFile(pcmFile))
+    } else {
+      val subList = SrtParser.parse(context, subUri)
+      subList.map {
+        Sentence(it.startTime.toFloat() / 1000, it.endTime.toFloat() / 1000)
+      }
+    }
+    scope.launch {
+      SentenceFileStoreUtil.saveData(context, currentId, newSentences)
+    }
+    _sentencesFlow.value = newSentences
+    Log.i(TAG, "Detected sentences: ${newSentences.size}")
+  }
+
+  // 复读控制
+  fun toggleRepeat() {
+    _repeatable.value = !_repeatable.value
+    updateAbSentenceByTime(_currentPositionSeconds.value)
+  }
+
+  fun seekToNextSentence() {
+    val list = _sentencesFlow.value
+    if (list.isEmpty()) return
+
+    val curSen = _curAbSentenceFlow.value ?: findSentenceByTime(_currentPositionSeconds.value)
+
+    if (curSen != null) {
+      val index = list.indexOf(curSen)
+      // 如果是最后一句，尝试切到下一首视频
+      if (index == list.lastIndex) {
+        //if (hasNextMediaItem()) {
+        //  seekToNextMediaItem()
+        //} else {
+        //}
+        ToastUtil.toast("已经是最后一句了")
+      } else {
+        // 找下一句
+        val nextIndex = (index + 1).coerceAtMost(list.lastIndex)
+        seekToSentence(list[nextIndex])
+      }
+    } else {
+      // 当前没在任何句子里，找最近的下一句
+      val nextSen =
+        list.firstOrNull { it.start > _currentPositionSeconds.value } ?: list.firstOrNull()
+      nextSen?.let { seekToSentence(it) }
+    }
+  }
+
+  fun seekToPreviousSentence() {
+    val list = _sentencesFlow.value
+    if (list.isEmpty()) return
+
+    val curSen = _curAbSentenceFlow.value ?: findSentenceByTime(_currentPositionSeconds.value)
+
+    if (curSen != null) {
+      val index = list.indexOf(curSen)
+      if (index == 0) {
+        //if (hasPreviousMediaItem()) {
+        //  seekToPreviousMediaItem()
+        //} else {
+        //}
+        seekToSentence(list.first())
+      } else {
+        val prevIndex = (index - 1).coerceAtLeast(0)
+        seekToSentence(list[prevIndex])
+      }
+    } else {
+      // 当前没在句子里，找最近的上一句
+      val prevSen = list.lastOrNull { it.end < _currentPositionSeconds.value } ?: list.firstOrNull()
+      prevSen?.let { seekToSentence(it) }
+    }
+  }
+
+  // --- 手动更新字幕 ---
+  // 这是 UI 唯一需要调用的“更换字幕”接口
+  fun updateSubtitle(subtitleUri: Uri) {
+    // 1. 调用 Loader 替换播放器字幕
+    val replaceSuccess = subtitleAutoLoader?.updateCurrentItemSubtitle(subtitleUri)
+    if (replaceSuccess == true) {
+      currentId = ""
+      val item = _currentMediaItem.value
+      if (item != null) handleMediaItemTransition(item)
+    }
+  }
+
+  suspend fun forceLoadCurrentSentences() {
+    loadSentences(_currentMediaItem.value)
+  }
+
+  private fun seekToSentence(sentence: Sentence) {
+    if (_repeatable.value) {
+      _curAbSentenceFlow.value = sentence
+    }
+    // 稍微加一点偏移量(如10ms)，防止seek精度问题导致还在上一句末尾
+    seekTo((sentence.start * 1000).toLong())
+  }
+
+  fun updateAbSentenceByTime(currentSec: Float) {
+    if (_repeatable.value) {
+      // 开启时，立即锁定当前句子
+      _curAbSentenceFlow.value = findSentenceByTime(currentSec) ?: _sentencesFlow.value.lastOrNull()
+    } else {
+      _curAbSentenceFlow.value = null
+    }
+  }
+
+  private fun findSentenceByTime(currentSec: Float): Sentence? {
+    // 优化：二分查找或简单遍历
+    return _sentencesFlow.value.firstOrNull { currentSec >= it.start && currentSec <= it.end }
+  }
+
+  // --- 基础播放器同步逻辑 ---
+  private val playerListener = object : Player.Listener {
+    override fun onIsPlayingChanged(isPlaying: Boolean) {
+      Log.i(TAG, "onIsPlayingChanged isPlaying: $isPlaying")
+      _isPlaying.value = isPlaying
+      if (!isPlaying) {
+        saveCurrentState()
+      }
+    }
+
+    override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+      Log.i(TAG, "onPlayWhenReadyChanged playWhenReady: $playWhenReady")
+      _playWhenReady.value = playWhenReady
+    }
+
+    override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+      Log.i(TAG, "onMediaItemTransition reason: $reason")
+      _currentMediaItem.value = mediaItem
+      if (mediaItem != null) {
+        handleMediaItemTransition(mediaItem)
+      }
+      saveCurrentState()
+    }
+
+    override fun onPlaybackStateChanged(playbackState: Int) {
+      Log.i(TAG, "onPlaybackStateChanged playbackState: $playbackState")
+      /*
+      状态常量 (Int)	含义	UI/业务逻辑应该做什么？
+        STATE_IDLE (1)	闲置	播放器里没东西，或者出错了。UI 应该禁用控制按钮。
+        STATE_BUFFERING (2)	缓冲中	数据不够了，正在加载。UI 应该显示 Loading 转圈。
+        STATE_READY (3)	就绪	数据够了，可以随时播放（不论现在是暂停还是播放中）。UI 隐藏 Loading，启用控制按钮。
+        STATE_ENDED (4)	结束	播完了。UI 显示重播按钮，或重置进度条。
+       */
+      _playbackState.value = playbackState
+    }
+
+    override fun onTimelineChanged(timeline: Timeline, reason: Int) {
+      Log.i(TAG, "onTimelineChanged reason: $reason")
+      //如果是列表增删改，保存列表
+      if (reason == Player.TIMELINE_CHANGE_REASON_PLAYLIST_CHANGED) {
+        _mediaItemCount.value = _playerState.value?.mediaItemCount ?: 0
+        scope.launch { _playlistRefreshEvent.emit(Unit) }
+        saveCurrentPlaylist()
+      }
+    }
+
+    override fun onPositionDiscontinuity(
+      oldPosition: Player.PositionInfo,
+      newPosition: Player.PositionInfo,
+      reason: Int,
+    ) {
+      updatePosition()
+
+      Log.i(TAG, "onPositionDiscontinuity reason: $reason")
+      // 【新增】如果是用户手动 Seek 导致的跳变，保存一下
+      if (reason == Player.DISCONTINUITY_REASON_SEEK) {
+        saveCurrentState()
+      }
+    }
+
+    // 监听播放器内部模式变化 (比如用户通过通知栏改了模式)
+    override fun onRepeatModeChanged(repeatMode: Int) {
+      _playerRepeatMode.value = repeatMode
+    }
+  }
+
+  private fun syncState() {
+    val player = _playerState.value ?: return
+    _isPlaying.value = player.isPlaying
+    _playWhenReady.value = player.playWhenReady
+    _currentMediaItem.value = player.currentMediaItem
+    _playbackState.value = player.playbackState
+    _mediaItemCount.value = player.mediaItemCount
+    _playerRepeatMode.value = player.repeatMode
+    updatePosition()
+  }
+
+  private fun updatePosition() {
+    val pos = _playerState.value?.currentPosition ?: 0L
+    _currentPosition.value = pos
+    _currentPositionSeconds.value = pos.toFloat() / 1000f
+    //Log.i(TAG, "====== updatePosition _currentPositionSeconds:${_currentPositionSeconds.value}, pos:${pos}")
+  }
+
+  private fun startProgressTicker() {
+    scope.launch {
+      while (isActive) {
+        if (_playerState.value?.isPlaying == true) {
+          updatePosition()
+        }
+        delay(16)
+      }
+    }
+  }
+
+  /**
+   * 保存当前播放位置 (Index + Position)
+   * 在 IO 线程执行
+   */
+  private fun saveCurrentState() {
+    // 取消上一次未执行的保存任务
+    saveStateJob?.cancel()
+    // 启动新的保存任务，带延迟
+    saveStateJob = scope.launch {
+      delay(500) // 防抖时间 0.5秒
+
+      val p = _playerState.value ?: return@launch
+      val index = p.currentMediaItemIndex
+      val pos = p.currentPosition
+
+      // 确保索引有效
+      if (index != C.INDEX_UNSET) {
+        val info = CurrentPlayVideoEntity(index, pos)
+        // PlaylistManager 内部会切到 IO 线程
+        PlaylistManager.saveCurrentPlayIndex(context, info)
+        Log.d(TAG, "Saved state: index=$index, pos=$pos")
+      }
+    }
+  }
+
+  /**
+   * 保存当前播放列表
+   * 在 IO 线程执行
+   */
+  private fun saveCurrentPlaylist() {
+    val player = _playerState.value ?: return
+    // 必须在主线程提取数据
+    val items = ArrayList<MediaItem>()
+    for (i in 0 until player.mediaItemCount) {
+      items.add(player.getMediaItemAt(i))
+    }
+
+    scope.launch(Dispatchers.IO) {
+      // 使用你现有的 PlaylistManager
+      PlaylistManager.saveCurrentPlaylist(context, items)
+      Log.d(TAG, "Saved playlist: size=${items.size}")
+    }
+  }
+
+  /**
+   * 分割结果枚举
+   */
+  enum class SplitResult {
+    SUCCESS,
+    NO_SENTENCE,        // 没找到当前句子
+    TOO_SHORT,          // 句子本身太短
+    TOO_CLOSE_TO_EDGE   // 分割点离边缘太近
+  }
+
+  /**
+   * 分割当前句子 (迁移后的逻辑)
+   */
+  fun splitCurrentSentence(): SplitResult {
+    val currentPos = _currentPositionSeconds.value
+    // 逻辑优化：优先取当前复读选中的句子；如果没有，则取当前播放时间点所在的句子
+    val targetSentence = _curAbSentenceFlow.value ?: findSentenceByTime(currentPos)
+
+    if (targetSentence == null) {
+      return SplitResult.NO_SENTENCE
+    }
+
+    // 1. 检查总长度 ( < 1.0s 不分)
+    if (targetSentence.end - targetSentence.start < 1.0f) {
+      return SplitResult.TOO_SHORT
+    }
+
+    // 2. 检查边缘距离 ( < 0.5s 不分)
+    val sentenceMinGap = 0.5f
+    if (currentPos <= targetSentence.start + sentenceMinGap ||
+      currentPos >= targetSentence.end - sentenceMinGap) {
+      return SplitResult.TOO_CLOSE_TO_EDGE
+    }
+
+    val currentList = _sentencesFlow.value.toMutableList()
+    val index = currentList.indexOf(targetSentence)
+
+    if (index != -1) {
+      // 3. 执行分割
+      // 新的前半段：End = currentPos - 0.1s
+      val newEndTime = (currentPos - 0.1f).coerceIn(targetSentence.start, currentPos)
+      val newSen = Sentence(targetSentence.start, newEndTime)
+
+      // 修改后半段(原句)：Start = currentPos
+      targetSentence.start = currentPos
+
+      // 4. 插入列表
+      currentList.add(index, newSen)
+
+      // 5. 更新流和磁盘
+      _sentencesFlow.value = currentList
+
+      scope.launch {
+        saveSentencesToDisk(currentList)
+      }
+
+      return SplitResult.SUCCESS
+    }
+
+    return SplitResult.NO_SENTENCE
+  }
+
+  /**
+   * 辅助方法：保存句子改动到本地
+   */
+  suspend fun saveSentencesToDisk(list: List<Sentence>) = withContext(Dispatchers.IO) {
+    if (currentId.isNotEmpty()) {
+      SentenceFileStoreUtil.saveData(context, currentId, list)
+      Log.i(TAG, "Sentences updated and saved to disk.")
+    }
+  }
+
+  /**
+   * 保存并合并重叠的句子
+   * 用于用户拖动 AB 边界松手后调用
+   */
+  fun saveAndMergeSentences() {
+    val list = _sentencesFlow.value
+    if (list.isEmpty()) return
+
+    scope.launch(Dispatchers.IO) {
+      // 1. 按 start 升序排列
+      val sorted = list.sortedBy { it.start }
+      val merged = ArrayList<Sentence>()
+
+      if (sorted.isNotEmpty()) {
+        var current = sorted.first()
+        for (i in 1 until sorted.size) {
+          val next = sorted[i]
+          if (next.start <= current.end) {
+            // 有重叠：取较大的 end 值进行合并
+            current.end = max(current.end, next.end)
+            Log.i(TAG, "Merge overlap sentences at index $i")
+          } else {
+            // 无重叠：保存当前区间，移动到下一个
+            merged.add(current)
+            current = next
+          }
+        }
+        // 最后一个也别忘了加进去
+        merged.add(current)
+      }
+
+      // 2. 更新内存数据流 (UI 会自动刷新显示新的合并后的列表)
+      _sentencesFlow.value = merged
+
+      // 3. 持久化保存
+      saveSentencesToDisk(merged)
+    }
+  }
+
+  fun deleteCurSentence() {
+    val currentPos = _currentPositionSeconds.value
+    // 逻辑优化：优先取当前复读选中的句子；如果没有，则取当前播放时间点所在的句子
+    val sen = _curAbSentenceFlow.value ?: findSentenceByTime(currentPos)
+    val sentences = _sentencesFlow.value
+
+    if (sen != null && sentences.contains(sen)) {
+      val list = sentences.toMutableList()
+      list.remove(sen)
+      _sentencesFlow.value = list
+
+      scope.launch {
+        saveSentencesToDisk(list)
+      }
+    }
+  }
+
+  fun setPlayerRepeatMode(mode: Int) {
+    _playerState.value?.repeatMode = mode
+    _playerRepeatMode.value = mode
+  }
+
+  // --- 暴露给 UI 的基础操作 ---
+  fun play() = _playerState.value?.play()
+  fun pause() = _playerState.value?.pause()
+  fun seekTo(positionMs: Long) = _playerState.value?.seekTo(positionMs)
+  fun seekToDefaultPosition(index: Int) = _playerState.value?.seekToDefaultPosition(index)
+  fun removeMediaItem(index: Int) = _playerState.value?.removeMediaItem(index)
+  fun hasNextMediaItem() = _playerState.value?.hasNextMediaItem() ?: false
+  fun seekToNextMediaItem() = _playerState.value?.seekToNextMediaItem()
+  fun hasPreviousMediaItem() = _playerState.value?.hasPreviousMediaItem() ?: false
+  fun seekToPreviousMediaItem() = _playerState.value?.seekToPreviousMediaItem()
+}

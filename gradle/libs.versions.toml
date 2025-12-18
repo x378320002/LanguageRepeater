@@ -14,7 +14,7 @@ kotlinSerialization = "2.2.21"
 kotlinJson = "1.9.0"
 navVersion = "2.9.1"
 
-ffmpegKitX6kb = "6.0.0"
+ffmpegKitX6kb = "6.1.1"
 exoplayer = "1.8.0"
 vad = "2.0.10"
 

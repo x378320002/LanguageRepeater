@@ -1,17 +1,25 @@
 package com.language.repeater
 
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Color
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.KeyEvent
 import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.navigation.NavOptions
 import androidx.navigation.createGraph
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.fragment.fragment
 import com.language.repeater.playvideo.PlayVideoFragment
+import com.language.repeater.playvideo.PlaybackConnection.Companion.TAG
+import com.language.repeater.playvideo.PlaybackService
 import com.language.repeater.test.TestFragment
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineExceptionHandler
@@ -48,10 +56,19 @@ val defaultNavOptions = NavOptions.Builder()
   .build()
 
 class MainActivity : AppCompatActivity() {
-  val volumeFlow = MutableSharedFlow<Int>(
-    extraBufferCapacity = 2,
-    onBufferOverflow = BufferOverflow.DROP_OLDEST
-  )
+  // 注册权限请求回调
+  private val requestPermissionLauncher = registerForActivityResult(
+    ActivityResultContracts.RequestPermission()
+  ) { isGranted: Boolean ->
+    Log.i(TAG, "requestPermissionLauncher isGranted:$isGranted")
+    if (isGranted) {
+      // 权限已授予，可以启动服务
+      //startPlaybackService()
+    } else {
+      // 权限被拒绝，处理逻辑（比如提示用户）
+      // 注意：没有通知权限，前台服务可能会崩溃或被系统杀掉
+    }
+  }
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
@@ -72,6 +89,32 @@ class MainActivity : AppCompatActivity() {
         label = "PlayVideoPageKey"
       }
       //Add other fragment destinations similarly.
+    }
+
+    checkAndStartService()
+  }
+
+  private fun checkAndStartService() {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) { // Android 13+
+      if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
+        //startPlaybackService()
+      } else {
+        requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+      }
+    } else {
+      // Android 12 及以下不需要动态申请通知权限
+      //startPlaybackService()
+    }
+  }
+
+  private fun startPlaybackService() {
+    Log.i(TAG, "startPlaybackService")
+    val intent = Intent(this, PlaybackService::class.java)
+    // Android 8.0+ 必须用 startForegroundService
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+      startForegroundService(intent)
+    } else {
+      startService(intent)
     }
   }
 }

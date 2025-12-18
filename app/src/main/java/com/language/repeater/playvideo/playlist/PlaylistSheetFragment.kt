@@ -1,87 +1,39 @@
 package com.language.repeater.playvideo.playlist
 
 import android.annotation.SuppressLint
-import android.app.Dialog
+import androidx.media3.common.C
+import com.language.repeater.playvideo.BasePlaySheetFragment
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
-import androidx.media3.common.MediaItem
-import androidx.media3.common.Player
-import androidx.media3.common.Player.TIMELINE_CHANGE_REASON_PLAYLIST_CHANGED
-import androidx.media3.common.Player.TIMELINE_CHANGE_REASON_SOURCE_UPDATE
-import androidx.media3.common.Timeline
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.SimpleItemAnimator
-import com.google.android.material.bottomsheet.BottomSheetBehavior
-import com.google.android.material.bottomsheet.BottomSheetDialog
-import com.google.android.material.bottomsheet.BottomSheetDialogFragment
-import com.language.repeater.R
 import com.language.repeater.databinding.PlaylistSheetFragmentBinding
-import com.language.repeater.playvideo.BasePlaySheetFragment
-import com.language.repeater.playvideo.PlayVideoFragment
+import com.language.repeater.playvideo.PlayerViewModel // 确保导入正确的 VM
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
 import kotlinx.coroutines.launch
 
-@SuppressLint("SetTextI18n")
-class PlaylistSheetFragment(
-  private val playVideoFragment: PlayVideoFragment,
-  private val player: Player
-) : BasePlaySheetFragment(player) {
+class PlaylistSheetFragment : BasePlaySheetFragment() {
+  // 共享 Activity 级别的 ViewModel
+  private val viewModel: PlayerViewModel by activityViewModels()
 
-  // ViewBinding 变量
   private var _binding: PlaylistSheetFragmentBinding? = null
-  // 这个属性只在 onCreateView 和 onDestroyView 之间有效
   private val binding get() = _binding!!
 
+  private var player: Player? = null
   private lateinit var adapter: PlaylistAdapter
-
-  private val playerListener = object : Player.Listener {
-    override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
-      Log.i("PlaylistSheetFragment", "onMediaItemTransition")
-      updateListState()
-      val newIndex = player.currentMediaItemIndex
-      if (newIndex != -1) {
-        // 使用 binding 访问 RecyclerView
-        binding.rvPlaylist.smoothScrollToPosition(newIndex)
-      }
-    }
-
-    override fun onIsPlayingChanged(isPlaying: Boolean) {
-      val isPlayingState = playingState()
-      if (adapter.isPlayerPlaying != isPlayingState) {
-        Log.i(TAG, "onIsPlayingChanged isPlayingState:$isPlayingState")
-        adapter.isPlayerPlaying = isPlayingState
-        val currentIndex = adapter.currentPlayingIndex
-        if (currentIndex != -1) {
-          adapter.notifyItemChanged(currentIndex, PlaylistAdapter.PAYLOAD_PLAY_STATE)
-        }
-      }
-    }
-
-    @SuppressLint("NotifyDataSetChanged")
-    override fun onTimelineChanged(timeline: Timeline, reason: Int) {
-      if (reason == TIMELINE_CHANGE_REASON_PLAYLIST_CHANGED) {
-        "(${player.mediaItemCount})".also { binding.tvCount.text = it }
-        adapter.notifyDataSetChanged()
-      } else if (reason == TIMELINE_CHANGE_REASON_SOURCE_UPDATE) {
-        //当前条目本来没有时间信息, 解析完获取到时间信息时, 会回调这个方法
-        Log.i(TAG, "onTimelineChanged TIMELINE_CHANGE_REASON_SOURCE_UPDATE")
-        val currentIndex = adapter.currentPlayingIndex
-        if (currentIndex != -1) {
-          adapter.notifyItemChanged(currentIndex, PlaylistAdapter.PAYLOAD_PLAY_STATE)
-        }
-      }
-    }
-  }
 
   override fun onCreateView(
     inflater: LayoutInflater,
     container: ViewGroup?,
     savedInstanceState: Bundle?
   ): View {
-    // 初始化 ViewBinding
     _binding = PlaylistSheetFragmentBinding.inflate(inflater, container, false)
     return binding.root
   }
@@ -89,59 +41,133 @@ class PlaylistSheetFragment(
   override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
     super.onViewCreated(view, savedInstanceState)
 
-    // 初始化 Adapter
-    adapter = PlaylistAdapter(player)
-    binding.rvPlaylist.setHasFixedSize(true)
-    // 这样即使调用不带 payload 的 notifyItemChanged，也不会有闪烁（Cross-fade）效果
-    (binding.rvPlaylist.itemAnimator as? SimpleItemAnimator)?.supportsChangeAnimations = false
+    setupRecyclerView()
+    observeViewModel()
+  }
 
-    // 设置 RecyclerView
-    binding.rvPlaylist.layoutManager = LinearLayoutManager(context)
-    binding.rvPlaylist.adapter = adapter
+  private fun setupRecyclerView() {
+    // 初始化 Adapter，传入点击回调
+    adapter = PlaylistAdapter(
+      onItemClick = { index ->
+        // 点击播放/暂停或切歌
+        if (index == adapter.currentPlayingIndex) {
+          viewModel.togglePlayPause()
+        } else {
+          viewModel.playItem(index)
+        }
+      },
+      onDeleteClick = { index ->
+        // 删除条目
+        viewModel.deleteItem(index)
+      }
+    )
 
-    // 初始同步状态
-    updateListState()
-    binding.tvCount.text = "(${player.mediaItemCount})"
+    binding.rvPlaylist.apply {
+      setHasFixedSize(true)
+      layoutManager = LinearLayoutManager(context)
+      this.adapter = this@PlaylistSheetFragment.adapter
+      // 禁用变更动画防止闪烁
+      (itemAnimator as? SimpleItemAnimator)?.supportsChangeAnimations = false
+    }
+  }
 
-    // 注册监听
-    player.addListener(playerListener)
+  @SuppressLint("SetTextI18n")
+  private fun observeViewModel() {
+    viewLifecycleOwner.lifecycleScope.launch {
+      repeatOnLifecycle(Lifecycle.State.STARTED) {
+        // 1. 监听连接状态 & 初始化数据
+        // 只有连接成功后，才能获取到 Player 里的列表数据
+        launch {
+          viewModel.playerState.collect { p ->
+            player = p
+            refreshFullList() // 初始加载列表
+            updateListState() // 初始同步状态
+          }
+        }
 
-    // 延迟滚动
-    binding.root.post {
-      if (player.currentMediaItemIndex != -1) {
-        binding.rvPlaylist.scrollToPosition(player.currentMediaItemIndex)
+        // 2. 监听列表内容刷新事件 (增删、排序、加载字幕)
+        launch {
+          viewModel.playlistRefreshEvent.collect {
+            refreshFullList()
+            binding.tvCount.text = "(${viewModel.mediaItemCount.value})"
+          }
+        }
+
+        // 3. 监听切歌 (MediaItemTransition)
+        launch {
+          viewModel.currentMediaItem.collect {
+            updateListState()
+            scrollToCurrent()
+          }
+        }
+
+        // 4. 监听播放状态 (UI防抖状态)
+        launch {
+          viewModel.isUiPlaying.collect { isPlaying ->
+            if (adapter.isPlayerPlaying != isPlaying) {
+              adapter.isPlayerPlaying = isPlaying
+              notifyCurrentItemChanged()
+            }
+          }
+        }
       }
     }
   }
 
+  /**
+   * 从 Player 获取完整列表并提交给 Adapter
+   * 注意：viewModel.getPlayer() 可能为空，需判空
+   */
+  private fun refreshFullList() {
+    val player = player ?: return
+    val currentItems = ArrayList<MediaItem>()
+    for (i in 0 until player.mediaItemCount) {
+      currentItems.add(player.getMediaItemAt(i))
+    }
+    adapter.submitList(currentItems)
+  }
+
+  /**
+   * 更新 Adapter 的高亮索引和播放状态
+   */
   private fun updateListState() {
+    val player = player ?: return
+
     val oldIndex = adapter.currentPlayingIndex
     val newIndex = player.currentMediaItemIndex
 
     adapter.currentPlayingIndex = newIndex
-    adapter.isPlayerPlaying = playingState()
+    adapter.isPlayerPlaying = viewModel.isUiPlaying.value
+    // 更新当前时长以便 Adapter 显示
+    adapter.currentDuration = if (player.duration != C.TIME_UNSET) player.duration else 0L
 
-    if (oldIndex != -1) adapter.notifyItemChanged(oldIndex, PlaylistAdapter.PAYLOAD_PLAY_STATE)
-    if (newIndex != -1) adapter.notifyItemChanged(newIndex, PlaylistAdapter.PAYLOAD_PLAY_STATE)
+    // 刷新旧位置 (取消高亮)
+    if (oldIndex != -1 && oldIndex < adapter.itemCount) {
+      adapter.notifyItemChanged(oldIndex, PlaylistAdapter.PAYLOAD_PLAY_STATE)
+    }
+    // 刷新新位置 (设置高亮)
+    if (newIndex != -1 && newIndex < adapter.itemCount) {
+      adapter.notifyItemChanged(newIndex, PlaylistAdapter.PAYLOAD_PLAY_STATE)
+    }
   }
 
-  private fun playingState(): Boolean {
-    // 1. 如果真的在播放，肯定是 true
-    if (player.isPlaying) return true
-
-    // 2. 【防抖核心】如果正在缓冲(切歌中)，且用户意图是“播放(playWhenReady=true)”，
-    //    那么 UI 上也应该保持“播放中”的状态，不要闪成暂停。
-    if (player.playbackState == Player.STATE_BUFFERING && player.playWhenReady) {
-      return true
+  private fun notifyCurrentItemChanged() {
+    val index = adapter.currentPlayingIndex
+    if (index != -1) {
+      adapter.notifyItemChanged(index, PlaylistAdapter.PAYLOAD_PLAY_STATE)
     }
+  }
 
-    return false
+  private fun scrollToCurrent() {
+    val player = viewModel.getPlayer() ?: return
+    val index = player.currentMediaItemIndex
+    if (index != -1) {
+      binding.rvPlaylist.smoothScrollToPosition(index)
+    }
   }
 
   override fun onDestroyView() {
     super.onDestroyView()
-    player.removeListener(playerListener)
-    // 释放 binding，防止 Fragment 视图销毁但对象残留导致的内存泄漏
     _binding = null
   }
 }

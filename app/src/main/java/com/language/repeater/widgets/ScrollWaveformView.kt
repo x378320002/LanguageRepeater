@@ -86,8 +86,6 @@ class ScrollWaveformView @JvmOverloads constructor(
      */
     fun onSeekEnd(position: Float)
   }
-  
-
 
   /** AB边界变化监听器 */
   interface OnABChangeListener {
@@ -225,19 +223,19 @@ class ScrollWaveformView @JvmOverloads constructor(
   /**
    * 设置PCM文件
    */
-  fun setPCMLoader(loader: PCMSegmentLoader, pos: Long, loadWindowComplete: ((Int)->Unit)? = null) {
+  fun setPCMLoader(loader: PCMSegmentLoader) {
     if (pcmLoader == loader) {
       return
     }
 
     pcmLoader = loader
     totalDuration = pcmLoader?.totalDuration ?: 0f
-    currentTime = pos / 1000f
+    currentTime = currentTime.coerceIn(0f, totalDuration)
 
     //waveformCache.clear()
     //提前绘制一遍, 清空上一个视频的内容
     //invalidate()
-    refreshWave(loadWindowComplete)
+    refreshWave()
   }
 
   fun setSentenceData(data : List<Sentence>) {
@@ -255,7 +253,7 @@ class ScrollWaveformView @JvmOverloads constructor(
   /**
    * 重新计算可见时间范围
    */
-  private fun refreshWave(loadWindowComplete: ((Int)->Unit)? = null) {
+  private fun refreshWave() {
     if (width == 0 || pcmLoader == null) return
 
     // 中心线在屏幕中央
@@ -266,17 +264,17 @@ class ScrollWaveformView @JvmOverloads constructor(
     visibleStartTime = (currentTime - visibleDuration).coerceAtLeast(0f)
     visibleEndTime = (currentTime + visibleDuration).coerceAtMost(totalDuration)
 
-    checkAndLoadData(loadWindowComplete)
+    checkAndLoadData()
     invalidate()
   }
 
   /**
    * 检查并加载需要的数据
    */
-  private fun checkAndLoadData(loadWindowComplete: ((Int)->Unit)? = null) {
+  private fun checkAndLoadData() {
     val loader = pcmLoader ?: return
 
-    // 计算需要哪些窗口的数据
+    // 计算需要哪些窗口的数据o
     val startWindow = (visibleStartTime / cacheWindowSize).toInt()
     val endWindow = (visibleEndTime / cacheWindowSize).toInt() + 1
     val preloadEnd = endWindow + preloadWindowCount
@@ -310,7 +308,6 @@ class ScrollWaveformView @JvmOverloads constructor(
             withContext(Dispatchers.Main) {
               loader.waveformCache[windowIndex] = waveformData
               invalidate()
-              loadWindowComplete?.invoke(windowIndex)
             }
           } catch (e: Exception) {
             e.printStackTrace()

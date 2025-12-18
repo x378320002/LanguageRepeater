@@ -1,6 +1,7 @@
 package com.language.repeater.playvideo
 
 import android.os.Bundle
+import android.os.Process
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -16,11 +17,10 @@ import com.language.repeater.TestPageKey
 import com.language.repeater.databinding.VideoPlayFragmentBinding
 import com.language.repeater.defaultNavOptions
 import com.language.repeater.foundation.BaseFragment
-import com.language.repeater.playvideo.components.HeadsetComponent
 import com.language.repeater.playvideo.components.PlayAllWaveComponent
 import com.language.repeater.playvideo.components.PlayCoreComponent
-import com.language.repeater.playvideo.components.PlayUIActComponent
 import com.language.repeater.playvideo.components.PlayScrollWaveComponent
+import com.language.repeater.playvideo.components.PlayUIActComponent
 import com.language.repeater.playvideo.components.PlayViewComponent
 import com.language.repeater.playvideo.components.SelectFileComponent
 
@@ -31,18 +31,18 @@ class PlayVideoFragment: BaseFragment(), Player.Listener  {
   }
 
   lateinit var binding: VideoPlayFragmentBinding
-  val viewModel: PlayVideoViewModel by activityViewModels()
+  val viewModel: PlayerViewModel by activityViewModels()
 
-  @UnstableApi
-  var playComponent = PlayCoreComponent()
+  //@UnstableApi
+  //var playComponent = PlayCoreComponent()
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
-    Log.i(TAG, "$TAG onCreate")
-    addComponent(playComponent)
+    Log.i(TAG, "onCreate, pid:${Process.myPid()}, currentThread:${Thread.currentThread().name}")
+    //addComponent(playComponent)
+    //addComponent(HeadsetComponent())
     addComponent(SelectFileComponent())
     addComponent(PlayViewComponent())
-    addComponent(HeadsetComponent())
     addComponent(PlayScrollWaveComponent())
     addComponent(PlayAllWaveComponent())
     addComponent(PlayUIActComponent())

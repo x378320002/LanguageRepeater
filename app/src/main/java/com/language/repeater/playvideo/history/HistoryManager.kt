@@ -5,6 +5,7 @@ import android.content.Context
 import com.language.repeater.db.AppDatabase
 import com.language.repeater.playvideo.model.VideoEntity
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.withContext
 
 object HistoryManager {
 
@@ -14,7 +15,7 @@ object HistoryManager {
   /**
    * 添加进历史记录 (自动更新时间)
    */
-  suspend fun addHistory(context: Context, video: VideoEntity) {
+  suspend fun addHistory(context: Context, video: VideoEntity) = withContext(Dispatchers.IO) {
     // 覆盖原本的时间，更新为当前时间，这样它就会排到第一位
     val newRecord = video.copy(lastPlayedTime = System.currentTimeMillis())
     getDao(context).insertOrUpdate(newRecord)

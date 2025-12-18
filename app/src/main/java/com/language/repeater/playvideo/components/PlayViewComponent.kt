@@ -7,6 +7,8 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.CaptionStyleCompat
 import com.language.repeater.foundation.BaseComponent
 import com.language.repeater.playvideo.PlayVideoFragment
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 
 /**
  * Date: 2025-12-01
@@ -18,7 +20,9 @@ class PlayViewComponent: BaseComponent<PlayVideoFragment>() {
   override fun onCreateView() {
     super.onCreateView()
 
-    fragment.binding.exoVideoView.player = fragment.playComponent.player
+    fragment.viewModel.playerState.onEach {
+      fragment.binding.exoVideoView.player = it
+    }.launchIn(uiScope)
 
     setSubtitleStyle()
   }
