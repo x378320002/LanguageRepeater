@@ -1,4 +1,4 @@
-package com.language.repeater.playvideo
+package com.language.repeater.playcore
 
 import android.annotation.SuppressLint
 import kotlin.collections.first
@@ -50,6 +50,7 @@ import java.io.File
 import kotlin.math.max
 
 /**
+ * Repository层, 比ViewModel更低一个层级
  * 播放连接管理器 (单例)
  * 职责：
  * 1. 连接 MediaSessionService

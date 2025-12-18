@@ -1,4 +1,4 @@
-package com.language.repeater.playvideo.sleeptimer
+package com.language.repeater.playcore
 
 import android.annotation.SuppressLint
 import kotlinx.coroutines.CoroutineScope
@@ -9,9 +9,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
 
+//Repository层, 比ViewModel更低一个层级
 object SleepTimerManager {
 
   // 使用 SupervisorJob + MainDispatcher，比 GlobalScope 更可控

@@ -43,7 +43,7 @@
     </activity>
 
     <service
-      android:name=".playvideo.PlaybackService"
+      android:name=".playcore.PlaybackService"
       android:foregroundServiceType="mediaPlayback"
       android:exported="true">
       <intent-filter>

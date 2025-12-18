@@ -1,4 +1,4 @@
-package com.language.repeater.playvideo
+package com.language.repeater.playcore
 
 import android.content.Context
 import android.graphics.Bitmap

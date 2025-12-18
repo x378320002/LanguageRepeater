@@ -3,15 +3,15 @@ package com.language.repeater.playvideo
 import kotlin.collections.map
 import android.app.Application
 import android.net.Uri
-import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.C
 import androidx.media3.common.Player
+import com.language.repeater.playcore.PlaybackConnection
 import com.language.repeater.playvideo.history.HistoryManager
 import com.language.repeater.playvideo.model.VideoEntity
 import com.language.repeater.playvideo.model.toMediaItem
-import com.language.repeater.playvideo.sleeptimer.SleepTimerManager
+import com.language.repeater.playcore.SleepTimerManager
 import com.language.repeater.utils.ToastUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted

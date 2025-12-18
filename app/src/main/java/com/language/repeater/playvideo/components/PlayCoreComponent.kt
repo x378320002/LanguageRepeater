@@ -16,7 +16,7 @@ import androidx.media3.session.SessionToken
 import com.language.repeater.foundation.BaseComponent
 import com.language.repeater.pcm.Sentence
 import com.language.repeater.playvideo.PlayVideoFragment
-import com.language.repeater.playvideo.PlaybackService
+import com.language.repeater.playcore.PlaybackService
 import com.language.repeater.playvideo.history.HistoryManager
 import com.language.repeater.playvideo.model.VideoEntity
 import com.language.repeater.playvideo.model.toMediaItem

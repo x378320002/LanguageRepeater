@@ -1,9 +1,8 @@
-package com.language.repeater.playvideo
+package com.language.repeater.playcore
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
-import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Process
@@ -20,6 +19,10 @@ import androidx.media3.session.MediaSessionService
 import com.language.repeater.MainActivity
 import com.language.repeater.R
 
+/**
+ * 继承MediaSessionService, 提供真实播放服务
+ * 连接系统媒体服务, 能无权限展示Notification, 能直接系统的默认Notification
+ */
 class PlaybackService : MediaSessionService() {
   companion object {
     private const val TAG = "wangzixu_PlaybackService"
@@ -131,7 +134,7 @@ class PlaybackService : MediaSessionService() {
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
         // IMPORTANCE_MIN 意味着这个通知会尽量不打扰用户（无声、折叠）
         val channel = NotificationChannel(channelId, "Service Startup", NotificationManager.IMPORTANCE_MIN)
-        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         manager.createNotificationChannel(channel)
       }
 
