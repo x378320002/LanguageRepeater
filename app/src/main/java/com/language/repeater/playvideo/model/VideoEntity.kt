@@ -1,5 +1,7 @@
 package com.language.repeater.playvideo.model
 
+import android.R.attr.mimeType
+import android.util.Log
 import androidx.core.net.toUri
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -7,6 +9,8 @@ import androidx.media3.common.MediaMetadata
 import androidx.media3.common.MimeTypes
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import com.language.repeater.MyApp
+import com.language.repeater.utils.SubtitleUtils
 import kotlinx.serialization.Serializable
 
 @Entity(tableName = "history_table")
@@ -34,10 +38,13 @@ fun VideoEntity.toMediaItem(): MediaItem {
       .setArtworkUri(it.uri.toUri())
       .build())
 
-  val subtitleUri = it.subUri?.toUri()
-  if (subtitleUri != null) {
+  val subU = it.subUri
+  if (subU != null && !subU.equals("null", true)) {
+    val subtitleUri = subU.toUri()
+    val mimeType = SubtitleUtils.getSubtitleMimeType(MyApp.instance, subtitleUri)
+    Log.i("wangzixu_VideoEntity", "hasSubTitle mimeType:$mimeType")
     val subtitleConfig = MediaItem.SubtitleConfiguration.Builder(subtitleUri)
-      .setMimeType(MimeTypes.APPLICATION_SUBRIP) //.srt
+      .setMimeType(mimeType) //.srt
       .setLanguage("en")
       .setSelectionFlags(C.SELECTION_FLAG_DEFAULT)
       .build()

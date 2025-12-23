@@ -1,5 +1,6 @@
 package com.language.repeater.utils
 
+import android.R.attr.data
 import android.content.Context
 import com.google.common.hash.Hashing.md5
 import com.language.repeater.json
@@ -41,14 +42,28 @@ object SentenceFileStoreUtil {
     }
   }
 
+  suspend fun deleteData(context: Context, key: String) = withContext(Dispatchers.IO) {
+    try {
+      val file = getFile(context, key)
+      if (file.exists()) {
+        file.delete()
+      }
+    } catch (e: IOException) {
+      e.printStackTrace()
+    } catch (e: Exception) {
+      // 捕获序列化错误，例如数据类型不匹配等
+      e.printStackTrace()
+    }
+  }
+
   /**
    * @param context Context
-   * @param md5 视频文件的 MD5
+   * @param key 视频文件的 MD5
    * @return 找到的数据, 或 null
    */
-  suspend fun loadData(context: Context, md5: String) = withContext<List<Sentence>?>(Dispatchers.IO) {
+  suspend fun loadData(context: Context, key: String) = withContext<List<Sentence>?>(Dispatchers.IO) {
     try {
-      val file = getFile(context, md5)
+      val file = getFile(context, key)
 
       if (!file.exists()) {
         null

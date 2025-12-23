@@ -31,7 +31,7 @@ class LocalVoiceSentenceDetector(
     var zcrThreshold: Float = 0.12f,
 
     /** 最小静音持续时间(毫秒)，低于此值不算句子间隔 */
-    val minSilenceDurationMs: Int = 800,
+    val minSilenceDurationMs: Int = 700,
 
     /** 最小语音持续时间(毫秒)，低于此值不算一句话 */
     val minSpeechDurationMs: Int = 50,

@@ -222,7 +222,7 @@ class PlaybackConnection(private val context: Context) {
       return
     }
 
-    scope.launch {
+    scope.launch(Dispatchers.IO) {
       // 1. 读取列表 (返回 List<VideoEntity>)
       val videoEntities = PlaylistManager.loadLastPlaylist(context)
       if (videoEntities.isNotEmpty()) {
@@ -266,13 +266,13 @@ class PlaybackConnection(private val context: Context) {
   }
 
   // --- 核心业务：媒体切换处理 ---
-  private fun handleMediaItemTransition(item: MediaItem) {
-    val key = item.mediaId
+  private fun handleMediaItemTransition(item: MediaItem?) {
+    val key = item?.mediaId ?: return
     // 【关键修复】如果 ID 没变，说明是同源切换(比如加字幕)，不要重新解析 PCM
     if (key == currentId && _sentencesFlow.value.isNotEmpty()) return
 
     currentId = key
-    Log.i(TAG, "Media Transition: ${item.mediaMetadata.title}, ID: $key")
+    Log.i(TAG, "handleMediaItemTransition ID: $key")
 
     val entity = VideoEntity(
       id = item.mediaId,
@@ -301,10 +301,11 @@ class PlaybackConnection(private val context: Context) {
 
     val uri = item.localConfiguration?.uri ?: return@launch
     try {
-      Log.i(TAG, "Start parsing: $currentId")
+      Log.i(TAG, "parseUriToPcm Start parsing: $currentId")
       // 提取 PCM 文件
       val path = FFmpegUtil.extractPcmFileByFFmpeg(context, uri, currentId)
       val pcmFile = File(path)
+      Log.i(TAG, "parseUriToPcm pcmFile size: ${pcmFile.length()/1048576}MB")
       _pcmLoaderStateFlow.value = PCMSegmentLoader(pcmFile)
 
       // 加载波形 (并行)
@@ -318,7 +319,7 @@ class PlaybackConnection(private val context: Context) {
         val cachedSentences = SentenceFileStoreUtil.loadData(context, currentId)
         if (!cachedSentences.isNullOrEmpty()) {
           _sentencesFlow.value = cachedSentences
-          Log.i(TAG, "Loaded cached sentences: ${cachedSentences.size}")
+          Log.i(TAG, "parseUriToPcm Loaded cached sentences: ${cachedSentences.size}")
         } else {
           loadSentences(item)
         }
@@ -335,17 +336,19 @@ class PlaybackConnection(private val context: Context) {
     }
   }
 
-  private suspend fun loadSentences(item: MediaItem?) = withContext(Dispatchers.IO) {
+  private suspend fun loadSentences(item: MediaItem?, forceUseVad: Boolean = false) = withContext(Dispatchers.IO) {
     if (item == null) return@withContext
 
     val uri = item.localConfiguration?.uri ?: return@withContext
     val subUri = item.localConfiguration?.subtitleConfigurations?.firstOrNull()?.uri
 
-    val newSentences = if (subUri == null) {
+    val newSentences = if (subUri == null || forceUseVad) {
       val path = FFmpegUtil.extractPcmFileByFFmpeg(context, uri, currentId)
       val pcmFile = File(path)
+      Log.i(TAG, "loadSentences from pcmFile, size: ${pcmFile.length()/1048576}MB")
       LocalVoiceSentenceDetector().detectSentences(PcmDataUtil.readPcmFile(pcmFile))
     } else {
+      Log.i(TAG, "loadSentences from subtitle : $subUri")
       val subList = SrtParser.parse(context, subUri)
       subList.map {
         Sentence(it.startTime.toFloat() / 1000, it.endTime.toFloat() / 1000)
@@ -355,7 +358,7 @@ class PlaybackConnection(private val context: Context) {
       SentenceFileStoreUtil.saveData(context, currentId, newSentences)
     }
     _sentencesFlow.value = newSentences
-    Log.i(TAG, "Detected sentences: ${newSentences.size}")
+    Log.i(TAG, "loadSentences sentences: ${newSentences.size}")
   }
 
   // 复读控制
@@ -421,16 +424,18 @@ class PlaybackConnection(private val context: Context) {
   // 这是 UI 唯一需要调用的“更换字幕”接口
   fun updateSubtitle(subtitleUri: Uri) {
     // 1. 调用 Loader 替换播放器字幕
-    val replaceSuccess = subtitleAutoLoader?.updateCurrentItemSubtitle(subtitleUri)
-    if (replaceSuccess == true) {
-      currentId = ""
-      val item = _currentMediaItem.value
-      if (item != null) handleMediaItemTransition(item)
+    val item = subtitleAutoLoader?.updateCurrentItemSubtitle(subtitleUri)
+    if (item != null) {
+      scope.launch {
+        loadSentences(item)
+      }
     }
   }
 
-  suspend fun forceLoadCurrentSentences() {
-    loadSentences(_currentMediaItem.value)
+  fun forceLoadCurrentSentences(forceUseVad: Boolean = false) {
+    scope.launch {
+      loadSentences(_currentMediaItem.value, forceUseVad)
+    }
   }
 
   private fun seekToSentence(sentence: Sentence) {
@@ -458,7 +463,7 @@ class PlaybackConnection(private val context: Context) {
   // --- 基础播放器同步逻辑 ---
   private val playerListener = object : Player.Listener {
     override fun onIsPlayingChanged(isPlaying: Boolean) {
-      Log.i(TAG, "onIsPlayingChanged isPlaying: $isPlaying")
+      //Log.i(TAG, "onIsPlayingChanged isPlaying: $isPlaying")
       _isPlaying.value = isPlaying
       if (!isPlaying) {
         saveCurrentState()
@@ -466,21 +471,22 @@ class PlaybackConnection(private val context: Context) {
     }
 
     override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
-      Log.i(TAG, "onPlayWhenReadyChanged playWhenReady: $playWhenReady")
+      //Log.i(TAG, "onPlayWhenReadyChanged playWhenReady: $playWhenReady")
       _playWhenReady.value = playWhenReady
     }
 
     override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
-      Log.i(TAG, "onMediaItemTransition reason: $reason")
-      _currentMediaItem.value = mediaItem
-      if (mediaItem != null) {
+      val preItem = _currentMediaItem.value
+      Log.i(TAG, "onMediaItemTransition reason: $reason, pre:${preItem?.mediaId}, mediaItem:${mediaItem?.mediaId}")
+      if (mediaItem != preItem) {
+        _currentMediaItem.value = mediaItem
         handleMediaItemTransition(mediaItem)
+        saveCurrentState()
       }
-      saveCurrentState()
     }
 
     override fun onPlaybackStateChanged(playbackState: Int) {
-      Log.i(TAG, "onPlaybackStateChanged playbackState: $playbackState")
+      //Log.i(TAG, "onPlaybackStateChanged playbackState: $playbackState")
       /*
       状态常量 (Int)	含义	UI/业务逻辑应该做什么？
         STATE_IDLE (1)	闲置	播放器里没东西，或者出错了。UI 应该禁用控制按钮。

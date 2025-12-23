@@ -7,7 +7,7 @@ package com.language.repeater.playvideo.model
  */
 data class SubtitleItem(
   val index: Int,
-  val startTime: Long,
-  val endTime: Long,
-  val content: String
+  var startTime: Long,
+  var endTime: Long,
+  var content: String
 )

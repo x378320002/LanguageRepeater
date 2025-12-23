@@ -142,6 +142,7 @@ class SelectFileComponent : BaseComponent<PlayVideoFragment>() {
     //resultLauncher
     openFileLauncher
     openDirLauncher
+    openSubtitleLauncher
   }
 
   override fun onCreateView() {
@@ -154,7 +155,6 @@ class SelectFileComponent : BaseComponent<PlayVideoFragment>() {
 //      intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
 //      intent.addCategory(Intent.CATEGORY_OPENABLE)
 //      resultLauncher.launch(null)
-
       openFileLauncher.launch(arrayOf("audio/*", "video/*"))
     }
 
@@ -163,7 +163,7 @@ class SelectFileComponent : BaseComponent<PlayVideoFragment>() {
     }
 
     fragment.binding.selectSubtitle.setOnClickListener {
-      openSubtitleLauncher.launch(arrayOf("text/.srt"))
+      openSubtitleLauncher.launch(arrayOf("text/*"))
     }
   }
 

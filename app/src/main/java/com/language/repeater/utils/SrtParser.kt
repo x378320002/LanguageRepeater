@@ -5,6 +5,7 @@ import kotlin.collections.lastIndex
 
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import com.language.repeater.playvideo.model.SubtitleItem
 import java.io.BufferedReader
 import java.io.InputStream
@@ -12,8 +13,9 @@ import java.io.InputStreamReader
 import java.util.regex.Pattern
 
 object SrtParser {
+  private const val TAG = "SrtParser"
   // 正则表达式匹配时间轴: 00:00:20,000 --> 00:00:24,400
-  private val TIME_PATTERN = Pattern.compile("(\\d{2}):(\\d{2}):(\\d{2})[,\\.](\\d{3})")
+  private val TIME_PATTERN = Pattern.compile("(\\d{1,2}):(\\d{1,2}):(\\d{1,2})[,\\.](\\d{3})")
 
   // 正则表达式匹配 HTML 标签 (用于清洗字幕内容)
   // 匹配如 <font color="...">, </font>, <b>, </i> 等
@@ -57,10 +59,8 @@ object SrtParser {
           // 【修改点】在保存前清洗文本
           val rawText = contentBuilder.toString().trim()
           val cleanText = stripHtmlTags(rawText)
-
           // 使用合并逻辑添加
           addOrMerge(result, SubtitleItem(index, startTime, endTime, cleanText))
-
           contentBuilder.clear()
           state = 0
         }
@@ -106,6 +106,12 @@ object SrtParser {
     }
 
     reader.close()
+
+    for (i in result.indices) {
+      val r = result[i]
+      Log.d(TAG, "sentence $i, begin:${r.startTime}, end:${r.endTime}, content:${r.content}")
+    }
+
     return result
   }
 
@@ -114,16 +120,21 @@ object SrtParser {
    * 如果当前句内容与上一句相同，且时间连续，则合并它们
    */
   private fun addOrMerge(list: MutableList<SubtitleItem>, newItem: SubtitleItem) {
+    if (newItem.endTime - newItem.startTime < 500L) {
+      return
+    }
     if (list.isNotEmpty()) {
       val lastItem = list.last()
-      // 判断逻辑：内容相同 且 时间连续 (新开始时间 >= 旧结束时间，且间隔小于 100ms 视为连续)
-      if (lastItem.content == newItem.content &&
-        newItem.startTime >= lastItem.endTime &&
-        (newItem.startTime - lastItem.endTime) <= 100) {
-
-        // 合并：修改上一条的 endTime 为新条目的 endTime
-        list[list.lastIndex] = lastItem.copy(endTime = newItem.endTime)
-        return
+      if (newItem.startTime - lastItem.endTime <= 50) {
+        if (lastItem.content == newItem.content || lastItem.content.contains(newItem.content)) {
+          lastItem.endTime = maxOf(lastItem.endTime, newItem.endTime)
+          return
+        }
+        if (newItem.content.contains(lastItem.content)) {
+          lastItem.content = newItem.content
+          lastItem.endTime = maxOf(lastItem.endTime, newItem.endTime)
+          return
+        }
       }
     }
     // 如果不满足合并条件，直接添加

@@ -77,7 +77,7 @@ object FFmpegUtil {
       //val cmd = "-y -i $str -vn -acodec pcm_s16le -ar 16000 -ac 1 $outPut"
       val cmd =
         "-y -i $str -vn -ac 1 -ar ${PcmConfig.PCM_SAMPLE_RATE} -f s16le -c:a pcm_s16le $outPath"
-      Log.i(TAG, "FFmpegKit cmd:$cmd")
+      Log.i(TAG, "FFmpegKit 开始解析成pcm -> cmd:$cmd")
       val session = FFmpegKit.execute(cmd)
       val returnCode = session.returnCode
       if (ReturnCode.isSuccess(returnCode)) {

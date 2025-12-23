@@ -1,21 +1,25 @@
 package com.language.repeater.playcore
 
-import android.app.NotificationChannel
-import android.app.NotificationManager
 import android.app.PendingIntent
+import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.os.Bundle
 import android.os.Process
 import android.util.Log
 import androidx.annotation.OptIn
-import androidx.core.app.NotificationCompat
 import androidx.media3.common.ForwardingPlayer
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.session.CommandButton
 import androidx.media3.session.DefaultMediaNotificationProvider
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
+import androidx.media3.session.SessionCommand
+import com.google.common.collect.ImmutableList
+import com.google.common.util.concurrent.Futures
+import com.google.common.util.concurrent.ListenableFuture
 import com.language.repeater.MainActivity
 import com.language.repeater.R
 
@@ -26,6 +30,12 @@ import com.language.repeater.R
 class PlaybackService : MediaSessionService() {
   companion object {
     private const val TAG = "wangzixu_PlaybackService"
+
+    // 1. 定义自定义命令
+    private const val ACTION_FLAG = "ACTION_FLAG"
+
+    // 创建 SessionCommand 对象
+    val CMD_FLAG = SessionCommand(ACTION_FLAG, Bundle.EMPTY)
   }
 
   private var player: Player? = null
@@ -41,29 +51,40 @@ class PlaybackService : MediaSessionService() {
     // 2. 创建拦截器 (处理耳机按键)
     // 这里拦截的逻辑最终调用 PlaybackConnection 的业务方法
     val interceptingPlayer = object : ForwardingPlayer(realPlayer) {
-
       // 拦截耳机/蓝牙的"下一首"指令 (双击)
       override fun seekToNext() {
+        Log.i(TAG, "interceptingPlayer seekToNext")
         // 转交给 Connection 处理业务逻辑 (跳到下一句)
         PlaybackConnection.getInstance(this@PlaybackService).seekToNextSentence()
       }
 
       // 拦截耳机/蓝牙的"上一首"指令 (三击)
       override fun seekToPrevious() {
+        Log.i(TAG, "interceptingPlayer seekToPrevious")
         PlaybackConnection.getInstance(this@PlaybackService).seekToPreviousSentence()
       }
-
-      // 播放/暂停通常不需要拦截，除非你有特殊需求(比如复读开关)
-      // 如果要拦截，记得 syncState 可能需要处理
     }
 
     player = interceptingPlayer
+
+    //设置一个自定义按钮给通知栏
+    val prevButton = CommandButton.Builder(CommandButton.ICON_UNDEFINED)
+      .setDisplayName("加入收藏列表")
+      //.setCustomIconResId(R.drawable.ic_launcher_foreground) // 设置自定义图标资源
+      .setCustomIconResId(androidx.media3.session.R.drawable.media3_icon_flag_unfilled)
+      .setSessionCommand(CMD_FLAG)
+      .setEnabled(true)
+      .setSlots(CommandButton.SLOT_OVERFLOW)
+      .build()
+    val customLayout = ImmutableList.of(prevButton)
 
     // 3. 创建 Session (为了通知栏和系统媒体控制)
     mediaSession = MediaSession
       .Builder(this, interceptingPlayer)
       .setSessionActivity(getSingleTopActivityIntent())
       .setBitmapLoader(CoilBitmapLoader(this))
+      .setCallback(CustomSessionCallback())
+      .setMediaButtonPreferences(customLayout)
       .build()
 
     // 4. 【核心】把 Player 实例上交给单例 Connection
@@ -79,9 +100,8 @@ class PlaybackService : MediaSessionService() {
   }
 
   override fun onUpdateNotification(session: MediaSession, startInForegroundRequired: Boolean) {
-    Log.i(TAG, "PlaybackService onUpdateNotification:${startInForegroundRequired}")
+    //Log.i(TAG, "PlaybackService onUpdateNotification:${startInForegroundRequired}")
     super.onUpdateNotification(session, startInForegroundRequired)
-    //startForegroundWithPlaceholder()
   }
 
   //override fun onTaskRemoved(rootIntent: Intent?) {
@@ -128,26 +148,42 @@ class PlaybackService : MediaSessionService() {
     return PendingIntent.getActivity(this, 0, intent, flags)
   }
 
-  private fun startForegroundWithPlaceholder() {
-    try {
-      val channelId = "playback_setup" // 专门用于启动的临时渠道
-      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-        // IMPORTANCE_MIN 意味着这个通知会尽量不打扰用户（无声、折叠）
-        val channel = NotificationChannel(channelId, "Service Startup", NotificationManager.IMPORTANCE_MIN)
-        val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-        manager.createNotificationChannel(channel)
+  // --- 内部类：处理通知栏 UI ---
+  // --- Session Callback ---
+  private inner class CustomSessionCallback : MediaSession.Callback {
+    // 授权自定义命令
+    override fun onConnect(
+      session: MediaSession,
+      controller: MediaSession.ControllerInfo
+    ): MediaSession.ConnectionResult {
+      val connectionResult = super.onConnect(session, controller)
+      val availableSessionCommands = connectionResult.availableSessionCommands.buildUpon()
+        .add(CMD_FLAG)
+        .build()
+
+      return MediaSession.ConnectionResult.accept(
+        availableSessionCommands,
+        connectionResult.availablePlayerCommands
+      )
+    }
+
+    // 处理点击
+    override fun onCustomCommand(
+      session: MediaSession,
+      controller: MediaSession.ControllerInfo,
+      customCommand: SessionCommand,
+      args: Bundle
+    ): ListenableFuture<androidx.media3.session.SessionResult> {
+      when (customCommand.customAction) {
+        ACTION_FLAG -> {
+          //PlaybackConnection.getInstance(applicationContext).seekToPreviousSentence()
+          Log.i(TAG, "PlaybackService ACTION_FLAG")
+        }
       }
 
-      val notification = NotificationCompat.Builder(this, channelId)
-        .setSmallIcon(android.R.drawable.ic_media_play) // 随便设一个图标
-        .setContentTitle("服务正在启动...")
-        .setPriority(NotificationCompat.PRIORITY_MIN)
-        .build()
-      // 这里的 ID (1001) 只要是非0即可
-      startForeground(1001, notification)
-    } catch (e: Exception) {
-      // 在极少数国产魔改ROM上可能会报错，捕获住防止崩
-      e.printStackTrace()
+      return Futures.immediateFuture(
+        androidx.media3.session.SessionResult(androidx.media3.session.SessionResult.RESULT_SUCCESS)
+      )
     }
   }
 }

@@ -48,7 +48,7 @@
     android:id="@+id/exo_video_view"
     app:shutter_background_color="@color/PastelGreen"
     android:background="@android:color/black"
-    app:surface_type="surface_view"
+    app:surface_type="texture_view"
     app:show_buffering="always"
     app:auto_show="false"
     app:show_subtitle_button="true"

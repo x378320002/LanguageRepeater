@@ -5,6 +5,7 @@ import android.view.View
 import androidx.appcompat.app.AlertDialog
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.language.repeater.MainActivity
 import com.language.repeater.R
 import com.language.repeater.foundation.BaseComponent
@@ -96,11 +97,7 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
       }
 
       fragment.binding.reloadSentence -> {
-        uiScope.launch {
-          fragment.showLoading()
-          fragment.viewModel.loadSentenceData()
-          fragment.hideLoading()
-        }
+        autoLoadSentences()
       }
 
       fragment.binding.splitSentence -> {
@@ -113,9 +110,32 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
     }
   }
 
+  private fun autoLoadSentences() {
+    val isPlaying = fragment.viewModel.isUiPlaying.value
+    MaterialAlertDialogBuilder(context)
+      .setTitle("重新生成断句信息")
+      .setMessage("确定要重新生成断句信息吗？这会覆盖当前的句子信息")
+      .setNeutralButton("基于字幕分割(如果有)") { dialog, _ ->
+        fragment.viewModel.loadSentenceData(false)
+      }
+      .setPositiveButton("自动分割") { _, _ ->
+        fragment.viewModel.loadSentenceData(true)
+      }
+      .setNegativeButton("取消", null)
+      .setOnDismissListener {
+        if (isPlaying) {
+          fragment.viewModel.play()
+        }
+      }
+      .show()
+    if (isPlaying) {
+      fragment.viewModel.pause()
+    }
+  }
+
   private fun splitCurSen() {
     val isPlaying = fragment.viewModel.isUiPlaying.value
-    AlertDialog.Builder(context)
+    MaterialAlertDialogBuilder(context)
       .setTitle("确认拆分")
       .setMessage("确定要拆分当前句子吗？")
       .setPositiveButton("确认") { _, _ ->
@@ -135,7 +155,7 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
 
   private fun deleteCurSen() {
     val isPlaying = fragment.viewModel.isUiPlaying.value
-    AlertDialog.Builder(context)
+    MaterialAlertDialogBuilder(context)
       .setTitle("确认删除")
       .setMessage("确定要删除当前AB句吗？")
       .setPositiveButton("删除") { _, _ ->

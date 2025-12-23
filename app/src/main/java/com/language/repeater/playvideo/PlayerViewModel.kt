@@ -140,8 +140,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     connection.updateAbSentenceByTime(position)
   }
 
-  suspend fun loadSentenceData() {
-    connection.forceLoadCurrentSentences()
+  fun loadSentenceData(forceUseVad: Boolean = false) {
+    connection.forceLoadCurrentSentences(forceUseVad)
   }
 
   /**

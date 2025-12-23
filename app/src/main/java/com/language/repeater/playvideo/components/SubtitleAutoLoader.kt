@@ -28,7 +28,7 @@ import kotlinx.coroutines.withContext
 class SubtitleAutoLoader(
   private val context: Context,
   private val player: Player,
-  private val scope: CoroutineScope
+  private val scope: CoroutineScope,
 ) {
   companion object {
     const val TAG = "wangzixu_SubtitleAutoLoader"
@@ -128,14 +128,15 @@ class SubtitleAutoLoader(
   }
 
   // --- 核心功能 2: 手动更新单曲字幕 (用于用户手动选择) ---
-  fun updateCurrentItemSubtitle(subtitleUri: Uri): Boolean {
-    val currentItem = player.currentMediaItem ?: return false
+  fun updateCurrentItemSubtitle(subtitleUri: Uri): MediaItem? {
+    val currentItem = player.currentMediaItem ?: return null
     val index = player.currentMediaItemIndex
-    if (index == C.INDEX_UNSET) return false
+    if (index == C.INDEX_UNSET) return null
 
     // 检查是否已经有了，避免重复刷新
-    val hasIt = currentItem.localConfiguration?.subtitleConfigurations?.any { it.uri == subtitleUri } == true
-    if (hasIt) return false
+    val hasIt =
+      currentItem.localConfiguration?.subtitleConfigurations?.any { it.uri == subtitleUri } == true
+    if (hasIt) return null
 
     Log.i(TAG, "手动更新字幕: ${currentItem.mediaMetadata.title}")
 
@@ -146,9 +147,7 @@ class SubtitleAutoLoader(
     }
 
     // 执行热替换
-    replaceItemWithSubtitle(index, currentItem, subtitleUri)
-
-    return true
+    return replaceItemWithSubtitle(index, currentItem, subtitleUri)
   }
 
   // --- 内部逻辑 ---
@@ -207,24 +206,28 @@ class SubtitleAutoLoader(
   }
 
   // 单个替换逻辑 (热替换)
-  private fun replaceItemWithSubtitle(index: Int, item: MediaItem, subtitleUri: Uri) {
+  private fun replaceItemWithSubtitle(index: Int, item: MediaItem, subtitleUri: Uri): MediaItem {
     val newItem = buildItemWithSubtitle(item, subtitleUri)
 
     // 使用先加后删策略，或者直接 setMediaItems (针对单个)
     // 为了最稳妥，我们用 setMediaItems 更新整个列表的这一项（其实开销很小）
     // 或者使用你之前验证过的 "修改ID + replace"
 
-    // 这里使用最稳的：重置列表法 (只改这一个)我
+    // 这里使用最稳的：重置列表法 (只改这一个)
     val playlist = ArrayList<MediaItem>()
-    for(i in 0 until player.mediaItemCount) {
+    for (i in 0 until player.mediaItemCount) {
       if (i == index) playlist.add(newItem)
       else playlist.add(player.getMediaItemAt(i))
     }
 
+    val isPlaying = player.isPlaying
     val curPos = player.currentPosition
     player.setMediaItems(playlist, index, curPos)
     player.prepare()
-    if (player.isPlaying) player.play()
+    if (isPlaying) {
+      player.play()
+    }
+    return newItem
   }
 
   private fun buildItemWithSubtitle(item: MediaItem, subUri: Uri): MediaItem {

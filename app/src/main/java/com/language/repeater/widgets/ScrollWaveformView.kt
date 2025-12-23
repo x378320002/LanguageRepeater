@@ -1,8 +1,5 @@
 package com.language.repeater.widgets
 
-import android.R.attr.height
-import android.R.attr.path
-import android.R.attr.width
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Canvas
