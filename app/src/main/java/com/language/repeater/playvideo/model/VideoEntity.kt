@@ -10,6 +10,7 @@ import androidx.media3.common.MimeTypes
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.language.repeater.MyApp
+import com.language.repeater.utils.FFmpegUtil
 import com.language.repeater.utils.SubtitleUtils
 import kotlinx.serialization.Serializable
 
@@ -24,14 +25,35 @@ data class VideoEntity(
   val positionMs: Long,
   var subUri: String? = null,
   // defaultValue 设为当前时间，方便插入
-  val lastPlayedTime: Long = System.currentTimeMillis(),
+  val lastPlayedTime: Long = System.currentTimeMillis()
 )
 
+fun MediaItem.toEntity(positionMs: Long = 0L): VideoEntity {
+  val item = this
+  //用artworkUri寻找原始的uri, 当前播放的uri可能是解析后的wav文件, 这个文件可能被删除
+  val oriUri = item.mediaMetadata.artworkUri?.toString() ?: item.localConfiguration?.uri.toString()
+  return VideoEntity(
+    id = item.mediaId,
+    uri = oriUri,
+    name = item.mediaMetadata.title.toString(),
+    positionMs = positionMs,
+    subUri = item.localConfiguration?.subtitleConfigurations?.firstOrNull()?.uri?.toString()
+  )
+}
+
 fun VideoEntity.toMediaItem(): MediaItem {
+  //val f = FFmpegUtil.getWavFile(MyApp.instance, id)
+  //val wavUri = if (f.exists() && f.length() > 0) {
+  //  f.absolutePath
+  //} else {
+  //  null
+  //}
   val it = this
+  val uri = it.uri
+  Log.i("wangzixu_VideoEntity", "toMediaItem uri:$uri")
   val builder = MediaItem
     .Builder()
-    .setUri(it.uri)
+    .setUri(uri)
     .setMediaId(it.id)
     .setMediaMetadata(MediaMetadata.Builder()
       .setTitle(it.name)

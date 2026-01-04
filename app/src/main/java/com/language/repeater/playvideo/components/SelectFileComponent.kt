@@ -10,18 +10,15 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.net.toUri
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.media3.common.C
 import com.language.repeater.dataStore
 import com.language.repeater.foundation.BaseComponent
 import com.language.repeater.playvideo.PlayVideoFragment
-import com.language.repeater.playvideo.model.CurrentPlayVideoEntity
 import com.language.repeater.subtitleStore
 import com.language.repeater.utils.DataStoreKey
 import com.language.repeater.utils.DataStoreKey.KEY_SUBTITLE_FOLDER
 import com.language.repeater.playvideo.playlist.PlaylistManager
-import com.language.repeater.utils.DataStoreKey.KEY_CURRENT_PLAY_INFO
+import com.language.repeater.utils.FFmpegUtil
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -53,7 +50,8 @@ class SelectFileComponent : BaseComponent<PlayVideoFragment>() {
           } else {
             needToCheckSubFolder = true
           }
-          Log.d(PlayVideoFragment.TAG, "Selected video name:${info.name}, 字幕: ${info.subUri}")
+          val wav = FFmpegUtil.extractWavFileByFFmpeg(context, info.uri.toUri(), info.id)
+          Log.d(PlayVideoFragment.TAG, "Selected video name:${info.name}, 字幕: ${info.subUri}, wav:$wav")
           info
         }
 

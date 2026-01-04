@@ -13,6 +13,7 @@ import com.language.repeater.dataStore
 import com.language.repeater.json
 import com.language.repeater.playvideo.model.CurrentPlayVideoEntity
 import com.language.repeater.playvideo.model.VideoEntity
+import com.language.repeater.playvideo.model.toEntity
 import com.language.repeater.subtitleStore
 import com.language.repeater.utils.DataStoreKey.KEY_CURRENT_PLAYLIST
 import com.language.repeater.utils.DataStoreKey.KEY_CURRENT_PLAY_INFO
@@ -92,15 +93,7 @@ object PlaylistManager {
   suspend fun saveCurrentPlaylist(context: Context, items: List<MediaItem>) =
     withContext(Dispatchers.IO) {
       val list = items.map { item ->
-        // 确保 uri 不为空，MediaItem 里的 uri 一般不会空
-        val uri = item.localConfiguration?.uri.toString()
-        val title = item.mediaMetadata.title?.toString() ?: "未知视频"
-
-        // 提取字幕 Uri
-        val subUri: String? = item.localConfiguration?.subtitleConfigurations?.firstOrNull()?.uri?.toString()
-        val id = item.mediaId
-
-        VideoEntity(id, uri, title, 0L, subUri)
+        item.toEntity()
       }
 
       // 【修改】使用 Kotlinx Serialization 序列化

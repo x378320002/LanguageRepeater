@@ -93,7 +93,7 @@ class PlaylistAdapter(
     binding.tvTitle.text = displayName
 
     // 2. 设置封面 (Coil)
-    val uri = mediaItem.localConfiguration?.uri
+    val uri = mediaItem.mediaMetadata.artworkUri ?: mediaItem.localConfiguration?.uri
     if (uri != null) {
       if (binding.ivCover.tag != uri) {
         binding.ivCover.tag = uri

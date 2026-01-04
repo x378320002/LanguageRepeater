@@ -1,8 +1,8 @@
 package com.language.repeater.utils
 
-import android.R.attr.data
 import android.content.Context
 import com.google.common.hash.Hashing.md5
+import com.language.repeater.MyApp
 import com.language.repeater.json
 import com.language.repeater.pcm.Sentence
 import kotlinx.coroutines.Dispatchers
@@ -13,11 +13,28 @@ import java.io.IOException
 object SentenceFileStoreUtil {
   private const val FILE_SUFFIX = "_sentences.json"
 
+  suspend fun clearTempData() {
+    val context = MyApp.instance
+    val wavDir = context.getExternalFilesDir("sentences")
+    if (wavDir != null && wavDir.exists()) {
+      wavDir.deleteRecursively()
+      wavDir.mkdirs()
+    }
+
+    context.filesDir.listFiles()?.forEach {
+      it.delete()
+    }
+  }
+
   /**
    * 根据 MD5 获取对应的文件
    */
   private fun getFile(context: Context, md5: String): File {
-    return File(context.filesDir, md5 + FILE_SUFFIX)
+    val outputDir = context.getExternalFilesDir("sentences")
+    if (outputDir != null && !outputDir.exists()) {
+      outputDir.mkdirs()
+    }
+    return File(outputDir, md5 + FILE_SUFFIX)
   }
 
   /**

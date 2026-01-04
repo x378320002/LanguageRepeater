@@ -13,7 +13,9 @@ import com.language.repeater.playvideo.PlayVideoFragment
 import com.language.repeater.playvideo.history.HistorySheetFragment
 import com.language.repeater.playvideo.playlist.PlaylistSheetFragment
 import com.language.repeater.playvideo.sleeptimer.SleepTimerSheetFragment
+import com.language.repeater.utils.FFmpegUtil
 import com.language.repeater.utils.ResourcesUtil
+import com.language.repeater.utils.SentenceFileStoreUtil
 import com.language.repeater.utils.ToastUtil
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -44,6 +46,7 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
     fragment.binding.playList.setOnClickListener(this)
     fragment.binding.repeatMode.setOnClickListener(this)
     fragment.binding.sleepTimeBtn.setOnClickListener(this)
+    fragment.binding.clearTemp.setOnClickListener(this)
 
     fragment.viewModel.repeatable.onEach {
       fragment.binding.voiceRepeatSwitch.isChecked = it
@@ -106,6 +109,14 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
 
       fragment.binding.deleteSentence -> {
         deleteCurSen()
+      }
+
+      fragment.binding.clearTemp -> {
+        fScope.launch {
+          FFmpegUtil.clearTempData()
+          SentenceFileStoreUtil.clearTempData()
+          ToastUtil.toast("清除成功")
+        }
       }
     }
   }

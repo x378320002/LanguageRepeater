@@ -64,8 +64,8 @@ dependencies {
   implementation(libs.androidx.exoplayer)
   implementation(libs.androidx.exoplayer.ui)
   implementation(libs.androidx.exoplayer.session)
-  implementation(libs.vad.webrtc)
-  implementation(libs.vad.silero)
+  //implementation(libs.vad.webrtc)
+  //implementation(libs.vad.silero)
 
   implementation(libs.kotlinx.serialization.json)
   implementation(libs.lottie)

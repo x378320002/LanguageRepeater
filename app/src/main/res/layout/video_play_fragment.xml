@@ -72,13 +72,13 @@
     app:layout_constraintTop_toBottomOf="@id/exo_video_view"
     android:background="@color/PastelOrange"
     android:layout_width="0dp"
-    android:layout_height="30dp"/>
+    android:layout_height="100dp"/>
 
   <com.language.repeater.widgets.ScrollWaveformView
     android:id="@+id/audio_progress_wave_view"
     app:layout_constraintStart_toStartOf="parent"
     app:layout_constraintEnd_toEndOf="parent"
-    app:layout_constraintTop_toBottomOf="@id/exo_video_view"
+    app:layout_constraintTop_toBottomOf="@id/audio_wave_view"
     android:background="@color/PastelOrange"
     android:layout_width="0dp"
     android:layout_height="100dp"
@@ -116,7 +116,7 @@
 
     <Button
       android:id="@+id/reload_sentence"
-      android:text="自动分割"
+      android:text="重新生成句子列表"
       android:layout_marginStart="5dp"
       app:layout_constraintTop_toTopOf="parent"
       app:layout_constraintStart_toStartOf="parent"
@@ -124,8 +124,8 @@
       android:layout_height="wrap_content"/>
 
     <Button
-      android:id="@+id/goTestPage"
-      android:text="GoTest"
+      android:id="@+id/clear_temp"
+      android:text="清除缓存"
       android:layout_marginStart="5dp"
       app:layout_constraintTop_toTopOf="parent"
       app:layout_constraintStart_toStartOf="parent"

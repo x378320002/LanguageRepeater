@@ -1,6 +1,7 @@
 package com.language.repeater.playvideo.components
 
 import android.util.Log
+import android.view.View
 import androidx.lifecycle.lifecycleScope
 import androidx.media3.common.util.UnstableApi
 import com.language.repeater.foundation.BaseComponent
@@ -25,17 +26,18 @@ class PlayAllWaveComponent: BaseComponent<PlayVideoFragment>() {
   override fun onCreateView() {
     super.onCreateView()
     //全量波形图数据填充
-    //viewModel.allWaveDataFlow.onEach {
-    //  fragment.binding.audioWaveView.setPcmData(it)
-    //}.launchIn(uiScope)
-    //
-    ////波形进度的更新
-    //fragment.playComponent.curPosSecFlow.onEach {
-    //  //处理波形图的更新
-    //  if (it >= 0) {
-    //    val total = fragment.playComponent.player.duration
-    //    fragment.binding.audioWaveView.updatePosition(it * 1000 / total)
-    //  }
-    //}.launchIn(uiScope)
+    fragment.binding.audioWaveView.visibility = View.VISIBLE
+    viewModel.allWaveDataFlow.onEach {
+      fragment.binding.audioWaveView.setPcmData(it)
+    }.launchIn(uiScope)
+
+    //波形进度的更新
+    fragment.viewModel.currentPosition.onEach {
+      //处理波形图的更新
+      val total = fragment.viewModel.getPlayer()?.duration
+      if (it >= 0 && total != null) {
+        fragment.binding.audioWaveView.updatePosition(it.toFloat() / total)
+      }
+    }.launchIn(uiScope)
   }
 }

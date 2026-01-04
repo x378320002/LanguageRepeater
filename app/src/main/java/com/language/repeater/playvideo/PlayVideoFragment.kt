@@ -67,10 +67,10 @@ class PlayVideoFragment: BaseFragment(), Player.Listener  {
   }
 
   private fun bindClickAction() {
-    binding.goTestPage.setOnClickListener {
-      //startActivity(Intent(requireContext(), TestActivity::class.java))
-      findNavController().navigate(TestPageKey, defaultNavOptions)
-    }
+    //binding.goTestPage.setOnClickListener {
+    //  //startActivity(Intent(requireContext(), TestActivity::class.java))
+    //  findNavController().navigate(TestPageKey, defaultNavOptions)
+    //}
 
     binding.testAction.setOnClickListener {
     }

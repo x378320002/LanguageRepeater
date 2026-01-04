@@ -6,6 +6,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileInputStream
+import java.io.RandomAccessFile
+import java.nio.charset.Charset
 import kotlin.math.min
 import kotlin.math.sqrt
 
@@ -16,6 +18,58 @@ import kotlin.math.sqrt
  */
 object PcmDataUtil {
   private const val TAG = "PcmDataUtil"
+
+  /**
+   * 获取 WAV 文件中音频真实数据的起始位置 (Data Offset)
+   * 它可以完美解决 FFmpeg 生成 metadata 导致文件头变长产生 "爆音/锯齿" 的问题
+   */
+  fun getDataOffset(file: File): Long {
+    if (!file.exists()) return 44 // 文件不存在的兜底
+
+    try {
+      RandomAccessFile(file, "r").use { raf ->
+        // 1. 简单校验是否是 RIFF WAVE
+        raf.seek(0)
+        val riffHeader = ByteArray(4)
+        raf.read(riffHeader)
+        if (String(riffHeader) != "RIFF") return 44 // 不是标准WAV，按默认处理
+
+        // 2. 跳过 RIFF size (4字节) + WAVE (4字节) = 目前在 12 字节处
+        raf.seek(12)
+
+        // 3. 循环遍历 Chunk，直到找到 "data"
+        val chunkNameBuf = ByteArray(4)
+        val sizeBuf = ByteArray(4)
+
+        while (raf.filePointer < raf.length()) {
+          // 读取 Chunk ID (例如 "fmt ", "LIST", "data")
+          if (raf.read(chunkNameBuf) != 4) break
+          val chunkName = String(chunkNameBuf, Charset.forName("ASCII"))
+
+          // 读取 Chunk Size (小端序)
+          if (raf.read(sizeBuf) != 4) break
+          val chunkSize = (sizeBuf[0].toInt() and 0xFF) or
+              ((sizeBuf[1].toInt() and 0xFF) shl 8) or
+              ((sizeBuf[2].toInt() and 0xFF) shl 16) or
+              ((sizeBuf[3].toInt() and 0xFF) shl 24)
+
+          if (chunkName == "data") {
+            // 找到了！当前的指针位置就是数据的开始
+            // 注意：RandomAccessFile 读完 size 后，指针正好指向 data 的内容
+            return raf.filePointer
+          } else {
+            // 不是 data 块 (比如是 metadata 所在的 LIST 块)，直接跳过它
+            // 防止越界，用 skipBytes
+            raf.skipBytes(chunkSize)
+          }
+        }
+      }
+    } catch (e: Exception) {
+      e.printStackTrace()
+    }
+
+    return 44 // 如果解析失败，回退到标准 44
+  }
 
   fun downsampleToWaveform(
     samples: ShortArray,
@@ -59,7 +113,7 @@ object PcmDataUtil {
   }
 
   fun readAllPcmToWavePoint(file: File, targetSize: Int): List<WaveformPoint> {
-    val total = file.length() / PcmConfig.BYTES_PER_SAMPLE
+    val total = (file.length() - 44) / PcmConfig.BYTES_PER_SAMPLE
     val step = (total / targetSize).coerceAtLeast(1)
 
     val samples = ShortArray(step.toInt())
@@ -67,6 +121,7 @@ object PcmDataUtil {
     val result = mutableListOf<WaveformPoint>()
 
     FileInputStream(file).use { input ->
+      input.skip(44)
       var bytesRead: Int
       while (input.read(buffer).also { bytesRead = it } != -1) {
         //把读出来的byte转成short数组, 再计算这个数组的最大最小值或者平均值, 转成WaveformPoint
@@ -90,11 +145,12 @@ object PcmDataUtil {
 
   //从指定pcm文件中读取字节数组, 转成short数组
   suspend fun readPcmFile(file: File): ShortArray = withContext(Dispatchers.IO) {
-    val totalSamples = (file.length() / PcmConfig.BYTES_PER_SAMPLE).toInt()
+    val totalSamples = ((file.length()-44) / PcmConfig.BYTES_PER_SAMPLE).toInt()
     val arr = ShortArray(totalSamples)
     var index = 0
     val buffer = ByteArray(2)
     FileInputStream(file).buffered().use { input ->
+      input.skip(44)
       while (input.read(buffer) != -1) {
         // s16le -> 2字节小端
         val byteIndex = 0
@@ -103,39 +159,5 @@ object PcmDataUtil {
       }
       arr
     }
-  }
-
-  /**
-   * 二次处理, downsample, 供ui渲染, 原始数据太大了, 必须经过二次处理
-   * 处理方式: 均方根
-   */
-  suspend fun downSample(data: List<Short>, width: Int): List<Int> = withContext(Dispatchers.IO) {
-    if (data.size <= width) {
-      return@withContext data.map { it.toInt() }
-    }
-
-    // Downsample：减少绘制点数
-    val step = data.size.toFloat() / width.toFloat()
-    Log.i(TAG, "step:$step")
-    val result = mutableListOf<Int>()
-    for (i in 0 until width) {
-      val start = (i * step).toInt()
-      val end = minOf((start + step).toInt(), data.size)
-
-      var sum = 0.0
-      var max = Short.MIN_VALUE.toInt()
-      var min = Short.MAX_VALUE.toInt()
-      for (j in start until end) {
-        val v = data[j].toInt()
-        sum += v * v
-        if (v > max) max = v
-        if (v < min) min = v
-      }
-      val rms = sqrt(sum / (end - start)).toDouble()
-      val mixed = (rms * 0.9 + (max - min) * 1 * 0.1)
-      result.add(mixed.toInt())
-//      result.add(rms.toInt())
-    }
-    return@withContext result
   }
 }

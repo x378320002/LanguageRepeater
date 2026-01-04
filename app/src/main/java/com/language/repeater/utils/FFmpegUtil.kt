@@ -3,11 +3,10 @@ package com.language.repeater.utils
 import android.content.Context
 import android.net.Uri
 import android.util.Log
-import androidx.core.net.toUri
 import com.arthenica.ffmpegkit.FFmpegKit
 import com.arthenica.ffmpegkit.FFmpegKitConfig
 import com.arthenica.ffmpegkit.ReturnCode
-import com.language.repeater.pcm.PcmConfig
+import com.language.repeater.MyApp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -19,53 +18,35 @@ import java.io.File
  */
 object FFmpegUtil {
   private const val TAG = "wangzixu"
-  private const val PCM_SUFFIX = ".pcm"
+  private const val SUFFIX = ".wav"
 
-  fun extractWavByFFmpeg(
-    context: Context,
-    input: String,
-    onSuccess: (outPut: String) -> Unit,
-    onFail: (errInfo: String?) -> Unit,
-  ) {
-    // 传入 content:// URI 字符串
-    if (input.isEmpty()) return
-
-    val outputDir = context.getExternalFilesDir("audio")
-    if (outputDir != null && !outputDir.exists()) {
-      outputDir.mkdirs()
+  suspend fun clearTempData() {
+    val context = MyApp.instance
+    val wavDir = context.getExternalFilesDir("wav")
+    if (wavDir != null && wavDir.exists()) {
+      wavDir.deleteRecursively()
+      wavDir.mkdirs()
     }
-    val outputFile = File(outputDir, "output.wav")
-    if (outputFile.length() > 0) {
-      outputFile.delete()
-    }
-    val outPath = outputFile.absolutePath
-    val str = FFmpegKitConfig.getSafParameterForRead(context, input.toUri())
 
-    // ffmpeg 命令
-    val cmd = "-y -i $str -vn -acodec pcm_s16le -ar 16000 -ac 1 $outPath"
-    Log.i(TAG, "FFmpegKit cmd:$cmd")
-    FFmpegKit.executeAsync(cmd) { session ->
-      val returnCode = session.returnCode
-      if (ReturnCode.isSuccess(returnCode)) {
-        Log.i(TAG, "FFmpegKit success")
-        onSuccess(outPath)
-      } else {
-        Log.i(TAG, "FFmpegKit failure:${returnCode}, ${session.failStackTrace}")
-        onFail(null)
-        if (outputFile.length() > 0) {
-          outputFile.delete()
-        }
-      }
+    val pcmDir = context.getExternalFilesDir("pcm")
+    if (pcmDir != null && pcmDir.exists()) {
+      pcmDir.deleteRecursively()
+      pcmDir.mkdirs()
     }
   }
 
-  suspend fun extractPcmFileByFFmpeg(context: Context, input: Uri, key: String): String =
+  fun getWavFile(context: Context, key: String): File {
+    val outputDir = context.getExternalFilesDir("wav")
+    if (outputDir != null && !outputDir.exists()) {
+      outputDir.mkdirs()
+    }
+    return File(outputDir, key + SUFFIX)
+  }
+
+
+  suspend fun extractWavFileByFFmpeg(context: Context, input: Uri, key: String): String =
     withContext(Dispatchers.IO) {
-      val outputDir = context.getExternalFilesDir("pcm")
-      if (outputDir != null && !outputDir.exists()) {
-        outputDir.mkdirs()
-      }
-      val outputFile = File(outputDir, key + PCM_SUFFIX)
+      val outputFile = getWavFile(context, key)
       if (outputFile.exists() && outputFile.length() > 0) {
         Log.i(TAG, "FFmpegKit extractPcmFileByFFmpeg 文件已经存在, 直接返回")
         return@withContext outputFile.absolutePath
@@ -74,9 +55,12 @@ object FFmpegUtil {
       val outPath = outputFile.absolutePath
       val str = FFmpegKitConfig.getSafParameterForRead(context, input)
       // ffmpeg 命令
-      //val cmd = "-y -i $str -vn -acodec pcm_s16le -ar 16000 -ac 1 $outPut"
-      val cmd =
-        "-y -i $str -vn -ac 1 -ar ${PcmConfig.PCM_SAMPLE_RATE} -f s16le -c:a pcm_s16le $outPath"
+      //val cmd =
+      //  "-y -i $str -vn -ac 1 -ar 16000 -f s16le -c:a pcm_s16le $outPath"
+      //val cmd = "-y -i $str -vn -ac 1 -ar 16000 -c:a pcm_s16le $outPath"
+      // 增加了: -map_metadata -1 (清除元数据)
+      // 增加了: -fflags +bitexact (强制标准头部，避免写入额外的编码信息)
+      val cmd = "-y -i $str -vn -ac 1 -ar 16000 -map_metadata -1 -fflags +bitexact -c:a pcm_s16le $outPath"
       Log.i(TAG, "FFmpegKit 开始解析成pcm -> cmd:$cmd")
       val session = FFmpegKit.execute(cmd)
       val returnCode = session.returnCode
@@ -91,42 +75,4 @@ object FFmpegUtil {
         throw Exception("extractPcmFileByFFmpeg failed:${returnCode}")
       }
     }
-
-  fun extractPcmFileByFFmpeg(
-    context: Context,
-    input: Uri?,
-    onSuccess: (outPut: String) -> Unit,
-    onFail: (errInfo: String?) -> Unit,
-  ) {
-    if (input == null) return
-
-    val outputDir = context.getExternalFilesDir("pcm")
-    if (outputDir != null && !outputDir.exists()) {
-      outputDir.mkdirs()
-    }
-    val outputFile = File(outputDir, "output.pcm")
-    if (outputFile.length() > 0) {
-      outputFile.delete()
-    }
-    val outPath = outputFile.absolutePath
-
-    val str = FFmpegKitConfig.getSafParameterForRead(context, input)
-    // ffmpeg 命令
-    //val cmd = "-y -i $str -vn -acodec pcm_s16le -ar 16000 -ac 1 $outPut"
-    val cmd = "-y -i $str -vn -ac 1 -ar 8000 -f s16le -c:a pcm_s16le $outPath"
-    Log.i(TAG, "FFmpegKit cmd:$cmd")
-    FFmpegKit.executeAsync(cmd) { session ->
-      val returnCode = session.returnCode
-      if (ReturnCode.isSuccess(returnCode)) {
-        Log.i(TAG, "FFmpegKit success")
-        onSuccess(outPath)
-      } else {
-        Log.i(TAG, "FFmpegKit failure:${returnCode}, ${session.failStackTrace}")
-        onFail(null)
-        if (outputFile.length() > 0) {
-          outputFile.delete()
-        }
-      }
-    }
-  }
 }

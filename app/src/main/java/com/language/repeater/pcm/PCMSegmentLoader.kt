@@ -1,5 +1,6 @@
 package com.language.repeater.pcm
 
+import android.util.Log
 import java.io.File
 import java.io.RandomAccessFile
 
@@ -8,8 +9,12 @@ class PCMSegmentLoader(
   private val pcmFile: File,
   private val sampleRate: Int = PcmConfig.PCM_SAMPLE_RATE
 ) {
-  val totalSamples = (pcmFile.length() / PcmConfig.BYTES_PER_SAMPLE).toInt()
+  val totalSamples = ((pcmFile.length() - 44) / PcmConfig.BYTES_PER_SAMPLE).toInt()
   val totalDuration = totalSamples.toFloat() / sampleRate
+
+  val offset = PcmDataUtil.getDataOffset(pcmFile).also {
+    Log.i("wangzixu_PCMSegmentLoader", "PCMSegmentLoader getDataOffset : $it")
+  }
 
   /** 波形数据缓存：时间窗口 -> 波形数据 */
   val waveformCache = mutableMapOf<Int, List<WaveformPoint>>()
@@ -35,13 +40,13 @@ class PCMSegmentLoader(
     val byteCount = actualCount * PcmConfig.BYTES_PER_SAMPLE
 
     val buffer = ByteArray(byteCount)
-    val samples = ShortArray(actualCount)
 
     RandomAccessFile(pcmFile, "r").use { raf ->
-      raf.seek(startByte)
+      raf.seek(startByte + offset)
       raf.readFully(buffer)
     }
 
+    val samples = ShortArray(actualCount)
     for (i in samples.indices) {
       val byteIndex = i * 2
       samples[i] = ((buffer[byteIndex + 1].toInt() shl 8) or

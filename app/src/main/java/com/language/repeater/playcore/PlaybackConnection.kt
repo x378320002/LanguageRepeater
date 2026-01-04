@@ -25,10 +25,11 @@ import com.language.repeater.pcm.WaveformPoint
 import com.language.repeater.playvideo.components.SubtitleAutoLoader
 import com.language.repeater.playvideo.history.HistoryManager
 import com.language.repeater.playvideo.model.CurrentPlayVideoEntity
-import com.language.repeater.playvideo.model.VideoEntity
+import com.language.repeater.playvideo.model.toEntity
 import com.language.repeater.playvideo.model.toMediaItem
 import com.language.repeater.playvideo.playlist.PlaylistManager
 import com.language.repeater.utils.FFmpegUtil
+import com.language.repeater.utils.ScreenUtil
 import com.language.repeater.utils.SentenceFileStoreUtil
 import com.language.repeater.utils.SrtParser
 import com.language.repeater.utils.ToastUtil
@@ -274,13 +275,7 @@ class PlaybackConnection(private val context: Context) {
     currentId = key
     Log.i(TAG, "handleMediaItemTransition ID: $key")
 
-    val entity = VideoEntity(
-      id = item.mediaId,
-      uri = item.localConfiguration?.uri.toString(),
-      name = item.mediaMetadata.title.toString(),
-      positionMs = _playerState.value?.currentPosition ?: 0L,
-      subUri = item.localConfiguration?.subtitleConfigurations?.firstOrNull()?.uri?.toString()
-    )
+    val entity = item.toEntity(_playerState.value?.currentPosition ?: 0L)
     // 1. 保存历史记录
     scope.launch(Dispatchers.IO) {
       HistoryManager.addHistory(context, entity)
@@ -301,18 +296,18 @@ class PlaybackConnection(private val context: Context) {
 
     val uri = item.localConfiguration?.uri ?: return@launch
     try {
-      Log.i(TAG, "parseUriToPcm Start parsing: $currentId")
+      Log.i(TAG, "parseUriToPcm Start parsing: $currentId, uri: $uri")
       // 提取 PCM 文件
-      val path = FFmpegUtil.extractPcmFileByFFmpeg(context, uri, currentId)
+      val path = FFmpegUtil.extractWavFileByFFmpeg(context, uri, currentId)
       val pcmFile = File(path)
       Log.i(TAG, "parseUriToPcm pcmFile size: ${pcmFile.length()/1048576}MB")
       _pcmLoaderStateFlow.value = PCMSegmentLoader(pcmFile)
 
-      // 加载波形 (并行)
-      //launch {
-      //  val waveData = PcmDataUtil.readAllPcmToWavePoint(pcmFile, ScreenUtil.getScreenSize().width)
-      //  _allWaveDataFlow.value = waveData
-      //}
+       //加载波形 (并行)
+      launch {
+        val waveData = PcmDataUtil.readAllPcmToWavePoint(pcmFile, ScreenUtil.getScreenSize().width)
+        _allWaveDataFlow.value = waveData
+      }
 
       // 加载句子 (优先缓存)
       launch {
@@ -343,7 +338,7 @@ class PlaybackConnection(private val context: Context) {
     val subUri = item.localConfiguration?.subtitleConfigurations?.firstOrNull()?.uri
 
     val newSentences = if (subUri == null || forceUseVad) {
-      val path = FFmpegUtil.extractPcmFileByFFmpeg(context, uri, currentId)
+      val path = FFmpegUtil.extractWavFileByFFmpeg(context, uri, currentId)
       val pcmFile = File(path)
       Log.i(TAG, "loadSentences from pcmFile, size: ${pcmFile.length()/1048576}MB")
       LocalVoiceSentenceDetector().detectSentences(PcmDataUtil.readPcmFile(pcmFile))
