@@ -12,7 +12,7 @@ import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.View
 import com.language.repeater.pcm.PCMSegmentLoader
-import com.language.repeater.pcm.Sentence
+import com.language.repeater.sentence.Sentence
 import com.language.repeater.pcm.WaveformPoint
 import com.language.repeater.utils.ResourcesUtil.toDp
 import com.language.repeater.utils.TimeFormatUtil

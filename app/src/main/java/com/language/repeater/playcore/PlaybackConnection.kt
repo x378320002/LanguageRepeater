@@ -17,10 +17,10 @@ import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
-import com.language.repeater.pcm.LocalVoiceSentenceDetector
+import com.language.repeater.sentence.LocalVoiceSentenceDetector
 import com.language.repeater.pcm.PCMSegmentLoader
 import com.language.repeater.pcm.PcmDataUtil
-import com.language.repeater.pcm.Sentence
+import com.language.repeater.sentence.Sentence
 import com.language.repeater.pcm.WaveformPoint
 import com.language.repeater.playvideo.components.SubtitleAutoLoader
 import com.language.repeater.playvideo.history.HistoryManager
@@ -28,9 +28,9 @@ import com.language.repeater.playvideo.model.CurrentPlayVideoEntity
 import com.language.repeater.playvideo.model.toEntity
 import com.language.repeater.playvideo.model.toMediaItem
 import com.language.repeater.playvideo.playlist.PlaylistManager
-import com.language.repeater.utils.FFmpegUtil
+import com.language.repeater.pcm.FFmpegUtil
 import com.language.repeater.utils.ScreenUtil
-import com.language.repeater.utils.SentenceFileStoreUtil
+import com.language.repeater.sentence.SentenceStoreUtil
 import com.language.repeater.utils.SrtParser
 import com.language.repeater.utils.ToastUtil
 import kotlinx.coroutines.CoroutineScope
@@ -311,7 +311,7 @@ class PlaybackConnection(private val context: Context) {
 
       // 加载句子 (优先缓存)
       launch {
-        val cachedSentences = SentenceFileStoreUtil.loadData(context, currentId)
+        val cachedSentences = SentenceStoreUtil.loadData(context, currentId)
         if (!cachedSentences.isNullOrEmpty()) {
           _sentencesFlow.value = cachedSentences
           Log.i(TAG, "parseUriToPcm Loaded cached sentences: ${cachedSentences.size}")
@@ -350,7 +350,7 @@ class PlaybackConnection(private val context: Context) {
       }
     }
     scope.launch {
-      SentenceFileStoreUtil.saveData(context, currentId, newSentences)
+      SentenceStoreUtil.saveData(context, currentId, newSentences)
     }
     _sentencesFlow.value = newSentences
     Log.i(TAG, "loadSentences sentences: ${newSentences.size}")
@@ -662,7 +662,7 @@ class PlaybackConnection(private val context: Context) {
    */
   suspend fun saveSentencesToDisk(list: List<Sentence>) = withContext(Dispatchers.IO) {
     if (currentId.isNotEmpty()) {
-      SentenceFileStoreUtil.saveData(context, currentId, list)
+      SentenceStoreUtil.saveData(context, currentId, list)
       Log.i(TAG, "Sentences updated and saved to disk.")
     }
   }

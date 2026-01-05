@@ -1,4 +1,4 @@
-package com.language.repeater.utils
+package com.language.repeater.pcm
 
 import android.content.Context
 import android.net.Uri
@@ -6,7 +6,6 @@ import android.util.Log
 import com.arthenica.ffmpegkit.FFmpegKit
 import com.arthenica.ffmpegkit.FFmpegKitConfig
 import com.arthenica.ffmpegkit.ReturnCode
-import com.language.repeater.MyApp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -19,30 +18,48 @@ import java.io.File
 object FFmpegUtil {
   private const val TAG = "wangzixu"
   private const val SUFFIX = ".wav"
+  private const val WAV_DIR = "wav"
 
-  suspend fun clearTempData() {
-    val context = MyApp.instance
-    val wavDir = context.getExternalFilesDir("wav")
-    if (wavDir != null && wavDir.exists()) {
-      wavDir.deleteRecursively()
-      wavDir.mkdirs()
+  suspend fun clearTempData(
+    context: Context, except: List<String>
+  ) = withContext(Dispatchers.IO) {
+    val wavDir = context.getExternalFilesDir(WAV_DIR)
+    if (wavDir != null && wavDir.exists() && wavDir.isDirectory) {
+      wavDir.listFiles()?.forEach { file->
+        val fileName = file.name
+        Log.i("wangzixu_clearTempData","FFmpegUtil fileName:$fileName")
+        // 如果文件名包含 except 中任意一个字符串，则跳过
+        val shouldKeep = except.any { exceptKey ->
+          fileName.contains(exceptKey)
+        }
+
+        if (!shouldKeep) {
+          runCatching {
+            file.delete()
+          }
+        }
+      }
     }
+  }
 
-    val pcmDir = context.getExternalFilesDir("pcm")
-    if (pcmDir != null && pcmDir.exists()) {
-      pcmDir.deleteRecursively()
-      pcmDir.mkdirs()
+  suspend fun delete(context: Context, key: String) = withContext(Dispatchers.IO) {
+    try {
+      val file = getWavFile(context, key)
+      if (file.exists()) {
+        file.delete()
+      }
+    } catch (e: Exception) {
+      e.printStackTrace()
     }
   }
 
   fun getWavFile(context: Context, key: String): File {
-    val outputDir = context.getExternalFilesDir("wav")
+    val outputDir = context.getExternalFilesDir(WAV_DIR)
     if (outputDir != null && !outputDir.exists()) {
       outputDir.mkdirs()
     }
     return File(outputDir, key + SUFFIX)
   }
-
 
   suspend fun extractWavFileByFFmpeg(context: Context, input: Uri, key: String): String =
     withContext(Dispatchers.IO) {
@@ -60,7 +77,8 @@ object FFmpegUtil {
       //val cmd = "-y -i $str -vn -ac 1 -ar 16000 -c:a pcm_s16le $outPath"
       // 增加了: -map_metadata -1 (清除元数据)
       // 增加了: -fflags +bitexact (强制标准头部，避免写入额外的编码信息)
-      val cmd = "-y -i $str -vn -ac 1 -ar 16000 -map_metadata -1 -fflags +bitexact -c:a pcm_s16le $outPath"
+      val cmd =
+        "-y -i $str -vn -ac 1 -ar 16000 -map_metadata -1 -fflags +bitexact -c:a pcm_s16le $outPath"
       Log.i(TAG, "FFmpegKit 开始解析成pcm -> cmd:$cmd")
       val session = FFmpegKit.execute(cmd)
       val returnCode = session.returnCode

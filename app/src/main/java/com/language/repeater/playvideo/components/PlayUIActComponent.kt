@@ -1,21 +1,19 @@
 package com.language.repeater.playvideo.components
 
-import android.R.attr.repeatMode
 import android.view.View
-import androidx.appcompat.app.AlertDialog
+import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.language.repeater.MainActivity
 import com.language.repeater.R
 import com.language.repeater.foundation.BaseComponent
 import com.language.repeater.playvideo.PlayVideoFragment
 import com.language.repeater.playvideo.history.HistorySheetFragment
 import com.language.repeater.playvideo.playlist.PlaylistSheetFragment
 import com.language.repeater.playvideo.sleeptimer.SleepTimerSheetFragment
-import com.language.repeater.utils.FFmpegUtil
+import com.language.repeater.pcm.FFmpegUtil
 import com.language.repeater.utils.ResourcesUtil
-import com.language.repeater.utils.SentenceFileStoreUtil
+import com.language.repeater.sentence.SentenceStoreUtil
 import com.language.repeater.utils.ToastUtil
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -112,9 +110,15 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
       }
 
       fragment.binding.clearTemp -> {
+        val player = fragment.viewModel.getPlayer() ?: return
+        // 必须在主线程提取数据
+        val items = mutableListOf<String>()
+        for (i in 0 until player.mediaItemCount) {
+          items.add(player.getMediaItemAt(i).mediaId)
+        }
         fScope.launch {
-          FFmpegUtil.clearTempData()
-          SentenceFileStoreUtil.clearTempData()
+          FFmpegUtil.clearTempData(context, items)
+          SentenceStoreUtil.clearTempData(context, items)
           ToastUtil.toast("清除成功")
         }
       }

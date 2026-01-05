@@ -10,7 +10,7 @@ import androidx.media3.common.MimeTypes
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.language.repeater.MyApp
-import com.language.repeater.utils.FFmpegUtil
+import com.language.repeater.pcm.FFmpegUtil
 import com.language.repeater.utils.SubtitleUtils
 import kotlinx.serialization.Serializable
 
@@ -50,7 +50,7 @@ fun VideoEntity.toMediaItem(): MediaItem {
   //}
   val it = this
   val uri = it.uri
-  Log.i("wangzixu_VideoEntity", "toMediaItem uri:$uri")
+  //Log.i("wangzixu_VideoEntity", "toMediaItem uri:$uri")
   val builder = MediaItem
     .Builder()
     .setUri(uri)

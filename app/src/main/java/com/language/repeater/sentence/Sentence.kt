@@ -1,4 +1,4 @@
-package com.language.repeater.pcm
+package com.language.repeater.sentence
 
 import kotlinx.serialization.Serializable
 

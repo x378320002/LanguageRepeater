@@ -1,6 +1,7 @@
-package com.language.repeater.pcm
+package com.language.repeater.sentence
 
 import android.util.Log
+import com.language.repeater.pcm.PcmConfig
 import kotlin.collections.forEachIndexed
 import kotlin.collections.lastIndex
 import kotlin.collections.map
