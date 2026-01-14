@@ -45,6 +45,8 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
     fragment.binding.repeatMode.setOnClickListener(this)
     fragment.binding.sleepTimeBtn.setOnClickListener(this)
     fragment.binding.clearTemp.setOnClickListener(this)
+    fragment.binding.mergePre.setOnClickListener(this)
+    fragment.binding.mergeNext.setOnClickListener(this)
 
     fragment.viewModel.repeatable.onEach {
       fragment.binding.voiceRepeatSwitch.isChecked = it
@@ -70,6 +72,14 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
 
   override fun onClick(v: View?) {
     when (v) {
+      fragment.binding.mergePre -> {
+        fragment.viewModel.mergePreSentence()
+      }
+
+      fragment.binding.mergeNext -> {
+        fragment.viewModel.mergeNextSentence()
+      }
+
       fragment.binding.sleepTimeBtn -> {
         val sheet = SleepTimerSheetFragment()
         sheet.show(fragment.childFragmentManager, "SleepTimer")
@@ -183,8 +193,6 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
         }
       }
       .show()
-    if (isPlaying) {
-      fragment.viewModel.pause()
-    }
+    fragment.viewModel.pause()
   }
 }

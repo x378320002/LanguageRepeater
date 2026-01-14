@@ -1,14 +1,9 @@
 package com.language.repeater.playvideo.playlist
 
 import android.content.Context
-import android.net.Uri
-import android.provider.OpenableColumns
-import android.util.Log
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.media3.common.C
 import androidx.media3.common.MediaItem
-import androidx.media3.common.Player
 import com.language.repeater.dataStore
 import com.language.repeater.json
 import com.language.repeater.playvideo.model.CurrentPlayVideoEntity
@@ -22,7 +17,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
-import kotlin.text.trim
 
 /**
  * Date: 2025-10-27
@@ -31,61 +25,6 @@ import kotlin.text.trim
  */
 object PlaylistManager {
   const val TAG = "wangzixu"
-
-  /**
-   * 快速获取文件的元数据
-   * @param context Context
-   * @param uri 文件的 Uri
-   * @return 包含文件名、大小的数据类，如果查询失败则返回 null
-   */
-  fun getFileInfo(context: Context, uri: Uri): VideoEntity {
-    var name: String? = null
-    var size: Long = 0
-    try {
-      val projection = arrayOf(
-        OpenableColumns.DISPLAY_NAME,
-        OpenableColumns.SIZE
-      )
-
-      context.contentResolver.query(uri, projection, null, null, null)?.use { cursor ->
-        if (cursor.moveToFirst()) {
-          val displayNameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-          if (displayNameIndex != -1) {
-            name = cursor.getString(displayNameIndex)
-          }
-
-          val sizeIndex = cursor.getColumnIndex(OpenableColumns.SIZE)
-          if (sizeIndex != -1) {
-            size = cursor.getLong(sizeIndex)
-          }
-        }
-      }
-    } catch (e: Exception) {
-      e.printStackTrace()
-    }
-
-    if (name.isNullOrEmpty()) {
-      name = uri.lastPathSegment
-      Log.i(TAG, "getFileInfo, contentResolver null, use lastPathSegment:$name")
-    }
-
-    if (name.isNullOrEmpty()) {
-      name = uri.path
-      Log.i(TAG, "getFileInfo, contentResolver null, use path:$name")
-    }
-
-    if (name.isNullOrEmpty()) {
-      name = uri.toString()
-      Log.i(TAG, "getFileInfo, contentResolver null, use uri.toString:$name")
-    }
-
-    val trimName = name.trim()
-      .replace(' ', '-') //后续ffmpeg命令里, 文件名不能带空格
-      .replace('\'', '-') //不能带'符号
-    val id = "$trimName-$size"
-
-    return VideoEntity(id, uri.toString(), name, 0L, null)
-  }
 
   /**
    * 保存当前播放器的列表到本地

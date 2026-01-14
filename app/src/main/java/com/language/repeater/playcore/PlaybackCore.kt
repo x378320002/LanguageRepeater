@@ -4,7 +4,6 @@ import android.annotation.SuppressLint
 import kotlin.collections.first
 import kotlin.collections.firstOrNull
 import kotlin.collections.isNotEmpty
-import kotlin.collections.lastIndex
 import android.content.ComponentName
 import android.content.Context
 import android.net.Uri
@@ -29,7 +28,6 @@ import com.language.repeater.playvideo.model.toEntity
 import com.language.repeater.playvideo.model.toMediaItem
 import com.language.repeater.playvideo.playlist.PlaylistManager
 import com.language.repeater.pcm.FFmpegUtil
-import com.language.repeater.utils.ScreenUtil
 import com.language.repeater.sentence.SentenceStoreUtil
 import com.language.repeater.utils.SrtParser
 import com.language.repeater.utils.ToastUtil
@@ -59,7 +57,7 @@ import kotlin.math.max
  * 3. 管理媒体附属数据 (PCM, Waveform, Sentences) -> 解析一次，全局复用
  * 4. 提供高级播放控制 (上一句, 下一句, AB复读)
  */
-class PlaybackConnection(private val context: Context) {
+class PlaybackCore(private val context: Context) {
 
   private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
@@ -130,10 +128,10 @@ class PlaybackConnection(private val context: Context) {
 
     @SuppressLint("StaticFieldLeak")
     @Volatile
-    private var instance: PlaybackConnection? = null
-    fun getInstance(context: Context): PlaybackConnection {
+    private var instance: PlaybackCore? = null
+    fun getInstance(context: Context): PlaybackCore {
       return instance ?: synchronized(this) {
-        instance ?: PlaybackConnection(context.applicationContext).also { instance = it }
+        instance ?: PlaybackCore(context.applicationContext).also { instance = it }
       }
     }
   }
@@ -303,11 +301,11 @@ class PlaybackConnection(private val context: Context) {
       Log.i(TAG, "parseUriToPcm pcmFile size: ${pcmFile.length()/1048576}MB")
       _pcmLoaderStateFlow.value = PCMSegmentLoader(pcmFile)
 
-       //加载波形 (并行)
-      launch {
-        val waveData = PcmDataUtil.readAllPcmToWavePoint(pcmFile, ScreenUtil.getScreenSize().width)
-        _allWaveDataFlow.value = waveData
-      }
+      //加载全部波形数据 (并行)
+      //launch {
+      //  val waveData = PcmDataUtil.readAllPcmToWavePoint(pcmFile, ScreenUtil.getScreenSize().width)
+      //  _allWaveDataFlow.value = waveData
+      //}
 
       // 加载句子 (优先缓存)
       launch {
@@ -366,27 +364,29 @@ class PlaybackConnection(private val context: Context) {
     val list = _sentencesFlow.value
     if (list.isEmpty()) return
 
-    val curSen = _curAbSentenceFlow.value ?: findSentenceByTime(_currentPositionSeconds.value)
+    //val curSen = _curAbSentenceFlow.value ?: findSentenceByTime(_currentPositionSeconds.value)
+    //
+    //if (curSen != null) {
+    //  val index = list.indexOf(curSen)
+    //  // 如果是最后一句，切换到第0个
+    //  if (index == list.lastIndex) {
+    //    seekToSentence(list[0])
+    //  } else {
+    //    // 找下一句
+    //    val nextIndex = (index + 1).coerceAtMost(list.lastIndex)
+    //    seekToSentence(list[nextIndex])
+    //  }
+    //} else {
+    //
+    //}
 
-    if (curSen != null) {
-      val index = list.indexOf(curSen)
-      // 如果是最后一句，尝试切到下一首视频
-      if (index == list.lastIndex) {
-        //if (hasNextMediaItem()) {
-        //  seekToNextMediaItem()
-        //} else {
-        //}
-        ToastUtil.toast("已经是最后一句了")
-      } else {
-        // 找下一句
-        val nextIndex = (index + 1).coerceAtMost(list.lastIndex)
-        seekToSentence(list[nextIndex])
-      }
-    } else {
-      // 当前没在任何句子里，找最近的下一句
-      val nextSen =
-        list.firstOrNull { it.start > _currentPositionSeconds.value } ?: list.firstOrNull()
-      nextSen?.let { seekToSentence(it) }
+    // 当前没在任何句子里，找最近的下一句
+    val nextSen =
+      list.firstOrNull {
+        it.start > _currentPositionSeconds.value
+      } ?: list.firstOrNull()
+    if (nextSen != null) {
+      seekToSentence(nextSen)
     }
   }
 
@@ -452,7 +452,7 @@ class PlaybackConnection(private val context: Context) {
 
   private fun findSentenceByTime(currentSec: Float): Sentence? {
     // 优化：二分查找或简单遍历
-    return _sentencesFlow.value.firstOrNull { currentSec >= it.start && currentSec <= it.end }
+    return _sentencesFlow.value.firstOrNull { currentSec <= it.end }
   }
 
   // --- 基础播放器同步逻辑 ---
@@ -509,11 +509,11 @@ class PlaybackConnection(private val context: Context) {
     ) {
       updatePosition()
 
-      Log.i(TAG, "onPositionDiscontinuity reason: $reason")
+      //Log.i(TAG, "onPositionDiscontinuity reason: $reason")
       // 【新增】如果是用户手动 Seek 导致的跳变，保存一下
-      if (reason == Player.DISCONTINUITY_REASON_SEEK) {
-        saveCurrentState()
-      }
+      //if (reason == Player.DISCONTINUITY_REASON_SEEK) {
+      //  saveCurrentState()
+      //}
     }
 
     // 监听播放器内部模式变化 (比如用户通过通知栏改了模式)
@@ -560,7 +560,7 @@ class PlaybackConnection(private val context: Context) {
     saveStateJob?.cancel()
     // 启动新的保存任务，带延迟
     saveStateJob = scope.launch {
-      delay(500) // 防抖时间 0.5秒
+      delay(1000) // 防抖时间 0.5秒
 
       val p = _playerState.value ?: return@launch
       val index = p.currentMediaItemIndex
@@ -611,7 +611,7 @@ class PlaybackConnection(private val context: Context) {
   fun splitCurrentSentence(): SplitResult {
     val currentPos = _currentPositionSeconds.value
     // 逻辑优化：优先取当前复读选中的句子；如果没有，则取当前播放时间点所在的句子
-    val targetSentence = _curAbSentenceFlow.value ?: findSentenceByTime(currentPos)
+    val targetSentence = _curAbSentenceFlow.value
 
     if (targetSentence == null) {
       return SplitResult.NO_SENTENCE
@@ -657,10 +657,54 @@ class PlaybackConnection(private val context: Context) {
     return SplitResult.NO_SENTENCE
   }
 
+  fun mergePre() {
+    val sen = _curAbSentenceFlow.value
+    val sentences = _sentencesFlow.value.toMutableList()
+    if (sen == null) {
+      ToastUtil.toast("当前没有选中任何句子")
+      return
+    }
+
+    val index = sentences.indexOf(sen)
+    if (index <= 0) {
+      ToastUtil.toast("当前没有上一句, 无法合并")
+      return
+    }
+
+    val nextSen = sentences[index - 1]
+    sen.start = minOf(sen.start, nextSen.start)
+    sen.end = maxOf(sen.end, nextSen.end)
+    _curAbSentenceFlow.value = sen
+    sentences.remove(nextSen)
+    _sentencesFlow.value = sentences
+  }
+
+  fun mergeNext() {
+    val sen = _curAbSentenceFlow.value
+    val sentences = _sentencesFlow.value.toMutableList()
+    if (sen == null) {
+      ToastUtil.toast("当前没有选中任何句子")
+      return
+    }
+
+    val index = sentences.indexOf(sen)
+    if (index == -1 || index == sentences.lastIndex) {
+      ToastUtil.toast("当前没有下一句, 无法合并")
+      return
+    }
+
+    val nextSen = sentences[index + 1]
+    sen.start = minOf(sen.start, nextSen.start)
+    sen.end = maxOf(sen.end, nextSen.end)
+    _curAbSentenceFlow.value = sen
+    sentences.remove(nextSen)
+    _sentencesFlow.value = sentences
+  }
+
   /**
    * 辅助方法：保存句子改动到本地
    */
-  suspend fun saveSentencesToDisk(list: List<Sentence>) = withContext(Dispatchers.IO) {
+  suspend fun saveSentencesToDisk(list: List<Sentence> = _sentencesFlow.value) = withContext(Dispatchers.IO) {
     if (currentId.isNotEmpty()) {
       SentenceStoreUtil.saveData(context, currentId, list)
       Log.i(TAG, "Sentences updated and saved to disk.")
@@ -669,9 +713,8 @@ class PlaybackConnection(private val context: Context) {
 
   /**
    * 保存并合并重叠的句子
-   * 用于用户拖动 AB 边界松手后调用
    */
-  fun saveAndMergeSentences() {
+  fun mergeAndSaveSentences() {
     val list = _sentencesFlow.value
     if (list.isEmpty()) return
 
@@ -688,6 +731,10 @@ class PlaybackConnection(private val context: Context) {
             // 有重叠：取较大的 end 值进行合并
             current.end = max(current.end, next.end)
             Log.i(TAG, "Merge overlap sentences at index $i")
+            //合并后本质上会删掉后一个sentence, 如果删掉的正好是curAbSen, 需要特殊处理
+            if (next == _curAbSentenceFlow.value) {
+              _curAbSentenceFlow.value = current
+            }
           } else {
             // 无重叠：保存当前区间，移动到下一个
             merged.add(current)
@@ -709,16 +756,27 @@ class PlaybackConnection(private val context: Context) {
   fun deleteCurSentence() {
     val currentPos = _currentPositionSeconds.value
     // 逻辑优化：优先取当前复读选中的句子；如果没有，则取当前播放时间点所在的句子
-    val sen = _curAbSentenceFlow.value ?: findSentenceByTime(currentPos)
-    val sentences = _sentencesFlow.value
+    val sen = _curAbSentenceFlow.value ?: findSentenceByTime(currentPos) ?: return
+    val sentences = _sentencesFlow.value.toMutableList()
+    val index = sentences.indexOf(sen)
+    if (index != -1) {
+      if (repeatable.value && _curAbSentenceFlow.value != null) {
+        seekToNextSentence()
+      }
 
-    if (sen != null && sentences.contains(sen)) {
-      val list = sentences.toMutableList()
-      list.remove(sen)
-      _sentencesFlow.value = list
+      if (sentences.size > 1) {
+        sentences.remove(sen)
+        _sentencesFlow.value = sentences
+      } else {
+        //如果当前只有这一个句子, 不删除, 把它变成从头到尾
+        playerState.value?.also {
+          sen.start = 0f
+          sen.end = it.duration.toFloat() / 1000
+        }
+      }
 
       scope.launch {
-        saveSentencesToDisk(list)
+        saveSentencesToDisk(sentences)
       }
     }
   }

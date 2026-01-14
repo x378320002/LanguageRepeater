@@ -39,4 +39,16 @@ interface HistoryDao {
    */
   @Query("DELETE FROM history_table")
   suspend fun clearAll()
+
+  /**
+   * 获取历史记录总数
+   */
+  @Query("SELECT COUNT(*) FROM history_table")
+  suspend fun getCount(): Int
+
+  /**
+   * 删除最旧的记录 (按 lastPlayedTime 升序，删除第一条)
+   */
+  @Query("DELETE FROM history_table WHERE id = (SELECT id FROM history_table ORDER BY lastPlayedTime ASC LIMIT 1)")
+  suspend fun deleteOldest()
 }

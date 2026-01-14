@@ -13,7 +13,7 @@ import java.io.InputStreamReader
 import java.util.regex.Pattern
 
 object SrtParser {
-  private const val TAG = "SrtParser"
+  private const val TAG = "wangzixu_SrtParser"
   // 正则表达式匹配时间轴: 00:00:20,000 --> 00:00:24,400
   private val TIME_PATTERN = Pattern.compile("(\\d{1,2}):(\\d{1,2}):(\\d{1,2})[,\\.](\\d{3})")
 
@@ -120,21 +120,16 @@ object SrtParser {
    * 如果当前句内容与上一句相同，且时间连续，则合并它们
    */
   private fun addOrMerge(list: MutableList<SubtitleItem>, newItem: SubtitleItem) {
-    if (newItem.endTime - newItem.startTime < 500L) {
-      return
-    }
     if (list.isNotEmpty()) {
       val lastItem = list.last()
-      if (newItem.startTime - lastItem.endTime <= 50) {
-        if (lastItem.content == newItem.content || lastItem.content.contains(newItem.content)) {
-          lastItem.endTime = maxOf(lastItem.endTime, newItem.endTime)
-          return
-        }
-        if (newItem.content.contains(lastItem.content)) {
-          lastItem.content = newItem.content
-          lastItem.endTime = maxOf(lastItem.endTime, newItem.endTime)
-          return
-        }
+      if (lastItem.content == newItem.content || lastItem.content.contains(newItem.content)) {
+        lastItem.endTime = maxOf(lastItem.endTime, newItem.endTime)
+        return
+      }
+      if (newItem.content.contains(lastItem.content)) {
+        lastItem.content = newItem.content
+        lastItem.endTime = maxOf(lastItem.endTime, newItem.endTime)
+        return
       }
     }
     // 如果不满足合并条件，直接添加

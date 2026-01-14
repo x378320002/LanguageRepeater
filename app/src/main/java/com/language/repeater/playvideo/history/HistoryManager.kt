@@ -14,11 +14,19 @@ object HistoryManager {
 
   /**
    * 添加进历史记录 (自动更新时间)
+   * @param maxHistoryCount 最大历史记录条数，默认为100条
    */
-  suspend fun addHistory(context: Context, video: VideoEntity) = withContext(Dispatchers.IO) {
+  suspend fun addHistory(context: Context, video: VideoEntity, maxHistoryCount: Int = 100) = withContext(Dispatchers.IO) {
     // 覆盖原本的时间，更新为当前时间，这样它就会排到第一位
     val newRecord = video.copy(lastPlayedTime = System.currentTimeMillis())
     getDao(context).insertOrUpdate(newRecord)
+
+    // 检查数据库中总条目数是否超过指定限制
+    val currentCount = getDao(context).getCount()
+    if (currentCount > maxHistoryCount) {
+      // 删除最旧的记录
+      getDao(context).deleteOldest()
+    }
   }
 
   /**

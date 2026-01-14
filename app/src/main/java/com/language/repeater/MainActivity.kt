@@ -17,7 +17,7 @@ import androidx.navigation.createGraph
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.fragment.fragment
 import com.language.repeater.playvideo.PlayVideoFragment
-import com.language.repeater.playcore.PlaybackConnection.Companion.TAG
+import com.language.repeater.playcore.PlaybackCore.Companion.TAG
 import com.language.repeater.playcore.PlaybackService
 import com.language.repeater.test.TestFragment
 import kotlinx.serialization.Serializable

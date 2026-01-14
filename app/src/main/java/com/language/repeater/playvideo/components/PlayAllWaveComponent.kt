@@ -25,19 +25,19 @@ class PlayAllWaveComponent: BaseComponent<PlayVideoFragment>() {
   @UnstableApi
   override fun onCreateView() {
     super.onCreateView()
-    //全量波形图数据填充
-    fragment.binding.audioWaveView.visibility = View.VISIBLE
-    viewModel.allWaveDataFlow.onEach {
-      fragment.binding.audioWaveView.setPcmData(it)
-    }.launchIn(uiScope)
-
-    //波形进度的更新
-    fragment.viewModel.currentPosition.onEach {
-      //处理波形图的更新
-      val total = fragment.viewModel.getPlayer()?.duration
-      if (it >= 0 && total != null) {
-        fragment.binding.audioWaveView.updatePosition(it.toFloat() / total)
-      }
-    }.launchIn(uiScope)
+    ////全量波形图数据填充
+    //fragment.binding.audioWaveView.visibility = View.VISIBLE
+    //viewModel.allWaveDataFlow.onEach {
+    //  fragment.binding.audioWaveView.setPcmData(it)
+    //}.launchIn(uiScope)
+    //
+    ////波形进度的更新
+    //fragment.viewModel.currentPosition.onEach {
+    //  //处理波形图的更新
+    //  val total = fragment.viewModel.getPlayer()?.duration
+    //  if (it >= 0 && total != null) {
+    //    fragment.binding.audioWaveView.updatePosition(it.toFloat() / total)
+    //  }
+    //}.launchIn(uiScope)
   }
 }

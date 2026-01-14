@@ -14,4 +14,7 @@
   <string name="sleep_time_btn">定时关闭</string>
   <string name="sleep_time">倒计时: %1$s</string>
   <string name="sleep_time_title">定时器</string>
+
+  <string name="merge_pre">合并上一句</string>
+  <string name="merge_next">合并下一句</string>
 </resources>

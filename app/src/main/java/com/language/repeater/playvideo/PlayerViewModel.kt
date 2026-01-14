@@ -7,7 +7,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.C
 import androidx.media3.common.Player
-import com.language.repeater.playcore.PlaybackConnection
+import com.language.repeater.playcore.PlaybackCore
 import com.language.repeater.playvideo.history.HistoryManager
 import com.language.repeater.playvideo.model.VideoEntity
 import com.language.repeater.playvideo.model.toMediaItem
@@ -24,30 +24,30 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     private const val TAG = "wangzixu_PlayerViewModel"
   }
 
-  private val connection = PlaybackConnection.getInstance(application)
+  private val playbackCore = PlaybackCore.getInstance(application)
 
   // --- 1. 直接透传 Repository 的数据流 ---
-  val playerState = connection.playerState
-  val currentPositionSeconds = connection.currentPositionSeconds
-  val currentPosition = connection.currentPosition
-  val currentMediaItem = connection.currentMediaItem
-  val mediaItemCount = connection.mediaItemCount
-  val playlistRefreshEvent = connection.playlistRefreshEvent
-  val playerRepeatMode = connection.playerRepeatMode
+  val playerState = playbackCore.playerState
+  val currentPositionSeconds = playbackCore.currentPositionSeconds
+  val currentPosition = playbackCore.currentPosition
+  val currentMediaItem = playbackCore.currentMediaItem
+  val mediaItemCount = playbackCore.mediaItemCount
+  val playlistRefreshEvent = playbackCore.playlistRefreshEvent
+  val playerRepeatMode = playbackCore.playerRepeatMode
 
   // 业务数据流
-  val pcmLoaderStateFlow = connection.pcmLoaderStateFlow
-  val allWaveDataFlow = connection.allWaveDataFlow
-  val sentencesFlow = connection.sentencesFlow
-  val repeatable = connection.repeatable
-  val curAbSentenceFlow = connection.curAbSentenceFlow
+  val pcmLoaderStateFlow = playbackCore.pcmLoaderStateFlow
+  val allWaveDataFlow = playbackCore.allWaveDataFlow
+  val sentencesFlow = playbackCore.sentencesFlow
+  val repeatable = playbackCore.repeatable
+  val curAbSentenceFlow = playbackCore.curAbSentenceFlow
 
   // --- 2. UI 逻辑封装 (防抖状态) ---
   // 启动模式必须用SharingStarted.Eagerly, 否则.value取值会不对
   val isUiPlaying = combine(
-    connection.isPlaying,
-    connection.playbackState,
-    connection.playWhenReady
+    playbackCore.isPlaying,
+    playbackCore.playbackState,
+    playbackCore.playWhenReady
   ) { isPlaying, state, playWhenReady ->
     if (isPlaying) return@combine true
     if (state == Player.STATE_BUFFERING && playWhenReady) return@combine true
@@ -56,7 +56,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
   init {
     // ViewModel 初始化时，尝试连接/启动服务
-    connection.connect()
+    playbackCore.connect()
   }
 
   /**
@@ -65,7 +65,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
    */
   private fun ensureConnected(): Boolean {
     if (getPlayer() == null) {
-      connection.connect()
+      playbackCore.connect()
       // 这里可以根据需求决定是否弹 Toast
       // ToastUtil.toast("服务重启中...")
       return false
@@ -73,16 +73,16 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     return true
   }
 
-  fun getPlayer(): Player? = connection.playerState.value
+  fun getPlayer(): Player? = playbackCore.playerState.value
 
   fun togglePlayPause() {
     if (!ensureConnected()) return
 
     // 1. 从 Repository 获取最底层的真实数据
     // 注意：这里读取的是 connection.isPlaying.value，它是热的，绝对准确
-    val isRealPlaying = connection.isPlaying.value
-    val isBuffering = connection.playbackState.value == Player.STATE_BUFFERING
-    val playWhenReady = connection.playWhenReady.value
+    val isRealPlaying = playbackCore.isPlaying.value
+    val isBuffering = playbackCore.playbackState.value == Player.STATE_BUFFERING
+    val playWhenReady = playbackCore.playWhenReady.value
 
     // 2. 复用判断逻辑 (与 isUiPlaying 的计算逻辑保持一致，但数据源不同)
     // 含义：系统认为"应该播放"的状态
@@ -90,27 +90,27 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     // 3. 执行操作
     if (shouldBePlaying) {
-      connection.pause()
+      playbackCore.pause()
     } else {
-      connection.play()
+      playbackCore.play()
     }
   }
 
   fun play() {
-    connection.play()
+    playbackCore.play()
   }
 
   fun pause() {
-    connection.pause()
+    playbackCore.pause()
   }
 
   fun playItem(index: Int) {
-    connection.seekToDefaultPosition(index)
-    connection.play()
+    playbackCore.seekToDefaultPosition(index)
+    playbackCore.play()
   }
 
   fun deleteItem(index: Int) {
-    connection.removeMediaItem(index)
+    playbackCore.removeMediaItem(index)
   }
 
   fun addPlayList(list: List<VideoEntity>, isReplace: Boolean) {
@@ -129,19 +129,19 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
   }
 
   // 复读控制直接调 Repository
-  fun toggleRepeat() = connection.toggleRepeat()
-  fun seekToNextSentence() = connection.seekToNextSentence()
-  fun seekToPreviousSentence() = connection.seekToPreviousSentence()
+  fun toggleRepeat() = playbackCore.toggleRepeat()
+  fun seekToNextSentence() = playbackCore.seekToNextSentence()
+  fun seekToPreviousSentence() = playbackCore.seekToPreviousSentence()
 
   // 手动选字幕
-  fun onSubtitleSelected(uri: Uri) = connection.updateSubtitle(uri)
+  fun onSubtitleSelected(uri: Uri) = playbackCore.updateSubtitle(uri)
 
   fun updateAbSentence(position: Float) {
-    connection.updateAbSentenceByTime(position)
+    playbackCore.updateAbSentenceByTime(position)
   }
 
   fun loadSentenceData(forceUseVad: Boolean = false) {
-    connection.forceLoadCurrentSentences(forceUseVad)
+    playbackCore.forceLoadCurrentSentences(forceUseVad)
   }
 
   /**
@@ -149,20 +149,20 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
    * UI 层的"拆分"按钮点击时调用此方法
    */
   fun splitCurrentSentence() {
-    val result = connection.splitCurrentSentence()
+    val result = playbackCore.splitCurrentSentence()
 
     // 根据返回的枚举做具体提示
     when (result) {
-      PlaybackConnection.SplitResult.SUCCESS -> {
+      PlaybackCore.SplitResult.SUCCESS -> {
         ToastUtil.toast("分割成功")
       }
-      PlaybackConnection.SplitResult.NO_SENTENCE -> {
+      PlaybackCore.SplitResult.NO_SENTENCE -> {
         ToastUtil.toast("当前位置没有可分割的句子")
       }
-      PlaybackConnection.SplitResult.TOO_SHORT -> {
+      PlaybackCore.SplitResult.TOO_SHORT -> {
         ToastUtil.toast("当前句子太短，无法继续分割")
       }
-      PlaybackConnection.SplitResult.TOO_CLOSE_TO_EDGE -> {
+      PlaybackCore.SplitResult.TOO_CLOSE_TO_EDGE -> {
         ToastUtil.toast("距离句子边缘太近，无法分割")
       }
     }
@@ -171,8 +171,10 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
   /**
    * 用户拖动句子边界结束，触发保存和合并逻辑
    */
-  fun onSentenceDragEnd() {
-    connection.saveAndMergeSentences()
+  fun saveSentenceData() {
+    viewModelScope.launch {
+      playbackCore.saveSentencesToDisk()
+    }
   }
 
   // 2. 切换逻辑
@@ -185,11 +187,11 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
       Player.REPEAT_MODE_ONE -> Player.REPEAT_MODE_OFF
       else -> Player.REPEAT_MODE_OFF
     }
-    connection.setPlayerRepeatMode(nextMode)
+    playbackCore.setPlayerRepeatMode(nextMode)
   }
 
   fun deleteCurrentSentence() {
-    connection.deleteCurSentence()
+    playbackCore.deleteCurSentence()
   }
 
   // --- 历史记录 ---
@@ -199,7 +201,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
   // 播放历史记录中的某一项
   fun playHistoryItem(item: VideoEntity) {
     val player = getPlayer() ?: return
-    val currentId = connection.currentMediaItem.value?.mediaId
+    val currentId = playbackCore.currentMediaItem.value?.mediaId
 
     // 1. 如果就是当前播放的，直接跳转进度并播放
     if (item.id == currentId) {
@@ -272,12 +274,20 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     SleepTimerManager.startTimer(seconds) {
       // 时间到了执行的操作：调用 Repository 暂停播放
       // 注意：这里是在主线程回调的，且 connection.pause() 内部安全
-      connection.pause()
+      playbackCore.pause()
       ToastUtil.toast("睡眠定时已结束，停止播放")
     }
   }
 
   fun stopSleepTimer() {
     SleepTimerManager.stopTimer()
+  }
+
+  fun mergePreSentence() {
+    playbackCore.mergePre()
+  }
+
+  fun mergeNextSentence() {
+    playbackCore.mergeNext()
   }
 }

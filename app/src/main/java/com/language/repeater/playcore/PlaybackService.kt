@@ -1,7 +1,6 @@
 package com.language.repeater.playcore
 
 import android.app.PendingIntent
-import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
@@ -55,13 +54,13 @@ class PlaybackService : MediaSessionService() {
       override fun seekToNext() {
         Log.i(TAG, "interceptingPlayer seekToNext")
         // 转交给 Connection 处理业务逻辑 (跳到下一句)
-        PlaybackConnection.getInstance(this@PlaybackService).seekToNextSentence()
+        PlaybackCore.getInstance(this@PlaybackService).seekToNextSentence()
       }
 
       // 拦截耳机/蓝牙的"上一首"指令 (三击)
       override fun seekToPrevious() {
         Log.i(TAG, "interceptingPlayer seekToPrevious")
-        PlaybackConnection.getInstance(this@PlaybackService).seekToPreviousSentence()
+        PlaybackCore.getInstance(this@PlaybackService).seekToPreviousSentence()
       }
     }
 
@@ -89,7 +88,7 @@ class PlaybackService : MediaSessionService() {
 
     // 4. 【核心】把 Player 实例上交给单例 Connection
     // 这样 UI 层就能直接访问这个内存对象，零延迟
-    PlaybackConnection.getInstance(this).initPlayer(interceptingPlayer)
+    PlaybackCore.getInstance(this).initPlayer(interceptingPlayer)
 
     // 5. 【修正】使用 Builder 构建 Provider，这是设置 BitmapLoader 的正确方式
     val notificationProvider = DefaultMediaNotificationProvider.Builder(this).build()
@@ -119,7 +118,7 @@ class PlaybackService : MediaSessionService() {
 
   override fun onDestroy() {
     // 服务销毁，断开连接
-    PlaybackConnection.getInstance(this).initPlayer(null)
+    PlaybackCore.getInstance(this).initPlayer(null)
 
     mediaSession?.run {
       player.release()

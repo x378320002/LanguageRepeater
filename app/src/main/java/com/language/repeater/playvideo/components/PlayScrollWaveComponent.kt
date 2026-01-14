@@ -1,6 +1,5 @@
 package com.language.repeater.playvideo.components
 
-import android.util.Log
 import androidx.media3.common.util.UnstableApi
 import com.language.repeater.foundation.BaseComponent
 import com.language.repeater.playvideo.PlayVideoFragment
@@ -39,8 +38,10 @@ class PlayScrollWaveComponent: BaseComponent<PlayVideoFragment>() {
 
     //波形图ab句子
     viewModel.curAbSentenceFlow.onEach {
-      waveformView.curABSeg = it
-      waveformView.invalidate()
+      if (waveformView.curABSeg != it) {
+        waveformView.curABSeg = it
+        waveformView.invalidate()
+      }
     }.launchIn(uiScope)
 
     //滚动波形图数据填充
@@ -58,7 +59,6 @@ class PlayScrollWaveComponent: BaseComponent<PlayVideoFragment>() {
         waveformView.updatePosition(it)
       }
     }.launchIn(uiScope)
-
 
     waveformView.setOnCustomClickListener {
       viewModel.togglePlayPause()
@@ -110,7 +110,7 @@ class PlayScrollWaveComponent: BaseComponent<PlayVideoFragment>() {
         if (isPlayWhenStart) {
           viewModel.play()
         }
-        viewModel.onSentenceDragEnd()
+        viewModel.saveSentenceData()
       }
     })
   }

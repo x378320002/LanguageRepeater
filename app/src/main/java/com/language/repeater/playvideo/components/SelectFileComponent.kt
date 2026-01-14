@@ -1,6 +1,7 @@
 package com.language.repeater.playvideo.components
 
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.util.Log
@@ -16,13 +17,21 @@ import com.language.repeater.playvideo.PlayVideoFragment
 import com.language.repeater.subtitleStore
 import com.language.repeater.utils.DataStoreKey
 import com.language.repeater.utils.DataStoreKey.KEY_SUBTITLE_FOLDER
-import com.language.repeater.playvideo.playlist.PlaylistManager
 import com.language.repeater.pcm.FFmpegUtil
+import com.language.repeater.utils.FileUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+class LocalOnlyOpenMultipleDocuments : ActivityResultContracts.OpenMultipleDocuments() {
+  override fun createIntent(context: Context, input: Array<String>): Intent {
+    return super.createIntent(context, input).apply {
+      putExtra(Intent.EXTRA_LOCAL_ONLY, true)
+    }
+  }
+}
 
 /**
  * Date: 2025-11-17
@@ -31,8 +40,10 @@ import kotlinx.coroutines.withContext
  */
 class SelectFileComponent : BaseComponent<PlayVideoFragment>() {
   val openFileLauncher by lazy {
-    fragment.registerForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) {
+    fragment.registerForActivityResult(LocalOnlyOpenMultipleDocuments()) {
       Log.d(PlayVideoFragment.TAG, "OpenMultipleDocuments uris size = ${it.size}")
+      if (it.isEmpty()) return@registerForActivityResult
+
       fragment.showLoading()
       fScope.launch {
         val preferences = context.subtitleStore.data.firstOrNull()
@@ -42,7 +53,7 @@ class SelectFileComponent : BaseComponent<PlayVideoFragment>() {
         val infos = it.map { uri ->
           takePersistablePermission(uri)
 
-          val info = PlaylistManager.getFileInfo(context, uri)
+          val info = FileUtil.getFileInfo(context, uri)
           val prefKey = stringPreferencesKey(info.id)
           val sub = preferences?.get(prefKey)
           if (!sub.isNullOrEmpty()) {
@@ -76,7 +87,7 @@ class SelectFileComponent : BaseComponent<PlayVideoFragment>() {
         }
 
         withContext(Dispatchers.Main) {
-          fragment.viewModel.addPlayList(infos, false)
+          fragment.viewModel.addPlayList(infos, true)
           fragment.hideLoading()
         }
       }
@@ -146,13 +157,13 @@ class SelectFileComponent : BaseComponent<PlayVideoFragment>() {
   override fun onCreateView() {
     super.onCreateView()
     fragment.binding.selectFileBtn.setOnClickListener {
-//      val intent = Intent(Intent.ACTION_OPEN_DOCUMENT)
-//      intent.type = "*/*" // 必须设置为 */* 才能配合 MIME array
-//      intent.putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("audio/*", "video/*"))
-//      intent.putExtra(Intent.EXTRA_LOCAL_ONLY, true)
-//      intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
-//      intent.addCategory(Intent.CATEGORY_OPENABLE)
-//      resultLauncher.launch(null)
+      //val intent = Intent(Intent.ACTION_OPEN_DOCUMENT)
+      //intent.type = "*/*" // 必须设置为 */* 才能配合 MIME array
+      //intent.putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("audio/*", "video/*"))
+      //intent.putExtra(Intent.EXTRA_LOCAL_ONLY, true)
+      //intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
+      //intent.addCategory(Intent.CATEGORY_OPENABLE)
+      //resultLauncher.launch(intent)
       openFileLauncher.launch(arrayOf("audio/*", "video/*"))
     }
 
@@ -161,7 +172,10 @@ class SelectFileComponent : BaseComponent<PlayVideoFragment>() {
     }
 
     fragment.binding.selectSubtitle.setOnClickListener {
-      openSubtitleLauncher.launch(arrayOf("text/*"))
+      openSubtitleLauncher.launch(arrayOf(
+        "text/*",
+        "application/x-subrip",
+      ))
     }
   }
 

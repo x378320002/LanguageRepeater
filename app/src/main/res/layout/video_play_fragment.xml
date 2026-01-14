@@ -193,8 +193,21 @@
       android:layout_marginStart="5dp"
       android:layout_width="wrap_content"
       android:layout_height="wrap_content"/>
-  </com.google.android.flexbox.FlexboxLayout>
 
+    <Button
+      android:id="@+id/merge_pre"
+      android:text="@string/merge_pre"
+      android:layout_marginStart="5dp"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"/>
+
+    <Button
+      android:id="@+id/merge_next"
+      android:text="@string/merge_next"
+      android:layout_marginStart="5dp"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"/>
+  </com.google.android.flexbox.FlexboxLayout>
 
 
 <!--  <com.lottiefiles.dotlottie.core.widget.DotLottieAnimation-->
