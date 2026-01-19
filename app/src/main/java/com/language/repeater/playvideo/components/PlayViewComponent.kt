@@ -1,6 +1,7 @@
 package com.language.repeater.playvideo.components
 
 import android.graphics.Color
+import android.widget.TextView
 import androidx.annotation.Dimension
 import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi
@@ -16,12 +17,16 @@ import kotlinx.coroutines.flow.onEach
  * Description:
  */
 class PlayViewComponent: BaseComponent<PlayVideoFragment>() {
-
   override fun onCreateView() {
     super.onCreateView()
 
     fragment.viewModel.playerState.onEach {
       fragment.binding.exoVideoView.player = it
+    }.launchIn(uiScope)
+
+    fragment.viewModel.currentMediaItem.onEach {
+      val title = it?.mediaMetadata?.title ?: "UnKnown"
+      fragment.binding.tvTitle.text = title
     }.launchIn(uiScope)
 
     setSubtitleStyle()

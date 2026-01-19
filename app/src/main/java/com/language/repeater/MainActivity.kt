@@ -12,6 +12,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
 import androidx.navigation.NavOptions
 import androidx.navigation.createGraph
 import androidx.navigation.fragment.NavHostFragment
@@ -53,11 +54,11 @@ class MainActivity : AppCompatActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     enableEdgeToEdge(
-      statusBarStyle = SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT),
-      navigationBarStyle = SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
+      statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
+      navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT)
     )
     setContentView(R.layout.activity_nav_host)
-
+    WindowCompat.setDecorFitsSystemWindows(window, false)
     val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
     val navController = navHostFragment.navController
     navController.graph = navController.createGraph(startDestination = PlayVideoPageKey) {
@@ -71,7 +72,7 @@ class MainActivity : AppCompatActivity() {
       //Add other fragment destinations similarly.
     }
 
-    checkAndStartService()
+    //checkAndStartService()
   }
 
   private fun checkAndStartService() {

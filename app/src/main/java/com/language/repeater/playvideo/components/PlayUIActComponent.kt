@@ -33,7 +33,7 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
   override fun onCreateView() {
     super.onCreateView()
     fragment.binding.voiceRepeatSwitch.setOnCheckedChangeListener { _, checked ->
-      fragment.viewModel.toggleRepeat()
+      fragment.viewModel.toggleRepeat(checked)
     }
     fragment.binding.voiceNext.setOnClickListener(this)
     fragment.binding.voicePrevious.setOnClickListener(this)
@@ -47,10 +47,6 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
     fragment.binding.clearTemp.setOnClickListener(this)
     fragment.binding.mergePre.setOnClickListener(this)
     fragment.binding.mergeNext.setOnClickListener(this)
-
-    fragment.viewModel.repeatable.onEach {
-      fragment.binding.voiceRepeatSwitch.isChecked = it
-    }.launchIn(uiScope)
 
     fragment.viewModel.playerRepeatMode.onEach {
       val text = when (it) {

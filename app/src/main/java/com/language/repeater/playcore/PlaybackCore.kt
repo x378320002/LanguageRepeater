@@ -8,6 +8,8 @@ import android.content.ComponentName
 import android.content.Context
 import android.net.Uri
 import android.util.Log
+import androidx.datastore.dataStore
+import androidx.datastore.preferences.core.edit
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
@@ -16,6 +18,8 @@ import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
+import com.language.repeater.MyApp
+import com.language.repeater.dataStore
 import com.language.repeater.sentence.LocalVoiceSentenceDetector
 import com.language.repeater.pcm.PCMSegmentLoader
 import com.language.repeater.pcm.PcmDataUtil
@@ -29,6 +33,8 @@ import com.language.repeater.playvideo.model.toMediaItem
 import com.language.repeater.playvideo.playlist.PlaylistManager
 import com.language.repeater.pcm.FFmpegUtil
 import com.language.repeater.sentence.SentenceStoreUtil
+import com.language.repeater.utils.DataStoreKey.KEY_CURRENT_PLAYLIST
+import com.language.repeater.utils.DataStoreKey.KEY_IS_REPEATED
 import com.language.repeater.utils.SrtParser
 import com.language.repeater.utils.ToastUtil
 import kotlinx.coroutines.CoroutineScope
@@ -41,7 +47,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -106,6 +114,7 @@ class PlaybackCore(private val context: Context) {
   private val _repeatable = MutableStateFlow(false)
   val repeatable = _repeatable.asStateFlow()
 
+  //当前播放的AB句子
   private val _curAbSentenceFlow = MutableStateFlow<Sentence?>(null)
   val curAbSentenceFlow = _curAbSentenceFlow.asStateFlow()
 
@@ -137,7 +146,30 @@ class PlaybackCore(private val context: Context) {
   }
 
   init {
-    setupBusinessLogic()
+    // 复读循环核心逻辑
+    // 只要 播放中 + 开启复读 + 有目标句子，就检测是否越界
+    //combine(
+    //  _isPlaying,
+    //  _currentPositionSeconds,
+    //  _repeatable,
+    //  _curAbSentenceFlow
+    //) { isPlaying, posSec, isRepeat, abSentence ->
+    //  if (isPlaying && isRepeat && abSentence != null) {
+    //    if (posSec >= abSentence.end) {
+    //      // 越界：跳回开始
+    //      seekTo((abSentence.start * 1000).toLong())
+    //    }
+    //  }
+    //  // 非复读模式下，如果有 UI 需要高亮当前句子，可以在这里计算并暴露 flow
+    //}.launchIn(scope)
+
+    scope.launch {
+      val repeat = context.dataStore.data.map {
+        it[KEY_IS_REPEATED]
+      }.firstOrNull() ?: false
+      Log.i(TAG, "init _repeatable:$repeat")
+      _repeatable.value = repeat
+    }
   }
 
   // 连接逻辑，但只为了启动 Service
@@ -207,6 +239,8 @@ class PlaybackCore(private val context: Context) {
     }
     mediaController = null
     controllerFuture = null
+    progressJob?.cancel()
+    progressJob = null
   }
 
   /**
@@ -244,24 +278,17 @@ class PlaybackCore(private val context: Context) {
     }
   }
 
-  // 设置业务逻辑监听 (复读检测、自动解析)
-  private fun setupBusinessLogic() {
-    // 复读循环核心逻辑
-    // 只要 播放中 + 开启复读 + 有目标句子，就检测是否越界
-    combine(
-      _isPlaying,
-      _currentPositionSeconds,
-      _repeatable,
-      _curAbSentenceFlow
-    ) { isPlaying, posSec, isRepeat, abSentence ->
-      if (isPlaying && isRepeat && abSentence != null) {
-        if (posSec >= abSentence.end) {
-          // 越界：跳回开始
-          seekTo((abSentence.start * 1000).toLong())
+  var progressJob: Job? = null
+  private fun startProgressTicker() {
+    progressJob?.cancel()
+    progressJob = scope.launch {
+      while (isActive) {
+        if (_playerState.value?.isPlaying == true) {
+          updatePosition(true)
         }
+        delay(16)
       }
-      // 非复读模式下，如果有 UI 需要高亮当前句子，可以在这里计算并暴露 flow
-    }.launchIn(scope)
+    }
   }
 
   // --- 核心业务：媒体切换处理 ---
@@ -308,14 +335,12 @@ class PlaybackCore(private val context: Context) {
       //}
 
       // 加载句子 (优先缓存)
-      launch {
-        val cachedSentences = SentenceStoreUtil.loadData(context, currentId)
-        if (!cachedSentences.isNullOrEmpty()) {
-          _sentencesFlow.value = cachedSentences
-          Log.i(TAG, "parseUriToPcm Loaded cached sentences: ${cachedSentences.size}")
-        } else {
-          loadSentences(item)
-        }
+      val cachedSentences = SentenceStoreUtil.loadData(context, currentId)
+      if (!cachedSentences.isNullOrEmpty()) {
+        _sentencesFlow.value = cachedSentences
+        Log.i(TAG, "parseUriToPcm Loaded cached sentences: ${cachedSentences.size}")
+      } else {
+        loadSentences(item)
       }
 
       withContext(Dispatchers.Main) {
@@ -355,34 +380,21 @@ class PlaybackCore(private val context: Context) {
   }
 
   // 复读控制
-  fun toggleRepeat() {
-    _repeatable.value = !_repeatable.value
-    updateAbSentenceByTime(_currentPositionSeconds.value)
+  fun toggleRepeat(checked: Boolean) {
+    val repeat = checked
+    _repeatable.value = repeat
+    scope.launch {
+      context.dataStore.edit { prefs ->
+        prefs[KEY_IS_REPEATED] = repeat
+      }
+    }
   }
 
   fun seekToNextSentence() {
     val list = _sentencesFlow.value
     if (list.isEmpty()) return
 
-    //val curSen = _curAbSentenceFlow.value ?: findSentenceByTime(_currentPositionSeconds.value)
-    //
-    //if (curSen != null) {
-    //  val index = list.indexOf(curSen)
-    //  // 如果是最后一句，切换到第0个
-    //  if (index == list.lastIndex) {
-    //    seekToSentence(list[0])
-    //  } else {
-    //    // 找下一句
-    //    val nextIndex = (index + 1).coerceAtMost(list.lastIndex)
-    //    seekToSentence(list[nextIndex])
-    //  }
-    //} else {
-    //
-    //}
-
-    // 当前没在任何句子里，找最近的下一句
-    val nextSen =
-      list.firstOrNull {
+    val nextSen = list.firstOrNull {
         it.start > _currentPositionSeconds.value
       } ?: list.firstOrNull()
     if (nextSen != null) {
@@ -394,25 +406,20 @@ class PlaybackCore(private val context: Context) {
     val list = _sentencesFlow.value
     if (list.isEmpty()) return
 
-    val curSen = _curAbSentenceFlow.value ?: findSentenceByTime(_currentPositionSeconds.value)
-
-    if (curSen != null) {
-      val index = list.indexOf(curSen)
-      if (index == 0) {
-        //if (hasPreviousMediaItem()) {
-        //  seekToPreviousMediaItem()
-        //} else {
-        //}
-        seekToSentence(list.first())
-      } else {
-        val prevIndex = (index - 1).coerceAtLeast(0)
-        seekToSentence(list[prevIndex])
-      }
-    } else {
-      // 当前没在句子里，找最近的上一句
-      val prevSen = list.lastOrNull { it.end < _currentPositionSeconds.value } ?: list.firstOrNull()
-      prevSen?.let { seekToSentence(it) }
+    val nextSen = list.lastOrNull {
+      it.end < _currentPositionSeconds.value
+    } ?: list.lastOrNull()
+    if (nextSen != null) {
+      seekToSentence(nextSen)
     }
+    //val curSen = _curAbSentenceFlow.value ?: return
+    //val index = list.indexOf(curSen)
+    //if (index == 0) {
+    //  seekToSentence(list.last())
+    //} else {
+    //  val prevIndex = (index - 1).coerceAtLeast(0)
+    //  seekToSentence(list[prevIndex])
+    //}
   }
 
   // --- 手动更新字幕 ---
@@ -439,15 +446,6 @@ class PlaybackCore(private val context: Context) {
     }
     // 稍微加一点偏移量(如10ms)，防止seek精度问题导致还在上一句末尾
     seekTo((sentence.start * 1000).toLong())
-  }
-
-  fun updateAbSentenceByTime(currentSec: Float) {
-    if (_repeatable.value) {
-      // 开启时，立即锁定当前句子
-      _curAbSentenceFlow.value = findSentenceByTime(currentSec) ?: _sentencesFlow.value.lastOrNull()
-    } else {
-      _curAbSentenceFlow.value = null
-    }
   }
 
   private fun findSentenceByTime(currentSec: Float): Sentence? {
@@ -508,12 +506,6 @@ class PlaybackCore(private val context: Context) {
       reason: Int,
     ) {
       updatePosition()
-
-      //Log.i(TAG, "onPositionDiscontinuity reason: $reason")
-      // 【新增】如果是用户手动 Seek 导致的跳变，保存一下
-      //if (reason == Player.DISCONTINUITY_REASON_SEEK) {
-      //  saveCurrentState()
-      //}
     }
 
     // 监听播放器内部模式变化 (比如用户通过通知栏改了模式)
@@ -533,22 +525,23 @@ class PlaybackCore(private val context: Context) {
     updatePosition()
   }
 
-  private fun updatePosition() {
-    val pos = _playerState.value?.currentPosition ?: 0L
-    _currentPosition.value = pos
-    _currentPositionSeconds.value = pos.toFloat() / 1000f
-    //Log.i(TAG, "====== updatePosition _currentPositionSeconds:${_currentPositionSeconds.value}, pos:${pos}")
-  }
+  fun updatePosition(checkAb: Boolean = false, seekPosition: Long? = null) {
+    val pos = seekPosition ?: (_playerState.value?.currentPosition ?: 0L)
 
-  private fun startProgressTicker() {
-    scope.launch {
-      while (isActive) {
-        if (_playerState.value?.isPlaying == true) {
-          updatePosition()
-        }
-        delay(16)
+    _currentPosition.value = pos
+    val curSec = pos.toFloat() / 1000f
+    _currentPositionSeconds.value = curSec
+
+    val curAbSen = _curAbSentenceFlow.value
+    if (checkAb && curAbSen != null && _repeatable.value) {
+      if (_playerState.value?.isPlaying == true && curSec >= curAbSen.end) {
+        seekTo((curAbSen.start * 1000).toLong())
       }
+    } else {
+      val curSen = findSentenceByTime(curSec)
+      _curAbSentenceFlow.value = curSen
     }
+    //Log.i(TAG, "====== updatePosition _currentPositionSeconds:${_currentPositionSeconds.value}, pos:${pos}")
   }
 
   /**
@@ -610,7 +603,6 @@ class PlaybackCore(private val context: Context) {
    */
   fun splitCurrentSentence(): SplitResult {
     val currentPos = _currentPositionSeconds.value
-    // 逻辑优化：优先取当前复读选中的句子；如果没有，则取当前播放时间点所在的句子
     val targetSentence = _curAbSentenceFlow.value
 
     if (targetSentence == null) {

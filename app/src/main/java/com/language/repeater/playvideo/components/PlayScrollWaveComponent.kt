@@ -44,6 +44,12 @@ class PlayScrollWaveComponent: BaseComponent<PlayVideoFragment>() {
       }
     }.launchIn(uiScope)
 
+    fragment.viewModel.repeatable.onEach {
+      fragment.binding.voiceRepeatSwitch.isChecked = it
+      waveformView.isRepeated = it
+      waveformView.invalidate()
+    }.launchIn(uiScope)
+
     //滚动波形图数据填充
     viewModel.pcmLoaderStateFlow.onEach {loader ->
       if (loader != null) {
@@ -79,11 +85,12 @@ class PlayScrollWaveComponent: BaseComponent<PlayVideoFragment>() {
       }
 
       override fun onSeeking(position: Float) {
+        viewModel.updatePosition(position)
       }
 
       override fun onSeekEnd(position: Float) {
         val player = viewModel.getPlayer() ?: return
-        viewModel.updateAbSentence(position)
+        //viewModel.updateAbSentence(position)
         player.seekTo((position * 1000).toLong())
         if (isPlayWhenStart) {
           viewModel.play()

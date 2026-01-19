@@ -129,15 +129,15 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
   }
 
   // 复读控制直接调 Repository
-  fun toggleRepeat() = playbackCore.toggleRepeat()
+  fun toggleRepeat(checked: Boolean) = playbackCore.toggleRepeat(checked)
   fun seekToNextSentence() = playbackCore.seekToNextSentence()
   fun seekToPreviousSentence() = playbackCore.seekToPreviousSentence()
 
   // 手动选字幕
   fun onSubtitleSelected(uri: Uri) = playbackCore.updateSubtitle(uri)
 
-  fun updateAbSentence(position: Float) {
-    playbackCore.updateAbSentenceByTime(position)
+  fun updatePosition(position: Float) {
+    playbackCore.updatePosition(false, (position * 1000).toLong())
   }
 
   fun loadSentenceData(forceUseVad: Boolean = false) {

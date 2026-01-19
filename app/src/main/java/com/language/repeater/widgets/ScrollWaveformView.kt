@@ -11,9 +11,11 @@ import android.util.Log
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.View
+import com.language.repeater.R
 import com.language.repeater.pcm.PCMSegmentLoader
 import com.language.repeater.sentence.Sentence
 import com.language.repeater.pcm.WaveformPoint
+import com.language.repeater.utils.ResourcesUtil
 import com.language.repeater.utils.ResourcesUtil.toDp
 import com.language.repeater.utils.TimeFormatUtil
 import kotlinx.coroutines.CoroutineScope
@@ -50,9 +52,6 @@ class ScrollWaveformView @JvmOverloads constructor(
    * 这个数字越大, 整体波形越长, 播放时移动的越快
    */
   val pixelsPerSecond: Float = 50f
-
-  /** 背景颜色 */
-  val waveBackgroundColor: Int = 0xFFF5F5F5.toInt()
 
   // ========== 拖动相关接口 ==========
 
@@ -95,67 +94,86 @@ class ScrollWaveformView @JvmOverloads constructor(
   }
 
   // ========== 画笔 ==========
-  //未播放画笔
-  private val waveformPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-    color = 0xFF1565C0.toInt()
+  /** 背景颜色 */
+  val waveBackgroundColor: Int = ResourcesUtil.getColor(R.color.wave_bg)
+
+  //波形图边缘颜色
+  private val waveOutlinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    color = ResourcesUtil.getColor(R.color.wave_outline)
     style = Paint.Style.STROKE
     strokeWidth = 1f
     strokeCap = Paint.Cap.ROUND
   }
 
-  // 用于绘制填充区域的画笔
-  private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+  // 用于绘制未播放画笔
+  private val unPlayPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
     style = Paint.Style.FILL
-    color = 0xFF64B5F6.toInt()
-    //alpha = 1 // 0-255
+    color = ResourcesUtil.getColor(R.color.wave_unplay)
   }
 
-  //已经播放画笔
-  private val playedWaveformPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-    color = 0xFF90CAF9.toInt()
-    style = Paint.Style.STROKE
-    strokeWidth = 1f
-    strokeCap = Paint.Cap.ROUND
-  }
-
-  // 用于绘制填充区域的画笔
-  private val playedFillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+  // 用于绘制已经播放的填充区域的画笔
+  private val playedPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
     style = Paint.Style.FILL
-    color = 0xFF90CAF9.toInt()
+    color = ResourcesUtil.getColor(R.color.wave_played)
     alpha = 180 // 0-255
   }
 
   //进度条
-  private val progressLinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-    color = 0xFFFF5722.toInt()
+  private val indicatorLinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    color = ResourcesUtil.getColor(R.color.wave_indicator)
     strokeWidth = 1f.toDp()
     strokeCap = Paint.Cap.ROUND
   }
 
   //voice开始指示器
-  private val voiceStartPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-    color = 0xFFFF0000.toInt()
+  private val senStartPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    color = ResourcesUtil.getColor(R.color.wave_sentence_begin_sign)
     strokeWidth = 1f.toDp()
   }
-
   //voice结束指示器
-  private val voiceEndPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-    color = 0xFF0000FF.toInt()
+  private val senEndPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    color = ResourcesUtil.getColor(R.color.wave_sentence_end_sign)
+    strokeWidth = 1f.toDp()
+  }
+  //voice开始指示器
+  private val curSenStartPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    color = ResourcesUtil.getColor(R.color.wave_sentence_begin_sign_cur)
+    strokeWidth = 1f.toDp()
+  }
+  //voice结束指示器
+  private val curSenEndPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    color = ResourcesUtil.getColor(R.color.wave_sentence_end_sign_cur)
     strokeWidth = 1f.toDp()
   }
 
   //中线画笔
   private val centerLinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-    color = 0x20000000
+    color = ResourcesUtil.getColor(R.color.wave_center_line)
     strokeWidth = 1f
   }
 
   //draw时间的画笔
   val timeTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-    color = 0xFF666666.toInt()
+    color = ResourcesUtil.getColor(R.color.wave_time)
     textSize = 30f
     textAlign = Paint.Align.CENTER
   }
+
+  val abBgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    style = Paint.Style.FILL
+    color = ResourcesUtil.getColor(R.color.wave_ab_bg)
+  }
+
+  val abTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    color = ResourcesUtil.getColor(R.color.wave_ab_text)
+    textSize = 10f.toDp()
+    textAlign = Paint.Align.CENTER
+    typeface = Typeface.DEFAULT_BOLD
+  }
+
+  val abBgRadius = 6f.toDp()
+  var abTextOffsetY = 0f
+  var aby = 0f
 
   private val path = Path()
 
@@ -342,6 +360,46 @@ class ScrollWaveformView @JvmOverloads constructor(
     }
   }
 
+  private val midData = mutableListOf<WaveformPoint>()
+  private fun prepareWaveData2(curSen: Sentence?) {
+    val loader = pcmLoader ?: return
+    val startTime = visibleStartTime
+    val endTime = visibleEndTime
+    val curTime = currentTime
+    val startWindow = (startTime / cacheWindowSize).toInt()
+    val endWindow = (endTime / cacheWindowSize).toInt()
+    leftData.clear()
+    midData.clear()
+    rightData.clear()
+    if (curSen == null) {
+      for (windowIndex in startWindow..endWindow) {
+        val windowData = loader.waveformCache[windowIndex] ?: continue
+        windowData.forEachIndexed { index, point ->
+          val time = point.time
+          if (time in startTime..endTime) {
+            leftData.add(point)
+          }
+        }
+      }
+    } else {
+      for (windowIndex in startWindow..endWindow) {
+        val windowData = loader.waveformCache[windowIndex] ?: continue
+        windowData.forEachIndexed { index, point ->
+          val time = point.time
+          if (time in startTime..endTime) {
+            if (time < curSen.start) {
+              leftData.add(point)
+            } else if (time > curSen.end) {
+              rightData.add(point)
+            } else {
+              midData.add(point)
+            }
+          }
+        }
+      }
+    }
+  }
+
   /**
    * 清理旧缓存
    */
@@ -462,8 +520,9 @@ class ScrollWaveformView @JvmOverloads constructor(
     // 准备已播放和未播放的波形数据
     // 分别绘制已播放和未播放的波形
     prepareWaveData()
-    drawWaveformSection(canvas, leftData, waveformPaint, playedFillPaint)
-    drawWaveformSection(canvas, rightData, waveformPaint, fillPaint)
+    drawWaveformSection(canvas, leftData, waveOutlinePaint, playedPaint)
+    //drawWaveformSection(canvas, midData, waveOutlinePaint, unPlayPaint)
+    drawWaveformSection(canvas, rightData, waveOutlinePaint, unPlayPaint)
 
     // 绘制中心线
     canvas.drawLine(0f, centerY, width.toFloat(), centerY, centerLinePaint)
@@ -483,28 +542,22 @@ class ScrollWaveformView @JvmOverloads constructor(
       return
     }
     sentences?.forEach { seg ->
-      drawSignPoint(canvas, seg.start, voiceStartPaint)
-      drawSignPoint(canvas, seg.end, voiceEndPaint)
+      if (seg == curABSeg) {
+        drawSignPoint(canvas, seg.start, curSenStartPaint)
+        drawSignPoint(canvas, seg.end, curSenEndPaint)
+      } else {
+        drawSignPoint(canvas, seg.start, senStartPaint)
+        drawSignPoint(canvas, seg.end, senEndPaint)
+      }
     }
-    curABSeg?.also {
-      drawAB(canvas, it.start, "A")
-      drawAB(canvas, it.end, "B")
-    }
-  }
 
-  val abBgRadius = 6f.toDp()
-  val abBgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-    style = Paint.Style.FILL
-    color = 0xFF00FFFF.toInt()
+    if (isRepeated && curABSeg != null) {
+      curABSeg?.also {
+        drawAB(canvas, it.start, "A")
+        drawAB(canvas, it.end, "B")
+      }
+    }
   }
-  val abTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-    color = 0xFFFF0000.toInt()
-    textSize = 10f.toDp()
-    textAlign = Paint.Align.CENTER
-    typeface = Typeface.DEFAULT_BOLD
-  }
-  var abTextOffsetY = 0f
-  var aby = 0f
 
   private fun drawAB(canvas: Canvas, time: Float, text: String) {
     //if (time < visibleStartTime || time > visibleEndTime) {
@@ -545,6 +598,10 @@ class ScrollWaveformView @JvmOverloads constructor(
     paint: Paint,
     fillPaint: Paint,
   ) {
+    if (waveformData.isEmpty()) {
+      return
+    }
+
     val centerY = height / 2f
     val maxAmplitude = 32767f
     val availableHeight = height / 2f * 0.9f
@@ -608,7 +665,7 @@ class ScrollWaveformView @JvmOverloads constructor(
     timeTextPaint.textAlign = Paint.Align.LEFT
     canvas.drawText(
       TimeFormatUtil.formatTime(0f),
-      0f,
+      10f,
       textSize,
       timeTextPaint
     )
@@ -616,13 +673,13 @@ class ScrollWaveformView @JvmOverloads constructor(
     timeTextPaint.textAlign = Paint.Align.RIGHT
     canvas.drawText(
       TimeFormatUtil.formatTime(totalDuration),
-      width.toFloat(),
+      width.toFloat() - 10,
       textSize,
       timeTextPaint
     )
 
     // 绘制进度线
-    canvas.drawLine(centerX, textSize + 10, centerX, height.toFloat(), progressLinePaint)
+    canvas.drawLine(centerX, textSize + 10, centerX, height.toFloat(), indicatorLinePaint)
   }
 
   /**
@@ -662,6 +719,7 @@ class ScrollWaveformView @JvmOverloads constructor(
   )
 
   var curABSeg: Sentence? = null
+  var isRepeated = false
 
   /**
    * 检查点击是否在AB边界上
