@@ -380,8 +380,8 @@ class PlaybackCore(private val context: Context) {
   }
 
   // 复读控制
-  fun toggleRepeat(checked: Boolean) {
-    val repeat = checked
+  fun toggleRepeat() {
+    val repeat = !_repeatable.value
     _repeatable.value = repeat
     scope.launch {
       context.dataStore.edit { prefs ->
@@ -395,7 +395,7 @@ class PlaybackCore(private val context: Context) {
     if (list.isEmpty()) return
 
     val nextSen = list.firstOrNull {
-        it.start > _currentPositionSeconds.value
+        it.start > _currentPositionSeconds.value + 0.05f
       } ?: list.firstOrNull()
     if (nextSen != null) {
       seekToSentence(nextSen)
@@ -422,6 +422,11 @@ class PlaybackCore(private val context: Context) {
     //}
   }
 
+  fun backToSentenceHead() {
+    val sentence = _curAbSentenceFlow.value ?: return
+    seekTo((sentence.start * 1000).toLong())
+  }
+
   // --- 手动更新字幕 ---
   // 这是 UI 唯一需要调用的“更换字幕”接口
   fun updateSubtitle(subtitleUri: Uri) {
@@ -444,7 +449,6 @@ class PlaybackCore(private val context: Context) {
     if (_repeatable.value) {
       _curAbSentenceFlow.value = sentence
     }
-    // 稍微加一点偏移量(如10ms)，防止seek精度问题导致还在上一句末尾
     seekTo((sentence.start * 1000).toLong())
   }
 

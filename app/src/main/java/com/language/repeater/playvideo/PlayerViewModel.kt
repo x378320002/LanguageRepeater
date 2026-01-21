@@ -34,6 +34,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
   val mediaItemCount = playbackCore.mediaItemCount
   val playlistRefreshEvent = playbackCore.playlistRefreshEvent
   val playerRepeatMode = playbackCore.playerRepeatMode
+  //val isPlayingState = playbackCore.isPlaying
 
   // 业务数据流
   val pcmLoaderStateFlow = playbackCore.pcmLoaderStateFlow
@@ -129,9 +130,10 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
   }
 
   // 复读控制直接调 Repository
-  fun toggleRepeat(checked: Boolean) = playbackCore.toggleRepeat(checked)
+  fun toggleRepeat() = playbackCore.toggleRepeat()
   fun seekToNextSentence() = playbackCore.seekToNextSentence()
   fun seekToPreviousSentence() = playbackCore.seekToPreviousSentence()
+  fun backToSentenceHead() = playbackCore.backToSentenceHead()
 
   // 手动选字幕
   fun onSubtitleSelected(uri: Uri) = playbackCore.updateSubtitle(uri)

@@ -20,6 +20,7 @@ import com.language.repeater.foundation.BaseFragment
 import com.language.repeater.playvideo.components.PlayAllWaveComponent
 import com.language.repeater.playvideo.components.PlayScrollWaveComponent
 import com.language.repeater.playvideo.components.PlayUIActComponent
+import com.language.repeater.playvideo.components.PlayUIShowComponent
 import com.language.repeater.playvideo.components.PlayViewComponent
 import com.language.repeater.playvideo.components.SelectFileComponent
 
@@ -42,6 +43,7 @@ class PlayVideoFragment: BaseFragment(), Player.Listener  {
     addComponent(PlayScrollWaveComponent())
     addComponent(PlayAllWaveComponent())
     addComponent(PlayUIActComponent())
+    addComponent(PlayUIShowComponent())
   }
 
   override fun onCreateView(
@@ -61,18 +63,6 @@ class PlayVideoFragment: BaseFragment(), Player.Listener  {
       val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
       v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
       insets
-    }
-
-    bindClickAction()
-  }
-
-  private fun bindClickAction() {
-    //binding.goTestPage.setOnClickListener {
-    //  //startActivity(Intent(requireContext(), TestActivity::class.java))
-    //  findNavController().navigate(TestPageKey, defaultNavOptions)
-    //}
-
-    binding.testAction.setOnClickListener {
     }
   }
 }

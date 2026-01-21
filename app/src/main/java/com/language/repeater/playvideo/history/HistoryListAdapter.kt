@@ -83,15 +83,12 @@ class HistoryListAdapter(
         binding.ivCover.tag = item.uri
         binding.ivCover.load(item.uri) {
           crossfade(true)
-          placeholder(R.color.PastelGreen)
-          error(androidx.media3.session.R.drawable.media_session_service_notification_ic_music_note)
-          transformations(RoundedCornersTransformation(COVER_RADIUS))
-          scale(Scale.FILL)
+          error(R.drawable.ic_music)
         }
       }
     } else {
       binding.ivCover.tag = null
-      binding.ivCover.setImageResource(androidx.media3.session.R.drawable.media_session_service_notification_ic_music_note)
+      binding.ivCover.setImageResource(R.drawable.ic_music)
     }
   }
 }

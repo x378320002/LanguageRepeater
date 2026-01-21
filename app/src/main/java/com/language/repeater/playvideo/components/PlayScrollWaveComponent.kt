@@ -44,12 +44,6 @@ class PlayScrollWaveComponent: BaseComponent<PlayVideoFragment>() {
       }
     }.launchIn(uiScope)
 
-    fragment.viewModel.repeatable.onEach {
-      fragment.binding.voiceRepeatSwitch.isChecked = it
-      waveformView.isRepeated = it
-      waveformView.invalidate()
-    }.launchIn(uiScope)
-
     //滚动波形图数据填充
     viewModel.pcmLoaderStateFlow.onEach {loader ->
       if (loader != null) {

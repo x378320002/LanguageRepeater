@@ -11,20 +11,22 @@
 
   <!-- 1. 封面区域 (包含时长角标) -->
   <!-- 使用 FrameLayout 包裹，以便叠加时长文字 -->
-  <FrameLayout
+  <androidx.cardview.widget.CardView
     android:layout_marginStart="15dp"
-    android:layout_width="90dp"
+    app:cardElevation="0dp"
+    app:cardCornerRadius="8dp"
+    app:cardBackgroundColor="@color/main_bg_color"
+    android:layout_width="50dp"
     android:layout_height="50dp">
     <!-- 封面图 -->
     <ImageView
       android:id="@+id/iv_cover"
       android:layout_width="match_parent"
       android:layout_height="match_parent"
-      android:scaleType="fitCenter"
-      android:background="#F0F0F0"
-      android:src="@drawable/media_session_service_notification_ic_music_note"
+      android:scaleType="centerInside"
+      android:src="@drawable/ic_music"
       tools:ignore="ContentDescription" />
-  </FrameLayout>
+  </androidx.cardview.widget.CardView>
 
   <!-- 2. 信息区域 -->
   <LinearLayout
@@ -40,8 +42,8 @@
       android:id="@+id/tv_title"
       android:layout_width="match_parent"
       android:layout_height="wrap_content"
-      android:textSize="15sp"
-      android:textColor="#333333"
+      android:textSize="14sp"
+      android:textColor="@color/main_text_color"
       android:maxLines="2"
       android:ellipsize="end"
       android:lineSpacingExtra="2dp"
@@ -63,7 +65,7 @@
       android:layout_gravity="center"
       android:scaleType="center"
       android:src="@drawable/more_vert"
-      app:tint="#999999"
+      app:tint="@color/ic_tint_color"
       tools:ignore="ContentDescription" />
   </FrameLayout>
 </LinearLayout>

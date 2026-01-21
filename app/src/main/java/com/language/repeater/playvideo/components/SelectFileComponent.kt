@@ -156,27 +156,27 @@ class SelectFileComponent : BaseComponent<PlayVideoFragment>() {
 
   override fun onCreateView() {
     super.onCreateView()
-    fragment.binding.selectFileBtn.setOnClickListener {
-      //val intent = Intent(Intent.ACTION_OPEN_DOCUMENT)
-      //intent.type = "*/*" // 必须设置为 */* 才能配合 MIME array
-      //intent.putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("audio/*", "video/*"))
-      //intent.putExtra(Intent.EXTRA_LOCAL_ONLY, true)
-      //intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
-      //intent.addCategory(Intent.CATEGORY_OPENABLE)
-      //resultLauncher.launch(intent)
-      openFileLauncher.launch(arrayOf("audio/*", "video/*"))
-    }
-
-    fragment.binding.selectSubtitleDir.setOnClickListener {
-      openDirLauncher.launch(null)
-    }
-
-    fragment.binding.selectSubtitle.setOnClickListener {
-      openSubtitleLauncher.launch(arrayOf(
-        "text/*",
-        "application/x-subrip",
-      ))
-    }
+    //fragment.binding.selectFileBtn.setOnClickListener {
+    //  //val intent = Intent(Intent.ACTION_OPEN_DOCUMENT)
+    //  //intent.type = "*/*" // 必须设置为 */* 才能配合 MIME array
+    //  //intent.putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("audio/*", "video/*"))
+    //  //intent.putExtra(Intent.EXTRA_LOCAL_ONLY, true)
+    //  //intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
+    //  //intent.addCategory(Intent.CATEGORY_OPENABLE)
+    //  //resultLauncher.launch(intent)
+    //  openFileLauncher.launch(arrayOf("audio/*", "video/*"))
+    //}
+    //
+    //fragment.binding.selectSubtitleDir.setOnClickListener {
+    //  openDirLauncher.launch(null)
+    //}
+    //
+    //fragment.binding.selectSubtitle.setOnClickListener {
+    //  openSubtitleLauncher.launch(arrayOf(
+    //    "text/*",
+    //    "application/x-subrip",
+    //  ))
+    //}
   }
 
   // 核心方法：申请持久权限

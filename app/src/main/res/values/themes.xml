@@ -11,7 +11,7 @@
   <style name="Base.Theme.LanguageRepeater" parent="Theme.Material3.DynamicColors.DayNight.NoActionBar">
     <!-- Customize your light theme here. -->
     <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
-    <item name="android:windowBackground">@color/main_background</item>
+    <item name="android:windowBackground">@color/main_bg_color</item>
     <item name="android:windowAnimationStyle">@style/ActivityAnimation</item>
   </style>
 
@@ -42,7 +42,7 @@
   </style>
 
   <!-- 定义 Dialog 主题 -->
-  <style name="CustomBottomSheetDialogTheme" parent="ThemeOverlay.Material3.BottomSheetDialog">
+  <style name="CustomBottomSheetDialogTheme" parent="ThemeOverlay.Material3.DayNight.BottomSheetDialog">
     <!-- 应用动画 -->
     <item name="android:windowAnimationStyle">@style/BottomSheetAnimation</item>
     <item name="android:backgroundDimAmount">0.4</item>

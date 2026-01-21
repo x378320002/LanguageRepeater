@@ -3,6 +3,7 @@ package com.language.repeater.widgets
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Canvas
+import android.graphics.CornerPathEffect
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.Typeface
@@ -95,7 +96,7 @@ class ScrollWaveformView @JvmOverloads constructor(
 
   // ========== 画笔 ==========
   /** 背景颜色 */
-  val waveBackgroundColor: Int = ResourcesUtil.getColor(R.color.wave_bg)
+  val waveBackgroundColor: Int = ResourcesUtil.getColor(R.color.main_bg_color_2)
 
   //波形图边缘颜色
   private val waveOutlinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -123,6 +124,7 @@ class ScrollWaveformView @JvmOverloads constructor(
     color = ResourcesUtil.getColor(R.color.wave_indicator)
     strokeWidth = 1f.toDp()
     strokeCap = Paint.Cap.ROUND
+    pathEffect = CornerPathEffect(3f.toDp()) // 👈 圆角半径
   }
 
   //voice开始指示器
@@ -161,11 +163,11 @@ class ScrollWaveformView @JvmOverloads constructor(
 
   val abBgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
     style = Paint.Style.FILL
-    color = ResourcesUtil.getColor(R.color.wave_ab_bg)
+    color = ResourcesUtil.getColor(R.color.wave_ab_sign_bg)
   }
 
   val abTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-    color = ResourcesUtil.getColor(R.color.wave_ab_text)
+    color = ResourcesUtil.getColor(R.color.wave_ab_sign_text)
     textSize = 10f.toDp()
     textAlign = Paint.Align.CENTER
     typeface = Typeface.DEFAULT_BOLD
@@ -361,7 +363,8 @@ class ScrollWaveformView @JvmOverloads constructor(
   }
 
   private val midData = mutableListOf<WaveformPoint>()
-  private fun prepareWaveData2(curSen: Sentence?) {
+  private fun prepareWaveData2() {
+    val curSen: Sentence? = curABSeg
     val loader = pcmLoader ?: return
     val startTime = visibleStartTime
     val endTime = visibleEndTime
@@ -538,9 +541,9 @@ class ScrollWaveformView @JvmOverloads constructor(
    * 绘制每句话的开始和结束点
    */
   private fun drawSentenceSign(canvas: Canvas) {
-    if (leftData.isEmpty() || rightData.isEmpty()) {
-      return
-    }
+    //if (leftData.isEmpty() || rightData.isEmpty()) {
+    //  return
+    //}
     sentences?.forEach { seg ->
       if (seg == curABSeg) {
         drawSignPoint(canvas, seg.start, curSenStartPaint)
@@ -680,6 +683,15 @@ class ScrollWaveformView @JvmOverloads constructor(
 
     // 绘制进度线
     canvas.drawLine(centerX, textSize + 10, centerX, height.toFloat(), indicatorLinePaint)
+    //val triangleHeight = 21f
+    //val triangleHalfWidth = 14f
+    //val path = Path().apply {
+    //  moveTo(centerX - triangleHalfWidth, height.toFloat())
+    //  lineTo(centerX + triangleHalfWidth, height.toFloat())
+    //  lineTo(centerX, height.toFloat() - triangleHeight)
+    //  close()
+    //}
+    //canvas.drawPath(path, indicatorLinePaint)
   }
 
   /**

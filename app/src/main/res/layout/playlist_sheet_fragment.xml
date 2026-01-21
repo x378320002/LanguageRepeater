@@ -3,23 +3,24 @@
   xmlns:android="http://schemas.android.com/apk/res/android"
   xmlns:app="http://schemas.android.com/apk/res-auto"
   xmlns:tools="http://schemas.android.com/tools"
+  android:background="@drawable/bg_bottom_sheet"
   android:layout_width="match_parent"
   android:layout_height="500dp">
   <LinearLayout
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:background="@drawable/bg_bottom_sheet">
+    android:orientation="vertical">
     <!-- bg_bottom_sheet 是一个只有左上右上圆角的白色背景 -->
 
     <!-- 顶部拖拽条 (Handle) -->
-    <View
+    <androidx.cardview.widget.CardView
       android:layout_width="40dp"
       android:layout_height="4dp"
       android:layout_gravity="center_horizontal"
       android:layout_marginTop="12dp"
-      android:background="#E0E0E0"
-      android:backgroundTint="#CCCCCC" />
+      app:cardCornerRadius="2dp"
+      app:cardElevation="0dp"
+      app:cardBackgroundColor="@color/ic_tint_color" />
 
     <!-- 标题栏 -->
     <LinearLayout
@@ -32,9 +33,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="播放列表"
-        android:textSize="18sp"
-        android:textStyle="bold"
-        android:textColor="#333333"
+        android:textSize="16sp"
+        android:textColor="@color/main_text_color"
         tools:ignore="HardcodedText" />
 
       <TextView
@@ -42,8 +42,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="8dp"
-        android:textSize="14sp"
-        android:textColor="#999999"
+        android:textSize="16sp"
+        android:textColor="@color/main_text_color"
         tools:text="(5)" />
     </LinearLayout>
 

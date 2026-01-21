@@ -32,103 +32,127 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
   @UnstableApi
   override fun onCreateView() {
     super.onCreateView()
-    fragment.binding.voiceRepeatSwitch.setOnCheckedChangeListener { _, checked ->
-      fragment.viewModel.toggleRepeat(checked)
-    }
-    fragment.binding.voiceNext.setOnClickListener(this)
-    fragment.binding.voicePrevious.setOnClickListener(this)
-    fragment.binding.reloadSentence.setOnClickListener(this)
-    fragment.binding.splitSentence.setOnClickListener(this)
-    fragment.binding.deleteSentence.setOnClickListener(this)
-    fragment.binding.historyList.setOnClickListener(this)
+    fragment.binding.voiceRepeatSwitch.setOnClickListener(this)
+    fragment.binding.playPauseBtn.setOnClickListener(this)
+    fragment.binding.seekPreSentence.setOnClickListener(this)
+    fragment.binding.seekNextSentence.setOnClickListener(this)
+    fragment.binding.backSentenceHead.setOnClickListener(this)
     fragment.binding.playList.setOnClickListener(this)
-    fragment.binding.repeatMode.setOnClickListener(this)
-    fragment.binding.sleepTimeBtn.setOnClickListener(this)
-    fragment.binding.clearTemp.setOnClickListener(this)
-    fragment.binding.mergePre.setOnClickListener(this)
-    fragment.binding.mergeNext.setOnClickListener(this)
+    //fragment.binding.voiceNext.setOnClickListener(this)
+    //fragment.binding.voicePrevious.setOnClickListener(this)
+    //fragment.binding.reloadSentence.setOnClickListener(this)
+    //fragment.binding.splitSentence.setOnClickListener(this)
+    //fragment.binding.deleteSentence.setOnClickListener(this)
+    //fragment.binding.historyList.setOnClickListener(this)
+    //fragment.binding.playList.setOnClickListener(this)
+    //fragment.binding.repeatMode.setOnClickListener(this)
+    //fragment.binding.sleepTimeBtn.setOnClickListener(this)
+    //fragment.binding.clearTemp.setOnClickListener(this)
+    //fragment.binding.mergePre.setOnClickListener(this)
+    //fragment.binding.mergeNext.setOnClickListener(this)
 
-    fragment.viewModel.playerRepeatMode.onEach {
-      val text = when (it) {
-        Player.REPEAT_MODE_ONE -> {
-          ResourcesUtil.getString(R.string.repeat_one)
-        }
-
-        Player.REPEAT_MODE_ALL -> {
-          ResourcesUtil.getString(R.string.repeat_all)
-        }
-
-        else -> {
-          ResourcesUtil.getString(R.string.repeat_off)
-        }
-      }
-      fragment.binding.repeatMode.text = text
-    }.launchIn(uiScope)
+    //fragment.viewModel.playerRepeatMode.onEach {
+    //  val text = when (it) {
+    //    Player.REPEAT_MODE_ONE -> {
+    //      ResourcesUtil.getString(R.string.repeat_one)
+    //    }
+    //
+    //    Player.REPEAT_MODE_ALL -> {
+    //      ResourcesUtil.getString(R.string.repeat_all)
+    //    }
+    //
+    //    else -> {
+    //      ResourcesUtil.getString(R.string.repeat_off)
+    //    }
+    //  }
+    //  fragment.binding.repeatMode.text = text
+    //}.launchIn(uiScope)
   }
 
   override fun onClick(v: View?) {
     when (v) {
-      fragment.binding.mergePre -> {
-        fragment.viewModel.mergePreSentence()
+      fragment.binding.voiceRepeatSwitch -> {
+        fragment.viewModel.toggleRepeat()
       }
-
-      fragment.binding.mergeNext -> {
-        fragment.viewModel.mergeNextSentence()
+      fragment.binding.playPauseBtn -> {
+        fragment.viewModel.togglePlayPause()
       }
-
-      fragment.binding.sleepTimeBtn -> {
-        val sheet = SleepTimerSheetFragment()
-        sheet.show(fragment.childFragmentManager, "SleepTimer")
+      fragment.binding.seekPreSentence -> {
+        fragment.viewModel.seekToPreviousSentence()
       }
-
-      fragment.binding.repeatMode -> {
-        fragment.viewModel.togglePlayerRepeatMode()
+      fragment.binding.seekNextSentence -> {
+        fragment.viewModel.seekToNextSentence()
       }
-
+      fragment.binding.backSentenceHead -> {
+        fragment.viewModel.backToSentenceHead()
+      }
       fragment.binding.playList -> {
-        val sheet = PlaylistSheetFragment()
-        sheet.show(fragment.childFragmentManager, "PlaylistSheet")
-      }
-
-      fragment.binding.historyList -> {
         val sheet = HistorySheetFragment()
         sheet.show(fragment.childFragmentManager, "HistorySheet")
       }
-
-      fragment.binding.voiceNext -> {
-        fragment.viewModel.seekToNextSentence()
-      }
-
-      fragment.binding.voicePrevious -> {
-        fragment.viewModel.seekToPreviousSentence()
-      }
-
-      fragment.binding.reloadSentence -> {
-        autoLoadSentences()
-      }
-
-      fragment.binding.splitSentence -> {
-        splitCurSen()
-      }
-
-      fragment.binding.deleteSentence -> {
-        deleteCurSen()
-      }
-
-      fragment.binding.clearTemp -> {
-        val player = fragment.viewModel.getPlayer() ?: return
-        // 必须在主线程提取数据
-        val items = mutableListOf<String>()
-        for (i in 0 until player.mediaItemCount) {
-          items.add(player.getMediaItemAt(i).mediaId)
-        }
-        fScope.launch {
-          FFmpegUtil.clearTempData(context, items)
-          SentenceStoreUtil.clearTempData(context, items)
-          ToastUtil.toast("清除成功")
-        }
-      }
     }
+     //when (v) {
+    //  fragment.binding.mergePre -> {
+    //    fragment.viewModel.mergePreSentence()
+    //  }
+    //
+    //  fragment.binding.mergeNext -> {
+    //    fragment.viewModel.mergeNextSentence()
+    //  }
+    //
+    //  fragment.binding.sleepTimeBtn -> {
+    //    val sheet = SleepTimerSheetFragment()
+    //    sheet.show(fragment.childFragmentManager, "SleepTimer")
+    //  }
+    //
+    //  fragment.binding.repeatMode -> {
+    //    fragment.viewModel.togglePlayerRepeatMode()
+    //  }
+    //
+    //  fragment.binding.playList -> {
+    //    val sheet = PlaylistSheetFragment()
+    //    sheet.show(fragment.childFragmentManager, "PlaylistSheet")
+    //  }
+    //
+    //  fragment.binding.historyList -> {
+    //    val sheet = HistorySheetFragment()
+    //    sheet.show(fragment.childFragmentManager, "HistorySheet")
+    //  }
+    //
+    //  fragment.binding.voiceNext -> {
+    //    fragment.viewModel.seekToNextSentence()
+    //  }
+    //
+    //  fragment.binding.voicePrevious -> {
+    //    fragment.viewModel.seekToPreviousSentence()
+    //  }
+    //
+    //  fragment.binding.reloadSentence -> {
+    //    autoLoadSentences()
+    //  }
+    //
+    //  fragment.binding.splitSentence -> {
+    //    splitCurSen()
+    //  }
+    //
+    //  fragment.binding.deleteSentence -> {
+    //    deleteCurSen()
+    //  }
+    //
+    //  fragment.binding.clearTemp -> {
+    //    val player = fragment.viewModel.getPlayer() ?: return
+    //    // 必须在主线程提取数据
+    //    val items = mutableListOf<String>()
+    //    for (i in 0 until player.mediaItemCount) {
+    //      items.add(player.getMediaItemAt(i).mediaId)
+    //    }
+    //    fScope.launch {
+    //      FFmpegUtil.clearTempData(context, items)
+    //      SentenceStoreUtil.clearTempData(context, items)
+    //      ToastUtil.toast("清除成功")
+    //    }
+    //  }
+    //}
   }
 
   private fun autoLoadSentences() {

@@ -7,7 +7,6 @@
   <color name="green1">#008577</color>
 
   <color name="transparent">#00000000</color>
-  <color name="main_background">#FFFFFFFF</color>
   <color name="exo_bottom_bar_background" tools:ignore="PrivateResource">#00000000</color>
   <color name="exo_black_opacity_60" tools:ignore="PrivateResource">#55000000</color>
 
@@ -17,9 +16,10 @@
   <color name="PlayListTextColorSelected">#008577</color>
   <color name="PlayListTextColor">#333333</color>
 
-  <color name="surface">#12140e</color>
-  <color name="surface_2">#383a32</color>
-  <color name="surface_3">#386663</color>
+  <color name="main_text_color">#CACACA</color>
+  <color name="main_bg_color">#1C1D1D</color>
+  <color name="main_bg_color_2">#383939</color>
+  <color name="main_bg_color_3">#595B5B</color>
   <color name="on_surface">#e2e3d8</color>
   <color name="on_surface_2">#c5c8ba</color>
   <color name="outline">#8f9285</color>
@@ -27,17 +27,30 @@
   <color name="button">#4c662b</color>
   <color name="button_2">#cdeda3</color>
 
-  <color name="wave_bg">#2f312a</color>
-  <color name="wave_outline">#37645F</color>
-  <color name="wave_played">#233D3B</color>
-  <color name="wave_unplay">#2F5654</color>
-  <color name="wave_indicator">#D19F9C</color>
+  <!--波形图相关-->
+  <color name="wave_outline">#46847F</color>
+  <color name="wave_played">#25403E</color>
+  <color name="wave_unplay">#346260</color>
+  <!--<color name="wave_outline">#A6A5A5</color>-->
+  <!--<color name="wave_played">#565656</color>-->
+  <!--<color name="wave_unplay">#7F7F7F</color>-->
+  <color name="wave_indicator">#12B0FF</color>
   <color name="wave_time">#9A9B99</color>
   <color name="wave_sentence_begin_sign">#797878</color>
   <color name="wave_sentence_end_sign">#797878</color>
   <color name="wave_sentence_begin_sign_cur">#FFE100</color>
   <color name="wave_sentence_end_sign_cur">#FFE100</color>
   <color name="wave_center_line">#666565</color>
-  <color name="wave_ab_bg">#009688</color>
-  <color name="wave_ab_text">#FBFBFB</color>
+  <color name="wave_ab_sign_bg">#009688</color>
+  <color name="wave_ab_sign_text">#CACACA</color>
+
+  <color name="ic_tint_color">#E2E2E2</color>
+  <color name="ic_tint_color_selected">#46847F</color>
+  <color name="ic_tint_color_pressed">#8D8D8D</color>
+
+  <color name="ic_tint_color_sub">#929292</color>
+
+  <color name="ic_tint_bg">#393939</color>
+  <color name="ic_tint_bg_pressed">#252525</color>
+  <color name="bg_selected">#252525</color>
 </resources>
