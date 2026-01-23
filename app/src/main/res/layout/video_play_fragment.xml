@@ -71,7 +71,7 @@
     android:layout_marginTop="10dp"
     app:cardCornerRadius="8dp"
     android:layout_width="0dp"
-    android:layout_height="140dp">
+    android:layout_height="120dp">
 
     <com.language.repeater.widgets.AllWaveformView
       android:id="@+id/audio_wave_view"
@@ -92,18 +92,187 @@
       />
   </androidx.cardview.widget.CardView>
 
-  <ImageView
-    android:id="@+id/play_pause_btn"
-    app:layout_constraintTop_toBottomOf="@+id/audio_wave_view_wrapper"
+  <com.google.android.flexbox.FlexboxLayout
+    android:id="@+id/edit_layout"
+    android:visibility="gone"
+    tools:visibility="visible"
+    android:layout_marginStart="15dp"
+    android:layout_marginEnd="15dp"
+    android:background="@drawable/bg_edit_layout"
+    app:layout_constraintTop_toBottomOf="@id/audio_wave_view_wrapper"
     app:layout_constraintStart_toStartOf="parent"
     app:layout_constraintEnd_toEndOf="parent"
-    android:layout_marginTop="80dp"
+    android:layout_marginTop="8dp"
+    app:flexDirection="row"
+    app:flexWrap="wrap"
+    app:justifyContent="space_evenly"
+    android:orientation="horizontal"
+    android:layout_width="0dp"
+    android:layout_height="wrap_content">
+
+    <LinearLayout
+      android:id="@+id/merge_pre"
+      android:orientation="vertical"
+      android:gravity="center"
+      android:layout_width="50dp"
+      android:layout_height="60dp">
+      <ImageView
+        android:src="@drawable/place_hold"
+        android:scaleType="centerInside"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:tint="@color/color_tint_edit_selector"
+        tools:ignore="ContentDescription" />
+      <TextView
+        android:layout_marginTop="4dp"
+        android:gravity="center"
+        android:textColor="@color/color_tint_edit_selector"
+        android:textSize="10dp"
+        android:text="@string/merge_pre"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:maxLines="2"
+        tools:ignore="SpUsage" />
+    </LinearLayout>
+
+
+    <LinearLayout
+      android:id="@+id/merge_next"
+      android:orientation="vertical"
+      android:gravity="center"
+      android:layout_width="50dp"
+      android:layout_height="60dp">
+      <ImageView
+        android:src="@drawable/place_hold"
+        android:scaleType="centerInside"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:tint="@color/color_tint_edit_selector"
+        tools:ignore="ContentDescription" />
+      <TextView
+        android:gravity="center"
+        android:layout_marginTop="4dp"
+        android:textColor="@color/color_tint_edit_selector"
+        android:textSize="10dp"
+        android:text="@string/merge_next"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:maxLines="2"
+        tools:ignore="SpUsage" />
+    </LinearLayout>
+
+    <LinearLayout
+      android:id="@+id/delete_sentence"
+      android:orientation="vertical"
+      android:gravity="center"
+      android:layout_width="50dp"
+      android:layout_height="60dp">
+      <ImageView
+        android:src="@drawable/place_hold"
+        android:scaleType="centerInside"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:tint="@color/color_tint_edit_selector"
+        tools:ignore="ContentDescription" />
+      <TextView
+        android:layout_marginTop="4dp"
+        android:gravity="center"
+        android:textColor="@color/color_tint_edit_selector"
+        android:textSize="10dp"
+        android:text="@string/delete_sentence"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:maxLines="2"
+        tools:ignore="SpUsage" />
+    </LinearLayout>
+
+    <LinearLayout
+      android:id="@+id/split_sentence"
+      android:orientation="vertical"
+      android:gravity="center"
+      android:layout_width="50dp"
+      android:layout_height="60dp">
+      <ImageView
+        android:src="@drawable/place_hold"
+        android:scaleType="centerInside"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:tint="@color/color_tint_edit_selector"
+        tools:ignore="ContentDescription" />
+      <TextView
+        android:layout_marginTop="4dp"
+        android:gravity="center"
+        android:textColor="@color/color_tint_edit_selector"
+        android:textSize="10dp"
+        android:text="@string/split_sentence"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:maxLines="2"
+        tools:ignore="SpUsage" />
+    </LinearLayout>
+
+  </com.google.android.flexbox.FlexboxLayout>
+
+  <androidx.appcompat.widget.LinearLayoutCompat
+    android:id="@+id/sub_actions_layout"
+    android:orientation="horizontal"
+    android:layout_marginTop="5dp"
+    app:layout_goneMarginTop="15dp"
+    app:layout_constraintTop_toBottomOf="@id/edit_layout"
+    app:layout_constraintStart_toStartOf="parent"
+    app:layout_constraintEnd_toEndOf="parent"
+    android:gravity="center"
+    android:layout_width="0dp"
+    android:layout_height="60dp">
+
+    <ImageView
+      android:id="@+id/edit_switch"
+      android:layout_width="60dp"
+      android:layout_height="match_parent"
+      android:scaleType="centerInside"
+      android:src="@drawable/place_hold"
+      app:tint="@color/color_tint_selected_selector"
+      tools:ignore="ContentDescription,HardcodedText" />
+
+    <ImageView
+      android:id="@+id/play_speed"
+      android:layout_width="60dp"
+      android:layout_height="match_parent"
+      android:scaleType="centerInside"
+      android:src="@drawable/place_hold"
+      app:tint="@color/color_tint_selected_selector"
+      tools:ignore="ContentDescription,HardcodedText" />
+
+    <ImageView
+      android:id="@+id/voice_repeat_switch"
+      android:layout_width="60dp"
+      android:layout_height="match_parent"
+      android:scaleType="centerInside"
+      android:src="@drawable/ic_ab_selector"
+      app:tint="@color/color_tint_selected_selector"
+      tools:ignore="ContentDescription,HardcodedText" />
+
+    <ImageView
+      android:id="@+id/sub_action_more"
+      android:layout_width="60dp"
+      android:layout_height="match_parent"
+      android:scaleType="centerInside"
+      android:src="@drawable/more_vert"
+      app:tint="@color/color_tint_selected_selector"
+      tools:ignore="ContentDescription,HardcodedText" />
+  </androidx.appcompat.widget.LinearLayoutCompat>
+
+  <ImageView
+    android:id="@+id/play_pause_btn"
+    app:layout_constraintTop_toBottomOf="@+id/sub_actions_layout"
+    app:layout_constraintStart_toStartOf="parent"
+    app:layout_constraintEnd_toEndOf="parent"
     android:src="@drawable/ic_play_pause_selector"
-    android:background="@drawable/bg_round_selector"
+    android:background="@drawable/bg_play_pause"
     android:scaleType="center"
     android:layout_width="80dp"
     android:layout_height="80dp"
-    app:tint="@color/ic_tint_selector"
+    app:tint="@color/ic_tint_color"
     tools:ignore="ContentDescription" />
 
   <ImageView
@@ -117,7 +286,7 @@
     android:layout_width="0dp"
     android:layout_height="0dp"
     android:paddingStart="10dp"
-    app:tint="@color/ic_tint_selector"
+    app:tint="@color/color_tint_selector"
     tools:ignore="ContentDescription,RtlSymmetry" />
 
   <ImageView
@@ -131,7 +300,7 @@
     android:layout_width="0dp"
     android:layout_height="0dp"
     android:paddingEnd="10dp"
-    app:tint="@color/ic_tint_selector"
+    app:tint="@color/color_tint_selector"
     tools:ignore="ContentDescription,RtlSymmetry" />
 
   <ImageView
@@ -145,7 +314,7 @@
     android:layout_width="0dp"
     android:layout_height="0dp"
     android:paddingStart="10dp"
-    app:tint="@color/ic_tint_selector"
+    app:tint="@color/color_tint_selector"
     tools:ignore="ContentDescription,RtlSymmetry" />
 
   <ImageView
@@ -159,25 +328,8 @@
     android:layout_width="0dp"
     android:layout_height="0dp"
     android:paddingEnd="10dp"
-    app:tint="@color/ic_tint_selector"
+    app:tint="@color/color_tint_selector"
     tools:ignore="ContentDescription,RtlSymmetry" />
-
-  <FrameLayout
-    android:id="@+id/voice_repeat_switch"
-    app:layout_constraintStart_toStartOf="@id/play_pause_btn"
-    app:layout_constraintEnd_toEndOf="@id/play_pause_btn"
-    app:layout_constraintBottom_toTopOf="@id/play_pause_btn"
-    android:layout_width="80dp"
-    android:layout_height="50dp">
-    <ImageView
-      android:layout_gravity="center"
-      android:layout_width="wrap_content"
-      android:layout_height="wrap_content"
-      android:scaleType="centerInside"
-      android:src="@drawable/ic_ab_selector"
-      app:tint="@color/ic_tint_selector_ab"
-      tools:ignore="ContentDescription,HardcodedText" />
-  </FrameLayout>
 
 <!--  <com.lottiefiles.dotlottie.core.widget.DotLottieAnimation-->
 <!--    android:id="@+id/lottie"-->

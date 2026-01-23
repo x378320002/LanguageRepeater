@@ -27,7 +27,7 @@ abstract class AppDatabase : RoomDatabase() {
           "repeater_database.db" // 数据库文件名
         )
           // 暂时允许在主线程查询（仅用于测试，正式版建议删掉 fallbackToDestructiveMigration）
-          // .fallbackToDestructiveMigration() // 如果改了表结构不想处理迁移，可以用这个暴力清除旧数据
+           .fallbackToDestructiveMigration(true) // 如果改了表结构不想处理迁移，可以用这个暴力清除旧数据
           .build()
         INSTANCE = instance
         instance

@@ -101,7 +101,7 @@ class SelectFileComponent : BaseComponent<PlayVideoFragment>() {
         takePersistablePermission(uri)
         fScope.launch {
           context.dataStore.edit {
-            it[DataStoreKey.KEY_SUBTITLE_FOLDER] = uri.toString()
+            it[KEY_SUBTITLE_FOLDER] = uri.toString()
           }
         }
       }

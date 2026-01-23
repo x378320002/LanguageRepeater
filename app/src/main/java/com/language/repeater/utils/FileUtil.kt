@@ -198,5 +198,16 @@ object FileUtil {
 
     return VideoEntity(id, uri.toString(), name, 0L, null)
   }
+
+  fun isSafUriAvailable(context: Context, uri: Uri): Boolean {
+    return try {
+      context.contentResolver.openInputStream(uri)?.use {
+        true
+      } ?: false
+    } catch (e: Exception) {
+      false
+    }
+  }
+
 }
 

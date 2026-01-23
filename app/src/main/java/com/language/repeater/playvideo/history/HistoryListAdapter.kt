@@ -10,10 +10,6 @@ import androidx.recyclerview.widget.RecyclerView
 import coil3.load
 import coil3.request.crossfade
 import coil3.request.error
-import coil3.request.placeholder
-import coil3.request.transformations
-import coil3.size.Scale
-import coil3.transform.RoundedCornersTransformation
 import com.language.repeater.R
 import com.language.repeater.databinding.HistorySheetItemBinding
 import com.language.repeater.playvideo.model.VideoEntity

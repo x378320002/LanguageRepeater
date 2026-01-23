@@ -10,7 +10,7 @@
   <color name="exo_bottom_bar_background" tools:ignore="PrivateResource">#00000000</color>
   <color name="exo_black_opacity_60" tools:ignore="PrivateResource">#55000000</color>
 
-  <color name="PastelOrange">#FFFFD6A5</color>
+  <color name="PastelOrawhite_20nge">#FFFFD6A5</color>
   <color name="PastelGreen">#86A9A2</color>
 
   <color name="PlayListTextColorSelected">#008577</color>
@@ -20,6 +20,7 @@
   <color name="main_bg_color">#1C1D1D</color>
   <color name="main_bg_color_2">#383939</color>
   <color name="main_bg_color_3">#595B5B</color>
+  <color name="bottom_dialog_bg_color">#383939</color>
   <color name="on_surface">#e2e3d8</color>
   <color name="on_surface_2">#c5c8ba</color>
   <color name="outline">#8f9285</color>
@@ -45,10 +46,11 @@
   <color name="wave_ab_sign_text">#CACACA</color>
 
   <color name="ic_tint_color">#E2E2E2</color>
-  <color name="ic_tint_color_selected">#46847F</color>
+  <color name="ic_tint_color_selected">#009688</color>
   <color name="ic_tint_color_pressed">#8D8D8D</color>
 
   <color name="ic_tint_color_sub">#929292</color>
+  <color name="ic_tint_color_edit">#009688</color>
 
   <color name="ic_tint_bg">#393939</color>
   <color name="ic_tint_bg_pressed">#252525</color>

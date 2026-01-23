@@ -8,7 +8,6 @@ import android.content.ComponentName
 import android.content.Context
 import android.net.Uri
 import android.util.Log
-import androidx.datastore.dataStore
 import androidx.datastore.preferences.core.edit
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -18,7 +17,7 @@ import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
-import com.language.repeater.MyApp
+import com.language.repeater.R
 import com.language.repeater.dataStore
 import com.language.repeater.sentence.LocalVoiceSentenceDetector
 import com.language.repeater.pcm.PCMSegmentLoader
@@ -33,7 +32,6 @@ import com.language.repeater.playvideo.model.toMediaItem
 import com.language.repeater.playvideo.playlist.PlaylistManager
 import com.language.repeater.pcm.FFmpegUtil
 import com.language.repeater.sentence.SentenceStoreUtil
-import com.language.repeater.utils.DataStoreKey.KEY_CURRENT_PLAYLIST
 import com.language.repeater.utils.DataStoreKey.KEY_IS_REPEATED
 import com.language.repeater.utils.SrtParser
 import com.language.repeater.utils.ToastUtil
@@ -46,9 +44,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -593,49 +589,56 @@ class PlaybackCore(private val context: Context) {
   }
 
   /**
-   * 分割结果枚举
-   */
-  enum class SplitResult {
-    SUCCESS,
-    NO_SENTENCE,        // 没找到当前句子
-    TOO_SHORT,          // 句子本身太短
-    TOO_CLOSE_TO_EDGE   // 分割点离边缘太近
-  }
-
-  /**
    * 分割当前句子 (迁移后的逻辑)
+   *     // 根据返回的枚举做具体提示
+   *     when (result) {
+   *       PlaybackCore.SplitResult.SUCCESS -> {
+   *         ToastUtil.toast("分割成功")
+   *       }
+   *       PlaybackCore.SplitResult.NO_SENTENCE -> {
+   *         ToastUtil.toast("当前位置没有可分割的句子")
+   *       }
+   *       PlaybackCore.SplitResult.TOO_SHORT -> {
+   *         ToastUtil.toast("当前句子太短，无法继续分割")
+   *       }
+   *       PlaybackCore.SplitResult.TOO_CLOSE_TO_EDGE -> {
+   *         ToastUtil.toast("距离句子边缘太近，无法分割")
+   *       }
+   *     }
    */
-  fun splitCurrentSentence(): SplitResult {
+  fun splitCurrentSentence() {
     val currentPos = _currentPositionSeconds.value
-    val targetSentence = _curAbSentenceFlow.value
-
-    if (targetSentence == null) {
-      return SplitResult.NO_SENTENCE
+    val sen = _curAbSentenceFlow.value
+    if (sen == null || sen.start > currentPos || sen.end < currentPos) {
+      ToastUtil.toast(R.string.current_no_sentence)
+      return
     }
 
     // 1. 检查总长度 ( < 1.0s 不分)
-    if (targetSentence.end - targetSentence.start < 1.0f) {
-      return SplitResult.TOO_SHORT
+    if (sen.end - sen.start < 1.0f) {
+      ToastUtil.toast("当前句子太短，无法继续分割")
+      return
     }
 
     // 2. 检查边缘距离 ( < 0.5s 不分)
     val sentenceMinGap = 0.5f
-    if (currentPos <= targetSentence.start + sentenceMinGap ||
-      currentPos >= targetSentence.end - sentenceMinGap) {
-      return SplitResult.TOO_CLOSE_TO_EDGE
+    if (currentPos <= sen.start + sentenceMinGap ||
+      currentPos >= sen.end - sentenceMinGap) {
+      ToastUtil.toast("距离句子边缘太近，无法分割")
+      return
     }
 
     val currentList = _sentencesFlow.value.toMutableList()
-    val index = currentList.indexOf(targetSentence)
+    val index = currentList.indexOf(sen)
 
     if (index != -1) {
       // 3. 执行分割
       // 新的前半段：End = currentPos - 0.1s
-      val newEndTime = (currentPos - 0.1f).coerceIn(targetSentence.start, currentPos)
-      val newSen = Sentence(targetSentence.start, newEndTime)
+      val newEndTime = (currentPos - 0.1f).coerceIn(sen.start, currentPos)
+      val newSen = Sentence(sen.start, newEndTime)
 
       // 修改后半段(原句)：Start = currentPos
-      targetSentence.start = currentPos
+      sen.start = currentPos
 
       // 4. 插入列表
       currentList.add(index, newSen)
@@ -646,21 +649,18 @@ class PlaybackCore(private val context: Context) {
       scope.launch {
         saveSentencesToDisk(currentList)
       }
-
-      return SplitResult.SUCCESS
+      ToastUtil.toast("分割成功")
     }
-
-    return SplitResult.NO_SENTENCE
   }
 
   fun mergePre() {
     val sen = _curAbSentenceFlow.value
-    val sentences = _sentencesFlow.value.toMutableList()
     if (sen == null) {
-      ToastUtil.toast("当前没有选中任何句子")
+      ToastUtil.toast(R.string.current_no_sentence)
       return
     }
 
+    val sentences = _sentencesFlow.value.toMutableList()
     val index = sentences.indexOf(sen)
     if (index <= 0) {
       ToastUtil.toast("当前没有上一句, 无法合并")
@@ -679,7 +679,7 @@ class PlaybackCore(private val context: Context) {
     val sen = _curAbSentenceFlow.value
     val sentences = _sentencesFlow.value.toMutableList()
     if (sen == null) {
-      ToastUtil.toast("当前没有选中任何句子")
+      ToastUtil.toast(R.string.current_no_sentence)
       return
     }
 
@@ -751,14 +751,18 @@ class PlaybackCore(private val context: Context) {
 
   fun deleteCurSentence() {
     val currentPos = _currentPositionSeconds.value
-    // 逻辑优化：优先取当前复读选中的句子；如果没有，则取当前播放时间点所在的句子
-    val sen = _curAbSentenceFlow.value ?: findSentenceByTime(currentPos) ?: return
+    val sen = _curAbSentenceFlow.value
+    if (sen == null || sen.start > currentPos || sen.end < currentPos) {
+      ToastUtil.toast(R.string.current_no_sentence)
+      return
+    }
+
     val sentences = _sentencesFlow.value.toMutableList()
     val index = sentences.indexOf(sen)
     if (index != -1) {
-      if (repeatable.value && _curAbSentenceFlow.value != null) {
-        seekToNextSentence()
-      }
+      //if (repeatable.value && _curAbSentenceFlow.value != null) {
+      //  seekToNextSentence()
+      //}
 
       if (sentences.size > 1) {
         sentences.remove(sen)
@@ -770,6 +774,7 @@ class PlaybackCore(private val context: Context) {
           sen.end = it.duration.toFloat() / 1000
         }
       }
+      _curAbSentenceFlow.value = findSentenceByTime(currentPos)
 
       scope.launch {
         saveSentencesToDisk(sentences)

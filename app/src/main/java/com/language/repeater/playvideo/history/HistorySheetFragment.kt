@@ -61,8 +61,8 @@ class HistorySheetFragment : BasePlaySheetFragment() {
             viewModel.playHistoryItem(item)
             dismiss()
           }
-          R.id.action_next_play -> viewModel.addNext(item)
-          R.id.action_add_more -> viewModel.addToEnd(item)
+          //R.id.action_next_play -> viewModel.addNext(item)
+          //R.id.action_add_more -> viewModel.addToEnd(item)
           R.id.action_delete -> viewModel.deleteHistory(item)
         }
       }

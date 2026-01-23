@@ -18,13 +18,12 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class VideoEntity(
   @PrimaryKey
-  val id: String,
+  val id: String, //主键, 根据文件的md5生成的唯一key
 
-  val uri: String,
-  val name: String,
-  val positionMs: Long,
-  var subUri: String? = null,
-  // defaultValue 设为当前时间，方便插入
+  val uri: String, //对应的saf地址
+  val name: String, //文件名
+  val positionMs: Long, //当前播放位置
+  var subUri: String? = null, //字幕文件地址
   val lastPlayedTime: Long = System.currentTimeMillis()
 )
 

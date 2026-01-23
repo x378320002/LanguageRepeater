@@ -6,12 +6,16 @@ import android.graphics.Canvas
 import android.graphics.CornerPathEffect
 import android.graphics.Paint
 import android.graphics.Path
+import android.graphics.Rect
 import android.graphics.Typeface
+import android.graphics.drawable.Drawable
 import android.util.AttributeSet
 import android.util.Log
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.View
+import androidx.appcompat.content.res.AppCompatResources
+import androidx.core.graphics.toRegion
 import com.language.repeater.R
 import com.language.repeater.pcm.PCMSegmentLoader
 import com.language.repeater.sentence.Sentence
@@ -26,7 +30,6 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.min
-
 /**
  * 滚动音频波形View
  * 特点：
@@ -62,6 +65,10 @@ class ScrollWaveformView @JvmOverloads constructor(
   /** AB边界变化监听器 */
   private var onABChangeListener: OnABChangeListener? = null
   private var onCustomClickListener: OnClickListener? = null
+  var editMode = false
+  private val editRectA = Rect()
+  private val editRectB = Rect()
+  private val editDrawable: Drawable = AppCompatResources.getDrawable(context, R.drawable.place_hold)!!
 
   /**
    * 拖动监听器
@@ -364,7 +371,7 @@ class ScrollWaveformView @JvmOverloads constructor(
 
   private val midData = mutableListOf<WaveformPoint>()
   private fun prepareWaveData2() {
-    val curSen: Sentence? = curABSeg
+    val curSen: Sentence? = curABSentence
     val loader = pcmLoader ?: return
     val startTime = visibleStartTime
     val endTime = visibleEndTime
@@ -420,7 +427,7 @@ class ScrollWaveformView @JvmOverloads constructor(
       override fun onDown(e: MotionEvent): Boolean {
         // 记录拖动开始时的播放位置
         dragStartTime = currentTime
-        dragABResult = checkABHit(e.x, e.y)?.apply {
+        dragABResult = checkABHit(e.x.toInt(), e.y.toInt())?.apply {
           onABChangeListener?.onABDragStart(this)
         }
         return true
@@ -535,6 +542,35 @@ class ScrollWaveformView @JvmOverloads constructor(
 
     //绘制每句话的起始点标记
     drawSentenceSign(canvas)
+
+    if (editMode && curABSentence != null) {
+      editRectA.set(0, 0, 0, 0)
+      editRectB.set(0, 0, 0, 0)
+      drawEditSign(canvas, curABSentence?.start ?: -1f, editRectA)
+      drawEditSign(canvas, curABSentence?.end ?: -1f, editRectB)
+    }
+  }
+
+  private fun drawEditSign(canvas: Canvas, time: Float, rect: Rect) {
+    if (time < visibleStartTime || time > visibleEndTime) {
+      editRectA.set(0, 0, 0, 0)
+      return
+    }
+    val x = timeToX(time).toInt()
+    val y = height / 2 + 15
+
+    val dw = editDrawable.intrinsicWidth
+    val dh = editDrawable.intrinsicHeight
+
+    // 计算左上角坐标，让 Drawable 居中
+    val left = x - dw / 2
+    val right = x + dw / 2
+    val top = y
+    val bottom = top + dh
+
+    editDrawable.setBounds(left, top, right, bottom)
+    editDrawable.draw(canvas)
+    rect.set(left - 15, top - 15, right + 15, bottom + 15)
   }
 
   /**
@@ -544,18 +580,18 @@ class ScrollWaveformView @JvmOverloads constructor(
     //if (leftData.isEmpty() || rightData.isEmpty()) {
     //  return
     //}
-    sentences?.forEach { seg ->
-      if (seg == curABSeg) {
-        drawSignPoint(canvas, seg.start, curSenStartPaint)
-        drawSignPoint(canvas, seg.end, curSenEndPaint)
+    sentences?.forEach { sen ->
+      if (sen == curABSentence) {
+        drawSignPoint(canvas, sen.start, curSenStartPaint)
+        drawSignPoint(canvas, sen.end, curSenEndPaint)
       } else {
-        drawSignPoint(canvas, seg.start, senStartPaint)
-        drawSignPoint(canvas, seg.end, senEndPaint)
+        drawSignPoint(canvas, sen.start, senStartPaint)
+        drawSignPoint(canvas, sen.end, senEndPaint)
       }
     }
 
-    if (isRepeated && curABSeg != null) {
-      curABSeg?.also {
+    if (isRepeated && curABSentence != null) {
+      curABSentence?.also {
         drawAB(canvas, it.start, "A")
         drawAB(canvas, it.end, "B")
       }
@@ -589,7 +625,7 @@ class ScrollWaveformView @JvmOverloads constructor(
     }
     val x = timeToX(time)
     val y = height / 2f
-    canvas.drawLine(x, y - 12, x, y + 12, paint)
+    canvas.drawLine(x, y - 15, x, y + 15, paint)
   }
 
   /**
@@ -730,7 +766,7 @@ class ScrollWaveformView @JvmOverloads constructor(
     val abType: String, // "A" 或 "B"
   )
 
-  var curABSeg: Sentence? = null
+  var curABSentence: Sentence? = null
   var isRepeated = false
 
   /**
@@ -739,29 +775,36 @@ class ScrollWaveformView @JvmOverloads constructor(
    * @param y 点击的Y坐标
    * @return 如果点击在AB边界上，返回ABHitResult，否则返回null
    */
-  private fun checkABHit(x: Float, y: Float): ABHitResult? {
-    val sentence = curABSeg ?: return null
-    if (sentences == null) return null
+  private fun checkABHit(x: Int, y: Int): ABHitResult? {
+    val sentence = curABSentence ?: return null
+    if (sentences == null || !editMode) return null
 
     val hitRadius = abBgRadius * 2 //点击检测范围
 
-    // 检查是否点击在A边界上
-    val curABA = timeToX(sentence.start)
-    if (curABA >= 0f
-      && curABA <= width
-      && x in (curABA - hitRadius)..(curABA + hitRadius)
-      && y in (aby - hitRadius)..(aby + hitRadius + abBgRadius)
-    ) {
+    //// 检查是否点击在A边界上
+    //val curABA = timeToX(sentence.start)
+    //if (curABA >= 0f
+    //  && curABA <= width
+    //  && x in (curABA - hitRadius)..(curABA + hitRadius)
+    //  && y in (aby - hitRadius)..(aby + hitRadius + abBgRadius)
+    //) {
+    //  return ABHitResult(sentence, "A")
+    //}
+    //
+    //// 检查是否点击在B边界上
+    //val curABB = timeToX(sentence.end)
+    //if (curABB >= 0f
+    //  && curABB <= width
+    //  && x in (curABB - hitRadius)..(curABB + hitRadius)
+    //  && y in (aby - hitRadius)..(aby + hitRadius + abBgRadius)
+    //) {
+    //  return ABHitResult(sentence, "B")
+    //}
+
+    if (editRectA.contains(x, y)) {
       return ABHitResult(sentence, "A")
     }
-
-    // 检查是否点击在B边界上
-    val curABB = timeToX(sentence.end)
-    if (curABB >= 0f
-      && curABB <= width
-      && x in (curABB - hitRadius)..(curABB + hitRadius)
-      && y in (aby - hitRadius)..(aby + hitRadius + abBgRadius)
-    ) {
+    if (editRectB.contains(x, y)) {
       return ABHitResult(sentence, "B")
     }
     return null
@@ -811,3 +854,4 @@ class ScrollWaveformView @JvmOverloads constructor(
     cleanup()
   }
 }
+

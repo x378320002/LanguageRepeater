@@ -4,7 +4,13 @@ import android.view.View
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import androidx.transition.AutoTransition
+import androidx.transition.ChangeBounds
+import androidx.transition.ChangeClipBounds
+import androidx.transition.Transition
+import androidx.transition.TransitionManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.transition.MaterialContainerTransform
 import com.language.repeater.R
 import com.language.repeater.foundation.BaseComponent
 import com.language.repeater.playvideo.PlayVideoFragment
@@ -38,6 +44,11 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
     fragment.binding.seekNextSentence.setOnClickListener(this)
     fragment.binding.backSentenceHead.setOnClickListener(this)
     fragment.binding.playList.setOnClickListener(this)
+    fragment.binding.editSwitch.setOnClickListener(this)
+    fragment.binding.mergePre.setOnClickListener(this)
+    fragment.binding.mergeNext.setOnClickListener(this)
+    fragment.binding.deleteSentence.setOnClickListener(this)
+    fragment.binding.splitSentence.setOnClickListener(this)
     //fragment.binding.voiceNext.setOnClickListener(this)
     //fragment.binding.voicePrevious.setOnClickListener(this)
     //fragment.binding.reloadSentence.setOnClickListener(this)
@@ -71,6 +82,18 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
 
   override fun onClick(v: View?) {
     when (v) {
+      fragment.binding.mergePre -> {
+        fragment.viewModel.mergePreSentence()
+      }
+      fragment.binding.mergeNext -> {
+        fragment.viewModel.mergeNextSentence()
+      }
+      fragment.binding.deleteSentence -> {
+        deleteCurSen()
+      }
+      fragment.binding.splitSentence -> {
+        splitCurSen()
+      }
       fragment.binding.voiceRepeatSwitch -> {
         fragment.viewModel.toggleRepeat()
       }
@@ -89,6 +112,19 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
       fragment.binding.playList -> {
         val sheet = HistorySheetFragment()
         sheet.show(fragment.childFragmentManager, "HistorySheet")
+      }
+      fragment.binding.editSwitch -> {
+        if (fragment.binding.editSwitch.isSelected) {
+          TransitionManager.beginDelayedTransition(fragment.binding.root)
+          fragment.binding.editSwitch.isSelected = false
+          fragment.binding.editLayout.visibility = View.GONE
+          fragment.viewModel.editMode(false)
+        } else {
+          TransitionManager.beginDelayedTransition(fragment.binding.root)
+          fragment.binding.editSwitch.isSelected = true
+          fragment.binding.editLayout.visibility = View.VISIBLE
+          fragment.viewModel.editMode(true)
+        }
       }
     }
      //when (v) {

@@ -15,4 +15,8 @@ object ToastUtil {
       .makeText(MyApp.instance, content, Toast.LENGTH_SHORT)
       .show()
   }
+
+  fun toast(stringId: Int) {
+    toast(ResourcesUtil.getString(stringId))
+  }
 }

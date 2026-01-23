@@ -51,7 +51,7 @@
     <!-- 注意：此属性仅在 API 27 (Android 8.1) 及以上生效 -->
     <item name="android:windowLightNavigationBar" tools:ignore="NewApi">true</item>
     <!-- 4. 【关键修改】设置底部导航栏背景为白色 -->
-    <!--<item name="android:navigationBarColor">@color/white</item>-->
+    <item name="android:navigationBarColor">@color/bottom_dialog_bg_color</item>
   </style>
 
 </resources>

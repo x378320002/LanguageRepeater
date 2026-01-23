@@ -23,6 +23,7 @@ import com.language.repeater.R
 import com.language.repeater.databinding.PlaylistSheetFragmentBinding
 import com.language.repeater.playvideo.PlayVideoFragment
 import com.language.repeater.playvideo.playlist.PlaylistAdapter
+import com.language.repeater.utils.ScreenUtil
 import kotlinx.coroutines.launch
 
 @SuppressLint("SetTextI18n")
@@ -37,8 +38,7 @@ open class BasePlaySheetFragment : BottomSheetDialogFragment() {
 
     //设置界面高度
     view.updateLayoutParams {
-      val displayMetrics = resources.displayMetrics
-      val fixedHeight = (displayMetrics.heightPixels * 0.6f).toInt()
+      val fixedHeight = (ScreenUtil.getScreenSize().height * 0.6f).toInt()
       height = fixedHeight
     }
   }

@@ -38,10 +38,15 @@ class PlayScrollWaveComponent: BaseComponent<PlayVideoFragment>() {
 
     //波形图ab句子
     viewModel.curAbSentenceFlow.onEach {
-      if (waveformView.curABSeg != it) {
-        waveformView.curABSeg = it
+      if (waveformView.curABSentence != it) {
+        waveformView.curABSentence = it
         waveformView.invalidate()
       }
+    }.launchIn(uiScope)
+
+    viewModel.editMode.onEach {
+      waveformView.editMode = it
+      waveformView.invalidate()
     }.launchIn(uiScope)
 
     //滚动波形图数据填充

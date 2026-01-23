@@ -177,10 +177,6 @@ class SubtitleAutoLoader(
       val item = player.getMediaItemAt(i)
       val title = item.mediaMetadata.title.toString()
 
-      // 优先检查该视频是否有手动指定的字幕 (SubtitleStore)
-      // 这里为了简化，我们暂时只匹配文件夹扫描结果
-      // 严谨的做法是：先查 DataStore 里的 individual mapping，没有再查 folder map
-
       val subtitleUri = map[title]
       val alreadyHas = item.localConfiguration?.subtitleConfigurations?.isNotEmpty() == true
 

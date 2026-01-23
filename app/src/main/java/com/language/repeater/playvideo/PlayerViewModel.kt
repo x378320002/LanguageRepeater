@@ -14,7 +14,9 @@ import com.language.repeater.playvideo.model.toMediaItem
 import com.language.repeater.playcore.SleepTimerManager
 import com.language.repeater.utils.ToastUtil
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -23,6 +25,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
   companion object {
     private const val TAG = "wangzixu_PlayerViewModel"
   }
+
+  private val _editMode = MutableStateFlow<Boolean>(false)
+  val editMode = _editMode.asStateFlow()
 
   private val playbackCore = PlaybackCore.getInstance(application)
 
@@ -151,23 +156,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
    * UI 层的"拆分"按钮点击时调用此方法
    */
   fun splitCurrentSentence() {
-    val result = playbackCore.splitCurrentSentence()
-
-    // 根据返回的枚举做具体提示
-    when (result) {
-      PlaybackCore.SplitResult.SUCCESS -> {
-        ToastUtil.toast("分割成功")
-      }
-      PlaybackCore.SplitResult.NO_SENTENCE -> {
-        ToastUtil.toast("当前位置没有可分割的句子")
-      }
-      PlaybackCore.SplitResult.TOO_SHORT -> {
-        ToastUtil.toast("当前句子太短，无法继续分割")
-      }
-      PlaybackCore.SplitResult.TOO_CLOSE_TO_EDGE -> {
-        ToastUtil.toast("距离句子边缘太近，无法分割")
-      }
-    }
+    playbackCore.splitCurrentSentence()
   }
 
   /**
@@ -227,9 +216,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
       // 4. 如果不存在，添加到当前播放位置的下一首，并播放
       // 这样既保留了原列表，又让用户立刻看到了点击的历史记录
       val mediaItem = item.toMediaItem()
-      val nextIndex = if (player.currentMediaItemIndex == C.INDEX_UNSET) 0 else player.currentMediaItemIndex + 1
-      player.addMediaItem(nextIndex, mediaItem)
-      player.seekTo(nextIndex, item.positionMs)
+      //val nextIndex = if (player.currentMediaItemIndex == C.INDEX_UNSET) 0 else player.currentMediaItemIndex + 1
+      player.addMediaItem(0, mediaItem)
+      player.seekTo(0, item.positionMs)
       player.prepare()
       player.play()
     }
@@ -291,5 +280,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
   fun mergeNextSentence() {
     playbackCore.mergeNext()
+  }
+
+  fun editMode(edit: Boolean) {
+    _editMode.value = edit
   }
 }
