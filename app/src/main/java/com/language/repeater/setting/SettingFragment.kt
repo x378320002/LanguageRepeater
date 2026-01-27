@@ -1,6 +1,5 @@
 package com.language.repeater.setting
 
-import android.R.attr.fragment
 import android.annotation.SuppressLint
 import android.os.Bundle
 import android.util.Log
@@ -10,12 +9,10 @@ import android.view.ViewGroup
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import androidx.datastore.preferences.core.edit
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.language.repeater.R
-import com.language.repeater.dataStore
 import com.language.repeater.databinding.SetttingFragmentBinding
 import com.language.repeater.foundation.BaseFragment
 import com.language.repeater.pcm.FFmpegUtil
@@ -23,7 +20,6 @@ import com.language.repeater.playvideo.PlayVideoFragment
 import com.language.repeater.playvideo.PlayerViewModel
 import com.language.repeater.sentence.SentenceStoreUtil
 import com.language.repeater.utils.DataStoreKey
-import com.language.repeater.utils.DataStoreKey.KEY_SUBTITLE_FOLDER
 import com.language.repeater.utils.FileUtil
 import com.language.repeater.utils.ToastUtil
 import kotlinx.coroutines.flow.launchIn
@@ -65,12 +61,6 @@ class SettingFragment: BaseFragment() {
 
   override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
     super.onViewCreated(view, savedInstanceState)
-    ViewCompat.setOnApplyWindowInsetsListener(binding.root) { v, insets ->
-      val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-      v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-      insets
-    }
-
     setUIAction()
     observeData()
   }

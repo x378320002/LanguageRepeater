@@ -57,7 +57,7 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        android:paddingEnd="15dp"
+        android:paddingEnd="25dp"
         android:paddingStart="15dp"
         android:paddingTop="15dp"
         android:paddingBottom="15dp"
@@ -65,7 +65,8 @@
         android:src="@drawable/place_hold"
         app:tint="@color/color_tint_selector"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"/>
+        android:layout_height="wrap_content"
+        tools:ignore="ContentDescription" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 
     <!-- 列表 -->

@@ -24,7 +24,7 @@ import com.language.repeater.playvideo.components.SelectFileComponent
 
 class PlayVideoFragment: BaseFragment(), Player.Listener  {
   companion object {
-    const val TAG = "wangzixu"
+    const val TAG = "wangzixu_PlayVideoFragment"
   }
 
   lateinit var binding: VideoPlayFragmentBinding
@@ -48,18 +48,13 @@ class PlayVideoFragment: BaseFragment(), Player.Listener  {
     container: ViewGroup?,
     savedInstanceState: Bundle?,
   ): View {
-    //Log.i(TAG, "$TAG onCreateView")
+    Log.i(TAG, "$TAG onCreateView")
     binding = VideoPlayFragmentBinding.inflate(inflater, container, false)
     return binding.root
   }
 
-  @OptIn(UnstableApi::class)
-  override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-    super.onViewCreated(view, savedInstanceState)
-    ViewCompat.setOnApplyWindowInsetsListener(binding.root) { v, insets ->
-      val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-      v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-      insets
-    }
+  override fun onDestroyView() {
+    super.onDestroyView()
+    Log.i(TAG, "$TAG onDestroyView")
   }
 }

@@ -1,8 +1,14 @@
 package com.language.repeater.utils
 
+import android.R.attr.fragment
+import android.content.Context
+import android.view.View
 import androidx.annotation.ColorRes
 import androidx.annotation.StringRes
+import androidx.appcompat.view.ContextThemeWrapper
+import androidx.appcompat.widget.PopupMenu
 import com.language.repeater.MyApp
+import com.language.repeater.R
 
 /**
  * Date: 2025-10-13
@@ -21,5 +27,10 @@ object ResourcesUtil {
 
   fun getString(@StringRes str: Int) : String {
     return MyApp.instance.resources.getString(str)
+  }
+
+  fun createLightPopMenu(context: Context, view: View): PopupMenu {
+    val c = ContextThemeWrapper(context, R.style.PopupMenu_Light)
+    return PopupMenu(c, view)
   }
 }

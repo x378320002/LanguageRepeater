@@ -8,6 +8,9 @@
     <item name="android:activityCloseExitAnimation">@anim/slide_out_right</item>
   </style>
 
+  <style name="PopupMenu.Light" parent="Theme.Material3.Light.NoActionBar">
+  </style>
+
   <style name="Base.Theme.LanguageRepeater" parent="Theme.Material3.DynamicColors.DayNight.NoActionBar">
     <!-- Customize your light theme here. -->
     <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
@@ -38,19 +41,16 @@
   <!-- 定义一个透明背景的 BottomSheet 样式, 给Dialog 主题 用的-->
   <style name="TransparentBottomSheetStyle" parent="Widget.Design.BottomSheet.Modal">
     <!-- 关键：把父容器背景设为透明 -->
-    <item name="android:background">@null</item>
+    <item name="android:background">@color/transparent</item>
   </style>
 
   <!-- 定义 Dialog 主题 -->
-  <style name="CustomBottomSheetDialogTheme" parent="ThemeOverlay.Material3.DayNight.BottomSheetDialog">
+  <style name="CustomBottomSheetDialogTheme" parent="Theme.Material3.DayNight.BottomSheetDialog">
+  <!--<style name="CustomBottomSheetDialogTheme" parent="Base.Theme.LanguageRepeater">-->
     <!-- 应用动画 -->
     <item name="android:windowAnimationStyle">@style/BottomSheetAnimation</item>
-    <item name="android:backgroundDimAmount">0.4</item>
-    <!--<item name="bottomSheetStyle">@style/TransparentBottomSheetStyle</item>-->
-    <!-- 5. 【关键修改】开启浅色导航栏模式 (让图标变黑) -->
-    <!-- 注意：此属性仅在 API 27 (Android 8.1) 及以上生效 -->
-    <item name="android:windowLightNavigationBar" tools:ignore="NewApi">true</item>
-    <!-- 4. 【关键修改】设置底部导航栏背景为白色 -->
+    <item name="android:backgroundDimAmount">0.5</item>
+    <item name="bottomSheetStyle">@style/TransparentBottomSheetStyle</item>
     <item name="android:navigationBarColor">@color/bottom_dialog_bg_color</item>
   </style>
 

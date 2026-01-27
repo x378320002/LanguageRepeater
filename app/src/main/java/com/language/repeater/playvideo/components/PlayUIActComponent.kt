@@ -1,7 +1,9 @@
 package com.language.repeater.playvideo.components
 
 import android.view.View
+import androidx.appcompat.view.ContextThemeWrapper
 import androidx.appcompat.widget.PopupMenu
+import androidx.core.content.ContentProviderCompat.requireContext
 import androidx.media3.common.util.UnstableApi
 import androidx.navigation.fragment.findNavController
 import androidx.transition.TransitionManager
@@ -14,7 +16,10 @@ import com.language.repeater.playvideo.PlayVideoFragment
 import com.language.repeater.playvideo.history.HistorySheetFragment
 import com.language.repeater.playvideo.playlist.PlaylistSheetFragment
 import com.language.repeater.sentence.SentenceStoreUtil
+import com.language.repeater.utils.ResourcesUtil
 import com.language.repeater.utils.ToastUtil
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 
 /**
@@ -56,22 +61,19 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
     //fragment.binding.mergePre.setOnClickListener(this)
     //fragment.binding.mergeNext.setOnClickListener(this)
 
-    //fragment.viewModel.playerRepeatMode.onEach {
-    //  val text = when (it) {
-    //    Player.REPEAT_MODE_ONE -> {
-    //      ResourcesUtil.getString(R.string.repeat_one)
-    //    }
-    //
-    //    Player.REPEAT_MODE_ALL -> {
-    //      ResourcesUtil.getString(R.string.repeat_all)
-    //    }
-    //
-    //    else -> {
-    //      ResourcesUtil.getString(R.string.repeat_off)
-    //    }
-    //  }
-    //  fragment.binding.repeatMode.text = text
-    //}.launchIn(uiScope)
+    fragment.viewModel.editMode.onEach {
+      if (it != fragment.binding.editSwitch.isSelected) {
+        if (it) {
+          TransitionManager.beginDelayedTransition(fragment.binding.root)
+          fragment.binding.editSwitch.isSelected = true
+          fragment.binding.editLayout.visibility = View.VISIBLE
+        } else {
+          TransitionManager.beginDelayedTransition(fragment.binding.root)
+          fragment.binding.editSwitch.isSelected = false
+          fragment.binding.editLayout.visibility = View.GONE
+        }
+      }
+    }.launchIn(uiScope)
   }
 
   override fun onClick(v: View?) {
@@ -116,14 +118,8 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
       }
       fragment.binding.editSwitch -> {
         if (fragment.binding.editSwitch.isSelected) {
-          TransitionManager.beginDelayedTransition(fragment.binding.root)
-          fragment.binding.editSwitch.isSelected = false
-          fragment.binding.editLayout.visibility = View.GONE
           fragment.viewModel.editMode(false)
         } else {
-          TransitionManager.beginDelayedTransition(fragment.binding.root)
-          fragment.binding.editSwitch.isSelected = true
-          fragment.binding.editLayout.visibility = View.VISIBLE
           fragment.viewModel.editMode(true)
         }
       }
@@ -193,7 +189,7 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
   }
 
   private fun showMoreMenu() {
-    val popup = PopupMenu(context, fragment.binding.subActionMore)
+    val popup = ResourcesUtil.createLightPopMenu(context, fragment.binding.subActionMore)
     popup.menuInflater.inflate(R.menu.menu_sub_action_more, popup.menu)
     popup.setOnMenuItemClickListener { menuItem ->
       when (menuItem.itemId) {

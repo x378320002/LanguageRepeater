@@ -8,6 +8,7 @@ import android.util.Log
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.ActivityResultCallback
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.view.ContextThemeWrapper
 import androidx.appcompat.widget.PopupMenu
 import androidx.core.net.toUri
 import androidx.datastore.preferences.core.edit
@@ -21,6 +22,7 @@ import com.language.repeater.utils.DataStoreKey.KEY_SUBTITLE_FOLDER
 import com.language.repeater.pcm.FFmpegUtil
 import com.language.repeater.utils.FileUtil
 import com.language.repeater.utils.FileUtil.takePersistablePermission
+import com.language.repeater.utils.ResourcesUtil
 import com.language.repeater.utils.ToastUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.firstOrNull
@@ -140,7 +142,7 @@ class SelectFileComponent : BaseComponent<PlayVideoFragment>() {
   }
 
   private fun showMenu() {
-    val popup = PopupMenu(context, fragment.binding.ivAdd)
+    val popup = ResourcesUtil.createLightPopMenu(context, fragment.binding.ivAdd)
     popup.menuInflater.inflate(R.menu.menu_add_media, popup.menu)
     popup.setOnMenuItemClickListener { menuItem ->
       when (menuItem.itemId) {

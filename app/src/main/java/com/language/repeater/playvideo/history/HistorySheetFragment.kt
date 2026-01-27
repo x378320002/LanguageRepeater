@@ -55,7 +55,6 @@ class HistorySheetFragment : BasePlaySheetFragment() {
   }
 
   private fun setupUI() {
-    binding.tvSheetTitle.text = "历史记录"
     binding.tvCount.visibility = View.GONE
 
     // 初始化 Adapter，传入回调

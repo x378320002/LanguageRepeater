@@ -13,6 +13,7 @@ import coil3.request.error
 import com.language.repeater.R
 import com.language.repeater.databinding.HistorySheetItemBinding
 import com.language.repeater.playvideo.model.VideoEntity
+import com.language.repeater.utils.ResourcesUtil
 import com.language.repeater.utils.ResourcesUtil.toDp
 
 class HistoryListAdapter(
@@ -39,7 +40,7 @@ class HistoryListAdapter(
     }
 
     private fun showPopupMenu(anchor: View, item: VideoEntity) {
-      val popup = PopupMenu(anchor.context, anchor)
+      val popup = ResourcesUtil.createLightPopMenu(anchor.context, anchor)
       popup.menuInflater.inflate(R.menu.menu_history_item, popup.menu)
       popup.setOnMenuItemClickListener { menuItem ->
         onMenuAction(item, menuItem.itemId)
