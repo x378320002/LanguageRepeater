@@ -1,23 +1,30 @@
 package com.language.repeater.playvideo.history
 
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.datastore.preferences.core.emptyPreferences
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.media3.common.Player
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.SimpleItemAnimator
 import com.dotlottie.dlplayer.Fit
 import com.language.repeater.R
+import com.language.repeater.dataStore
 import com.language.repeater.databinding.PlaylistSheetFragmentBinding
 import com.language.repeater.playvideo.BasePlaySheetFragment
 import com.language.repeater.playvideo.PlayerViewModel
+import com.language.repeater.utils.DataStoreKey
 import com.lottiefiles.dotlottie.core.model.Config
 import com.lottiefiles.dotlottie.core.util.DotLottieSource
 import com.lottiefiles.dotlottie.core.util.LayoutUtil
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 class HistorySheetFragment : BasePlaySheetFragment() {
@@ -28,6 +35,8 @@ class HistorySheetFragment : BasePlaySheetFragment() {
   private val binding get() = _binding!!
 
   private lateinit var adapter: HistoryListAdapter
+
+  private var currentRepeatMode: Int = Player.REPEAT_MODE_ONE
 
   override fun onCreateView(
     inflater: LayoutInflater,
@@ -74,10 +83,29 @@ class HistorySheetFragment : BasePlaySheetFragment() {
       this.adapter = this@HistorySheetFragment.adapter
       (itemAnimator as? SimpleItemAnimator)?.supportsChangeAnimations = false
     }
+
+    binding.repeatMode.setOnClickListener {
+      if (currentRepeatMode == Player.REPEAT_MODE_OFF) {
+        viewModel.setPlayerRepeatMode(Player.REPEAT_MODE_ONE)
+      } else {
+        viewModel.setPlayerRepeatMode(Player.REPEAT_MODE_OFF)
+      }
+    }
   }
 
   private fun observeData() {
     viewLifecycleOwner.lifecycleScope.launch {
+      launch {
+        DataStoreKey.observeRepeatMode().collect {
+          currentRepeatMode = it
+          if (it == Player.REPEAT_MODE_OFF) {
+            binding.repeatMode.setImageResource(R.drawable.place_hold)
+          } else {
+            binding.repeatMode.setImageResource(R.drawable.back_2)
+          }
+        }
+      }
+
       repeatOnLifecycle(Lifecycle.State.STARTED) {
         // 显示 Loading
         showLoading()
@@ -91,7 +119,11 @@ class HistorySheetFragment : BasePlaySheetFragment() {
             // 可以处理空状态显示
             hideLoading()
           }
-          adapter.submitList(historyList)
+          for (i in historyList.indices) {
+            val h = historyList[i]
+            Log.i(TAG, "history: $i, time: ${h.history.lastPlayedTime}, title:${h.videoInfo.name}")
+          }
+          adapter.submitList(historyList.map { it.videoInfo })
         }
       }
     }

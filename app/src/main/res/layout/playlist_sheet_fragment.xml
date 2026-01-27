@@ -23,29 +23,50 @@
       app:cardBackgroundColor="@color/ic_tint_color" />
 
     <!-- 标题栏 -->
-    <LinearLayout
+    <androidx.constraintlayout.widget.ConstraintLayout
       android:layout_width="match_parent"
-      android:layout_height="wrap_content"
-      android:padding="16dp">
+      android:layout_height="wrap_content">
 
       <TextView
         android:id="@+id/tv_sheet_title"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        android:layout_marginStart="15dp"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="播放列表"
+        android:text="@string/history_title"
         android:textSize="16sp"
         android:textColor="@color/main_text_color"
         tools:ignore="HardcodedText" />
 
       <TextView
         android:id="@+id/tv_count"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toEndOf="@id/tv_sheet_title"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="8dp"
         android:textSize="16sp"
         android:textColor="@color/main_text_color"
         tools:text="(5)" />
-    </LinearLayout>
+
+      <ImageView
+        android:id="@+id/repeat_mode"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:paddingEnd="15dp"
+        android:paddingStart="15dp"
+        android:paddingTop="15dp"
+        android:paddingBottom="15dp"
+        android:scaleType="centerInside"
+        android:src="@drawable/place_hold"
+        app:tint="@color/color_tint_selector"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"/>
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
     <!-- 列表 -->
     <androidx.recyclerview.widget.RecyclerView

@@ -29,12 +29,6 @@ import com.language.repeater.R
 class PlaybackService : MediaSessionService() {
   companion object {
     private const val TAG = "wangzixu_PlaybackService"
-
-    // 1. 定义自定义命令
-    private const val ACTION_FLAG = "ACTION_FLAG"
-
-    // 创建 SessionCommand 对象
-    val CMD_FLAG = SessionCommand(ACTION_FLAG, Bundle.EMPTY)
   }
 
   private var player: Player? = null
@@ -66,24 +60,11 @@ class PlaybackService : MediaSessionService() {
 
     player = interceptingPlayer
 
-    //设置一个自定义按钮给通知栏
-    val prevButton = CommandButton.Builder(CommandButton.ICON_UNDEFINED)
-      .setDisplayName("加入收藏列表")
-      //.setCustomIconResId(R.drawable.ic_launcher_foreground) // 设置自定义图标资源
-      .setCustomIconResId(androidx.media3.session.R.drawable.media3_icon_flag_unfilled)
-      .setSessionCommand(CMD_FLAG)
-      .setEnabled(true)
-      .setSlots(CommandButton.SLOT_OVERFLOW)
-      .build()
-    val customLayout = ImmutableList.of(prevButton)
-
     // 3. 创建 Session (为了通知栏和系统媒体控制)
     mediaSession = MediaSession
       .Builder(this, interceptingPlayer)
       .setSessionActivity(getSingleTopActivityIntent())
       .setBitmapLoader(CoilBitmapLoader(this))
-      .setCallback(CustomSessionCallback())
-      .setMediaButtonPreferences(customLayout)
       .build()
 
     // 4. 【核心】把 Player 实例上交给单例 Connection
@@ -145,44 +126,5 @@ class PlaybackService : MediaSessionService() {
     }
 
     return PendingIntent.getActivity(this, 0, intent, flags)
-  }
-
-  // --- 内部类：处理通知栏 UI ---
-  // --- Session Callback ---
-  private inner class CustomSessionCallback : MediaSession.Callback {
-    // 授权自定义命令
-    override fun onConnect(
-      session: MediaSession,
-      controller: MediaSession.ControllerInfo
-    ): MediaSession.ConnectionResult {
-      val connectionResult = super.onConnect(session, controller)
-      val availableSessionCommands = connectionResult.availableSessionCommands.buildUpon()
-        .add(CMD_FLAG)
-        .build()
-
-      return MediaSession.ConnectionResult.accept(
-        availableSessionCommands,
-        connectionResult.availablePlayerCommands
-      )
-    }
-
-    // 处理点击
-    override fun onCustomCommand(
-      session: MediaSession,
-      controller: MediaSession.ControllerInfo,
-      customCommand: SessionCommand,
-      args: Bundle
-    ): ListenableFuture<androidx.media3.session.SessionResult> {
-      when (customCommand.customAction) {
-        ACTION_FLAG -> {
-          //PlaybackConnection.getInstance(applicationContext).seekToPreviousSentence()
-          Log.i(TAG, "PlaybackService ACTION_FLAG")
-        }
-      }
-
-      return Futures.immediateFuture(
-        androidx.media3.session.SessionResult(androidx.media3.session.SessionResult.RESULT_SUCCESS)
-      )
-    }
   }
 }

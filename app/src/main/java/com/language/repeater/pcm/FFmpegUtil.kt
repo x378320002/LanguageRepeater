@@ -20,6 +20,23 @@ object FFmpegUtil {
   private const val SUFFIX = ".wav"
   private const val WAV_DIR = "wav"
 
+  /**
+   * 获取 SENTENCE_DIR 文件夹的大小
+   *
+   * @param context 上下文
+   * @return 文件夹的大小（以字节为单位）
+   */
+  suspend fun getDirectorySize(context: Context): Long = withContext(Dispatchers.IO) {
+    var size: Long = 0
+    val dir = context.getExternalFilesDir(WAV_DIR)
+    if (dir != null && dir.exists() && dir.isDirectory) {
+      dir.listFiles()?.forEach { file ->
+        size += file.length()
+      }
+    }
+    size
+  }
+
   suspend fun clearTempData(
     context: Context, except: List<String>
   ) = withContext(Dispatchers.IO) {

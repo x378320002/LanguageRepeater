@@ -10,10 +10,6 @@ import androidx.recyclerview.widget.RecyclerView
 import coil3.load
 import coil3.request.crossfade
 import coil3.request.error
-import coil3.request.placeholder
-import coil3.request.transformations
-import coil3.size.Scale
-import coil3.transform.RoundedCornersTransformation
 import com.language.repeater.R
 import com.language.repeater.databinding.PlaylistSheetItemBinding
 import com.language.repeater.utils.ResourcesUtil
@@ -26,7 +22,6 @@ class PlaylistAdapter(
 ) : RecyclerView.Adapter<PlaylistAdapter.ViewHolder>() {
 
   companion object {
-    private val COVER_RADIUS = 6f.toDp()
     const val PAYLOAD_PLAY_STATE = "PAYLOAD_PLAY_STATE"
   }
 
@@ -93,22 +88,20 @@ class PlaylistAdapter(
     binding.tvTitle.text = displayName
 
     // 2. 设置封面 (Coil)
-    val uri = mediaItem.mediaMetadata.artworkUri ?: mediaItem.localConfiguration?.uri
-    if (uri != null) {
+    val uri = (mediaItem.mediaMetadata.artworkUri ?: mediaItem.localConfiguration?.uri)?.toString()
+
+    // 加载封面
+    if (uri != null && uri.isNotEmpty()) {
       if (binding.ivCover.tag != uri) {
         binding.ivCover.tag = uri
         binding.ivCover.load(uri) {
           crossfade(true)
-          // 假设你在 colors.xml 定义了 PastelGreen，如果没有请换成 R.drawable.xxx
-          placeholder(R.color.PastelGreen)
-          error(androidx.media3.session.R.drawable.media_session_service_notification_ic_music_note)
-          transformations(RoundedCornersTransformation(COVER_RADIUS))
-          scale(Scale.FILL)
+          error(R.drawable.ic_music)
         }
       }
     } else {
       binding.ivCover.tag = null
-      binding.ivCover.setImageResource(androidx.media3.session.R.drawable.media_session_service_notification_ic_music_note)
+      binding.ivCover.setImageResource(R.drawable.ic_music)
     }
 
     bindPlayerState(holder, position)

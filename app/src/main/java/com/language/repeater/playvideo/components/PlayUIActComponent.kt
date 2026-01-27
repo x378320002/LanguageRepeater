@@ -1,28 +1,20 @@
 package com.language.repeater.playvideo.components
 
 import android.view.View
-import androidx.media3.common.MediaItem
-import androidx.media3.common.Player
+import androidx.appcompat.widget.PopupMenu
 import androidx.media3.common.util.UnstableApi
-import androidx.transition.AutoTransition
-import androidx.transition.ChangeBounds
-import androidx.transition.ChangeClipBounds
-import androidx.transition.Transition
+import androidx.navigation.fragment.findNavController
 import androidx.transition.TransitionManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.google.android.material.transition.MaterialContainerTransform
 import com.language.repeater.R
+import com.language.repeater.SettingPageKey
 import com.language.repeater.foundation.BaseComponent
+import com.language.repeater.pcm.FFmpegUtil
 import com.language.repeater.playvideo.PlayVideoFragment
 import com.language.repeater.playvideo.history.HistorySheetFragment
 import com.language.repeater.playvideo.playlist.PlaylistSheetFragment
-import com.language.repeater.playvideo.sleeptimer.SleepTimerSheetFragment
-import com.language.repeater.pcm.FFmpegUtil
-import com.language.repeater.utils.ResourcesUtil
 import com.language.repeater.sentence.SentenceStoreUtil
 import com.language.repeater.utils.ToastUtil
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 
 /**
@@ -49,6 +41,8 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
     fragment.binding.mergeNext.setOnClickListener(this)
     fragment.binding.deleteSentence.setOnClickListener(this)
     fragment.binding.splitSentence.setOnClickListener(this)
+    fragment.binding.subActionMore.setOnClickListener(this)
+    fragment.binding.ivSetting.setOnClickListener(this)
     //fragment.binding.voiceNext.setOnClickListener(this)
     //fragment.binding.voicePrevious.setOnClickListener(this)
     //fragment.binding.reloadSentence.setOnClickListener(this)
@@ -82,6 +76,12 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
 
   override fun onClick(v: View?) {
     when (v) {
+      fragment.binding.ivSetting -> {
+        fragment.findNavController().navigate(SettingPageKey)
+      }
+      fragment.binding.subActionMore -> {
+        showMoreMenu()
+      }
       fragment.binding.mergePre -> {
         fragment.viewModel.mergePreSentence()
       }
@@ -109,6 +109,7 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
       fragment.binding.backSentenceHead -> {
         fragment.viewModel.backToSentenceHead()
       }
+
       fragment.binding.playList -> {
         val sheet = HistorySheetFragment()
         sheet.show(fragment.childFragmentManager, "HistorySheet")
@@ -189,6 +190,52 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
     //    }
     //  }
     //}
+  }
+
+  private fun showMoreMenu() {
+    val popup = PopupMenu(context, fragment.binding.subActionMore)
+    popup.menuInflater.inflate(R.menu.menu_sub_action_more, popup.menu)
+    popup.setOnMenuItemClickListener { menuItem ->
+      when (menuItem.itemId) {
+        R.id.action_split_auto -> {
+          autoLoadSentences(true)
+        }
+        R.id.action_split_subtitle -> {
+          autoLoadSentences(false)
+        }
+      }
+      true
+    }
+    popup.show()
+  }
+
+  private fun autoLoadSentences(auto: Boolean) {
+    if (!auto) {
+      val item = fragment.viewModel.currentMediaItem.value
+      val subUri = item?.localConfiguration?.subtitleConfigurations?.firstOrNull()?.uri
+      if (subUri == null) {
+        ToastUtil.toast("当前视频没有对应的字幕文件")
+      }
+      return
+    }
+
+    val isPlaying = fragment.viewModel.isUiPlaying.value
+    MaterialAlertDialogBuilder(context)
+      .setTitle("重新生成句子信息")
+      .setMessage("确定要重新生成断句信息吗？这会覆盖当前的句子列表信息")
+      .setPositiveButton("自动分割") { _, _ ->
+        fragment.viewModel.loadSentenceData(auto)
+      }
+      .setNegativeButton("取消", null)
+      .setOnDismissListener {
+        if (isPlaying) {
+          fragment.viewModel.play()
+        }
+      }
+      .show()
+    if (isPlaying) {
+      fragment.viewModel.pause()
+    }
   }
 
   private fun autoLoadSentences() {

@@ -12,10 +12,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.activityViewModels
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
-import androidx.navigation.fragment.findNavController
-import com.language.repeater.TestPageKey
 import com.language.repeater.databinding.VideoPlayFragmentBinding
-import com.language.repeater.defaultNavOptions
 import com.language.repeater.foundation.BaseFragment
 import com.language.repeater.playvideo.components.PlayAllWaveComponent
 import com.language.repeater.playvideo.components.PlayScrollWaveComponent

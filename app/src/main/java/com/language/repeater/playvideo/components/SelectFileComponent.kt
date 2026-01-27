@@ -8,24 +8,28 @@ import android.util.Log
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.ActivityResultCallback
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.widget.PopupMenu
 import androidx.core.net.toUri
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.language.repeater.R
 import com.language.repeater.dataStore
 import com.language.repeater.foundation.BaseComponent
 import com.language.repeater.playvideo.PlayVideoFragment
 import com.language.repeater.subtitleStore
-import com.language.repeater.utils.DataStoreKey
 import com.language.repeater.utils.DataStoreKey.KEY_SUBTITLE_FOLDER
 import com.language.repeater.pcm.FFmpegUtil
 import com.language.repeater.utils.FileUtil
+import com.language.repeater.utils.FileUtil.takePersistablePermission
+import com.language.repeater.utils.ToastUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.forEach
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class LocalOnlyOpenMultipleDocuments : ActivityResultContracts.OpenMultipleDocuments() {
+class LocalOnlyOpenMultipleDocuments : ActivityResultContracts.OpenDocument() {
   override fun createIntent(context: Context, input: Array<String>): Intent {
     return super.createIntent(context, input).apply {
       putExtra(Intent.EXTRA_LOCAL_ONLY, true)
@@ -40,9 +44,9 @@ class LocalOnlyOpenMultipleDocuments : ActivityResultContracts.OpenMultipleDocum
  */
 class SelectFileComponent : BaseComponent<PlayVideoFragment>() {
   val openFileLauncher by lazy {
-    fragment.registerForActivityResult(LocalOnlyOpenMultipleDocuments()) {
-      Log.d(PlayVideoFragment.TAG, "OpenMultipleDocuments uris size = ${it.size}")
-      if (it.isEmpty()) return@registerForActivityResult
+    fragment.registerForActivityResult(LocalOnlyOpenMultipleDocuments()) { uri->
+      Log.d(PlayVideoFragment.TAG, "OpenMultipleDocuments uris size = ${uri}")
+      if (uri == null) return@registerForActivityResult
 
       fragment.showLoading()
       fScope.launch {
@@ -50,21 +54,18 @@ class SelectFileComponent : BaseComponent<PlayVideoFragment>() {
 
         //转成info给视频播放器
         var needToCheckSubFolder = false
-        val infos = it.map { uri ->
-          takePersistablePermission(uri)
 
-          val info = FileUtil.getFileInfo(context, uri)
-          val prefKey = stringPreferencesKey(info.id)
-          val sub = preferences?.get(prefKey)
-          if (!sub.isNullOrEmpty()) {
-            info.subUri = sub
-          } else {
-            needToCheckSubFolder = true
-          }
-          val wav = FFmpegUtil.extractWavFileByFFmpeg(context, info.uri.toUri(), info.id)
-          Log.d(PlayVideoFragment.TAG, "Selected video name:${info.name}, 字幕: ${info.subUri}, wav:$wav")
-          info
+        takePersistablePermission(context, uri)
+        val info = FileUtil.getFileInfo(context, uri)
+        val prefKey = stringPreferencesKey(info.id)
+        val sub = preferences?.get(prefKey)
+        if (!sub.isNullOrEmpty()) {
+          info.subUri = sub
+        } else {
+          needToCheckSubFolder = true
         }
+        val wav = FFmpegUtil.extractWavFileByFFmpeg(context, info.uri.toUri(), info.id)
+        Log.d(PlayVideoFragment.TAG, "Selected video name:${info.name}, 字幕: ${info.subUri}, wav:$wav")
 
         //去文件夹寻找字幕
         if (needToCheckSubFolder) {
@@ -72,37 +73,22 @@ class SelectFileComponent : BaseComponent<PlayVideoFragment>() {
           Log.d(PlayVideoFragment.TAG, "needToCheckSubFolder folder: $folder")
           val map = SubtitleAutoLoader.scanSubtitleFolder(context, folder)
           if (map.isNotEmpty()) {
-            infos.forEach {info->
-              if (info.subUri == null) {
-                val key = info.name.substringBeforeLast(".")
-                val tempUri = map[key]
-                info.subUri = tempUri.toString()
-                if (tempUri != null) {
-                  val prefKey = stringPreferencesKey(info.id)
-                  context.subtitleStore.edit { sp-> sp[prefKey] = tempUri.toString() }
-                }
+            if (info.subUri == null) {
+              val key = info.name.substringBeforeLast(".")
+              val tempUri = map[key]
+              info.subUri = tempUri.toString()
+              if (tempUri != null) {
+                val prefKey = stringPreferencesKey(info.id)
+                context.subtitleStore.edit { sp-> sp[prefKey] = tempUri.toString() }
               }
             }
           }
         }
 
         withContext(Dispatchers.Main) {
-          fragment.viewModel.addPlayList(infos, true)
+          //构造两个使其永远后下一个, 激活下一个按钮
+          fragment.viewModel.addPlayList(listOf(info, info), true)
           fragment.hideLoading()
-        }
-      }
-    }
-  }
-
-  val openDirLauncher by lazy {
-    fragment.registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
-      Log.d(PlayVideoFragment.TAG, "OpenDocumentTree uri: $uri")
-      if (uri != null) {
-        takePersistablePermission(uri)
-        fScope.launch {
-          context.dataStore.edit {
-            it[KEY_SUBTITLE_FOLDER] = uri.toString()
-          }
         }
       }
     }
@@ -111,7 +97,7 @@ class SelectFileComponent : BaseComponent<PlayVideoFragment>() {
   val openSubtitleLauncher by lazy {
     fragment.registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
       if (uri != null) {
-        takePersistablePermission(uri)
+        takePersistablePermission(context, uri)
         fragment.viewModel.onSubtitleSelected(uri)
       }
     }
@@ -130,14 +116,14 @@ class SelectFileComponent : BaseComponent<PlayVideoFragment>() {
               Log.d(PlayVideoFragment.TAG, "Selected video mutable, uri: ${clipData.itemCount}")
               for (i in 0 until clipData.itemCount) {
                 val uri = clipData.getItemAt(i).uri
-                takePersistablePermission(uri)
+                takePersistablePermission(context, uri)
                 // 处理每个文件
               }
             } else if (data != null) {
               // 单选
               val uri = data
               Log.d(PlayVideoFragment.TAG, "Selected video single, uri: $uri")
-              takePersistablePermission(uri)
+              takePersistablePermission(context, uri)
               //fragment.viewModel.parseUriToPcm(uri)
               //getParentFolder(context, uri)
             }
@@ -150,12 +136,35 @@ class SelectFileComponent : BaseComponent<PlayVideoFragment>() {
     super.onCreate()
     //resultLauncher
     openFileLauncher
-    openDirLauncher
     openSubtitleLauncher
+  }
+
+  private fun showMenu() {
+    val popup = PopupMenu(context, fragment.binding.ivAdd)
+    popup.menuInflater.inflate(R.menu.menu_add_media, popup.menu)
+    popup.setOnMenuItemClickListener { menuItem ->
+      when (menuItem.itemId) {
+        R.id.action_media -> {
+          openFileLauncher.launch(arrayOf("audio/*", "video/*"))
+        }
+        R.id.action_subtitle -> {
+          if (fragment.viewModel.currentMediaItem.value != null)  {
+            openSubtitleLauncher.launch(arrayOf("text/*", "application/x-subrip"))
+          } else {
+            ToastUtil.toast("当前没有视频, 无法设置字幕")
+          }
+        }
+      }
+      true
+    }
+    popup.show()
   }
 
   override fun onCreateView() {
     super.onCreateView()
+    fragment.binding.ivAdd.setOnClickListener {
+      showMenu()
+    }
     //fragment.binding.selectFileBtn.setOnClickListener {
     //  //val intent = Intent(Intent.ACTION_OPEN_DOCUMENT)
     //  //intent.type = "*/*" // 必须设置为 */* 才能配合 MIME array
@@ -177,22 +186,5 @@ class SelectFileComponent : BaseComponent<PlayVideoFragment>() {
     //    "application/x-subrip",
     //  ))
     //}
-  }
-
-  // 核心方法：申请持久权限
-  private fun takePersistablePermission(uri: Uri) {
-    try {
-      val contentResolver = context.contentResolver
-      // 关键代码：告诉系统我要永久接管这个 Uri 的读权限
-      val takeFlags: Int =
-        Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-      contentResolver.takePersistableUriPermission(uri, takeFlags)
-      // 成功后，你就可以把 uri.toString() 存入 Room 或 SharedPreferences 了
-      // 下次直接用 Uri.parse(string) 就能播放
-    } catch (e: SecurityException) {
-      e.printStackTrace()
-      // 某些特殊云端文件可能不支持持久权限，这里要做异常处理
-      Log.d(PlayVideoFragment.TAG, "takePersistablePermission failed:${e.message}, uri: $uri")
-    }
   }
 }

@@ -1,9 +1,13 @@
 package com.language.repeater.utils
 
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import android.provider.OpenableColumns
 import android.util.Log
+import androidx.core.net.toUri
+import androidx.documentfile.provider.DocumentFile
+import com.language.repeater.playvideo.PlayVideoFragment
 import com.language.repeater.playvideo.model.VideoEntity
 import com.language.repeater.playvideo.playlist.PlaylistManager
 import java.io.FileInputStream
@@ -196,18 +200,60 @@ object FileUtil {
       id = "$trimName-$size"
     }
 
-    return VideoEntity(id, uri.toString(), name, 0L, null)
+    return VideoEntity(id, uri.toString(), name, null)
   }
 
-  fun isSafUriAvailable(context: Context, uri: Uri): Boolean {
+  fun isSafUriAvailable(context: Context, uri: String): Boolean {
     return try {
-      context.contentResolver.openInputStream(uri)?.use {
+      context.contentResolver.openInputStream(uri.toUri())?.use {
         true
       } ?: false
     } catch (e: Exception) {
+      e.printStackTrace()
       false
     }
   }
 
+  /**
+   * 获取文件对应的名字
+   */
+  fun getUriFileName(context: Context, uri: String): String {
+    var name = ""
+    try {
+      //val contentUri = uri.toUri()
+      //val projection = arrayOf(OpenableColumns.DISPLAY_NAME)
+      //context.contentResolver.query(contentUri, projection, null, null, null)?.use { cursor ->
+      //  if (cursor.moveToFirst()) {
+      //    val displayNameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+      //    if (displayNameIndex != -1) {
+      //      name = cursor.getString(displayNameIndex)
+      //    }
+      //  }
+      //}
+      name = DocumentFile.fromTreeUri(context, uri.toUri())?.name ?: ""
+      Log.i(TAG, "getUriFileName : $name")
+    } catch (e: Exception) {
+      Log.i(TAG, "getUriFileName error : ${e.message}")
+      e.printStackTrace()
+    }
+    return name
+  }
+
+  // 核心方法：申请持久权限
+  fun takePersistablePermission(context: Context, uri: Uri) {
+    try {
+      val contentResolver = context.contentResolver
+      // 关键代码：告诉系统我要永久接管这个 Uri 的读权限
+      val takeFlags: Int =
+        Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+      contentResolver.takePersistableUriPermission(uri, takeFlags)
+      // 成功后，你就可以把 uri.toString() 存入 Room 或 SharedPreferences 了
+      // 下次直接用 Uri.parse(string) 就能播放
+    } catch (e: SecurityException) {
+      e.printStackTrace()
+      // 某些特殊云端文件可能不支持持久权限，这里要做异常处理
+      Log.d(PlayVideoFragment.TAG, "takePersistablePermission failed:${e.message}, uri: $uri")
+    }
+  }
 }
 

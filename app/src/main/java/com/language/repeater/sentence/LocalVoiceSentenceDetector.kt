@@ -32,19 +32,18 @@ class LocalVoiceSentenceDetector(
     var zcrThreshold: Float = 0.12f,
 
     /** 最小静音持续时间(毫秒)，低于此值不算句子间隔 */
-    val minSilenceDurationMs: Int = 700,
+    val minSilenceDurationMs: Int = 500,
 
     /** 最小语音持续时间(毫秒)，低于此值不算一句话 */
     val minSpeechDurationMs: Int = 50,
 
     /** 句子前后的额外补偿扩展 */
-    var paddingMs: Int = 150,
+    var paddingMs: Int = 100,
 
     /** 句子前后追加清辅音和低音量的检查计算区间,多少帧 */
-    var expandEdgeStartCount: Int = 15, //20帧=300ms
-    var expandEdgeEndCount: Int = 30, //20帧=300ms
-
-    var expandEdgeCheckEnergyFactor: Float = 0.2f, //20帧=300ms
+    var expandEdgeStartCount: Int = 10, //20帧=300ms
+    var expandEdgeEndCount: Int = 15, //20帧=300ms
+    var expandEdgeCheckEnergyFactor: Float = 0.3f, //20帧=300ms
   )
 
   /**
@@ -298,38 +297,38 @@ class LocalVoiceSentenceDetector(
       return  (feature.energy >= config.energyThreshold * config.expandEdgeCheckEnergyFactor)
     }
 
-    fun expandBegin(seg: Segment, index: Int) {
+    fun expandBegin(seg: Segment) {
       val begin = (seg.frameStart - config.expandEdgeStartCount).coerceAtLeast(0)
       val end = seg.frameStart - 1
-      for (i in begin..end) {
-        val feature = features[i]
-        val isSpeech = isSpeech(feature)
-        if (isSpeech) {
-          seg.frameStart = i
-          break
-        }
-      }
-      //seg.first = (seg.first - config.expandEdgeExtraCount).coerceAtLeast(0)
-    }
-
-    fun expandEnd(seg: Segment, index: Int) {
-      val begin = seg.frameEnd + 1
-      val end = (seg.frameEnd + config.expandEdgeEndCount).coerceAtMost(features.lastIndex)
       for (i in end downTo begin) {
         val feature = features[i]
         val isSpeech = isSpeech(feature)
         if (isSpeech) {
-          seg.frameEnd = i
+          seg.frameStart = i
+        } else {
           break
         }
       }
-      //seg.second = (seg.second + config.expandEdgeExtraCount).coerceAtMost(features.lastIndex)
+    }
+
+    fun expandEnd(seg: Segment) {
+      val begin = seg.frameEnd + 1
+      val end = (seg.frameEnd + config.expandEdgeEndCount).coerceAtMost(features.lastIndex)
+      for (i in begin .. end) {
+        val feature = features[i]
+        val isSpeech = isSpeech(feature)
+        if (isSpeech) {
+          seg.frameEnd = i
+        } else {
+          break
+        }
+      }
     }
 
     for (i in segments.indices) {
       val seg = segments[i]
-      expandBegin(seg, i)
-      expandEnd(seg, i)
+      expandBegin(seg)
+      expandEnd(seg)
     }
   }
 
@@ -346,8 +345,8 @@ class LocalVoiceSentenceDetector(
 
     val paddingSample = config.paddingMs * sampleRate / 1000
     sentences.forEach {
-      it.sampleStart = (it.sampleStart - paddingSample / 2).coerceAtLeast(0)
-      it.sampleEnd = (it.sampleEnd + paddingSample).coerceAtMost(maxSampleIndex)
+      it.sampleStart = (it.sampleStart - paddingSample).coerceAtLeast(0)
+      it.sampleEnd = (it.sampleEnd + paddingSample * 2).coerceAtMost(maxSampleIndex)
     }
 
     sentences = mergeSentence(sentences)

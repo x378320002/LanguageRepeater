@@ -11,6 +11,7 @@ import android.util.Log
 import androidx.datastore.preferences.core.edit
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.Timeline
 import androidx.media3.session.MediaController
@@ -19,20 +20,21 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import com.language.repeater.R
 import com.language.repeater.dataStore
+import com.language.repeater.db.historyDao
 import com.language.repeater.sentence.LocalVoiceSentenceDetector
 import com.language.repeater.pcm.PCMSegmentLoader
 import com.language.repeater.pcm.PcmDataUtil
 import com.language.repeater.sentence.Sentence
 import com.language.repeater.pcm.WaveformPoint
 import com.language.repeater.playvideo.components.SubtitleAutoLoader
-import com.language.repeater.playvideo.history.HistoryManager
 import com.language.repeater.playvideo.model.CurrentPlayVideoEntity
 import com.language.repeater.playvideo.model.toEntity
 import com.language.repeater.playvideo.model.toMediaItem
 import com.language.repeater.playvideo.playlist.PlaylistManager
 import com.language.repeater.pcm.FFmpegUtil
 import com.language.repeater.sentence.SentenceStoreUtil
-import com.language.repeater.utils.DataStoreKey.KEY_IS_REPEATED
+import com.language.repeater.utils.DataStoreKey
+import com.language.repeater.utils.DataStoreKey.KEY_AB_REPEATED
 import com.language.repeater.utils.SrtParser
 import com.language.repeater.utils.ToastUtil
 import kotlinx.coroutines.CoroutineScope
@@ -44,6 +46,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.isActive
@@ -114,10 +117,6 @@ class PlaybackCore(private val context: Context) {
   private val _curAbSentenceFlow = MutableStateFlow<Sentence?>(null)
   val curAbSentenceFlow = _curAbSentenceFlow.asStateFlow()
 
-  // 播放模式状态流 (默认为不循环)
-  private val _playerRepeatMode = MutableStateFlow(Player.REPEAT_MODE_OFF)
-  val playerRepeatMode = _playerRepeatMode.asStateFlow()
-
   // --- 内部变量 ---
   private var currentId: String = ""
   private var parseJob: Job? = null
@@ -161,7 +160,7 @@ class PlaybackCore(private val context: Context) {
 
     scope.launch {
       val repeat = context.dataStore.data.map {
-        it[KEY_IS_REPEATED]
+        it[KEY_AB_REPEATED]
       }.firstOrNull() ?: false
       Log.i(TAG, "init _repeatable:$repeat")
       _repeatable.value = repeat
@@ -211,6 +210,13 @@ class PlaybackCore(private val context: Context) {
 
     // 3. 设置新的
     if (newPlayer != null) {
+      scope.launch(Dispatchers.IO) {
+        val cycle = DataStoreKey.observeRepeatMode().first()
+        withContext(Dispatchers.Main) {
+          newPlayer.repeatMode = cycle
+        }
+      }
+
       newPlayer.addListener(playerListener)
 
       // 初始化字幕加载器
@@ -255,14 +261,22 @@ class PlaybackCore(private val context: Context) {
       // 1. 读取列表 (返回 List<VideoEntity>)
       val videoEntities = PlaylistManager.loadLastPlaylist(context)
       if (videoEntities.isNotEmpty()) {
+
         // 2. 转换为 MediaItem
-        val mediaItems = videoEntities.map { it.toMediaItem() }
+        var mediaItems = videoEntities.map { it.toMediaItem() }
 
         // 3. 读取上次播放位置 (VideoEntity -> Index/Pos)
         val playInfo = PlaylistManager.loadCurrentPlayIndex(context)
 
         val startIndex = playInfo?.index ?: 0
         val startPos = playInfo?.positionMs ?: C.TIME_UNSET
+
+        //保证一定有下一个视频,激活seekToNext功能
+        if (startIndex == mediaItems.lastIndex) {
+          val addToLast = mediaItems[mediaItems.lastIndex]
+          mediaItems = mediaItems.toMutableList()
+          mediaItems.add(addToLast)
+        }
 
         withContext(Dispatchers.Main) {
           Log.i(TAG, "Restoring playlist: ${mediaItems.size} items, index: $startIndex")
@@ -295,12 +309,6 @@ class PlaybackCore(private val context: Context) {
 
     currentId = key
     Log.i(TAG, "handleMediaItemTransition ID: $key")
-
-    val entity = item.toEntity(_playerState.value?.currentPosition ?: 0L)
-    // 1. 保存历史记录
-    scope.launch(Dispatchers.IO) {
-      HistoryManager.addHistory(context, entity)
-    }
 
     // 2. 开始解析数据 (取消上一次的解析)
     parseJob?.cancel()
@@ -381,7 +389,7 @@ class PlaybackCore(private val context: Context) {
     _repeatable.value = repeat
     scope.launch {
       context.dataStore.edit { prefs ->
-        prefs[KEY_IS_REPEATED] = repeat
+        prefs[KEY_AB_REPEATED] = repeat
       }
     }
   }
@@ -455,6 +463,11 @@ class PlaybackCore(private val context: Context) {
 
   // --- 基础播放器同步逻辑 ---
   private val playerListener = object : Player.Listener {
+    override fun onPlayerError(error: PlaybackException) {
+      super.onPlayerError(error)
+      Log.i(TAG, "onPlayerError reason: ${error.message}")
+    }
+
     override fun onIsPlayingChanged(isPlaying: Boolean) {
       //Log.i(TAG, "onIsPlayingChanged isPlaying: $isPlaying")
       _isPlaying.value = isPlaying
@@ -474,6 +487,15 @@ class PlaybackCore(private val context: Context) {
       if (mediaItem != preItem) {
         _currentMediaItem.value = mediaItem
         handleMediaItemTransition(mediaItem)
+
+        // 保存历史记录
+        mediaItem?.toEntity()?.also {
+          scope.launch(Dispatchers.IO) {
+            //HistoryManager.addHistory(context, entity)
+            context.historyDao.saveHistory(it)
+          }
+        }
+
         saveCurrentState()
       }
     }
@@ -510,7 +532,7 @@ class PlaybackCore(private val context: Context) {
 
     // 监听播放器内部模式变化 (比如用户通过通知栏改了模式)
     override fun onRepeatModeChanged(repeatMode: Int) {
-      _playerRepeatMode.value = repeatMode
+      //_playerRepeatMode.value = repeatMode
     }
   }
 
@@ -521,7 +543,7 @@ class PlaybackCore(private val context: Context) {
     _currentMediaItem.value = player.currentMediaItem
     _playbackState.value = player.playbackState
     _mediaItemCount.value = player.mediaItemCount
-    _playerRepeatMode.value = player.repeatMode
+    //_playerRepeatMode.value = player.repeatMode
     updatePosition()
   }
 
@@ -784,7 +806,9 @@ class PlaybackCore(private val context: Context) {
 
   fun setPlayerRepeatMode(mode: Int) {
     _playerState.value?.repeatMode = mode
-    _playerRepeatMode.value = mode
+    scope.launch {
+      DataStoreKey.saveRepeatMode(mode)
+    }
   }
 
   // --- 暴露给 UI 的基础操作 ---

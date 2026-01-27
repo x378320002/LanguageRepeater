@@ -37,7 +37,7 @@ class MyApp : Application(), SingletonImageLoader.Factory {
     super.onCreate()
     instance = this
 
-    AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
+    //AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
   }
 
   override fun newImageLoader(context: PlatformContext): ImageLoader {

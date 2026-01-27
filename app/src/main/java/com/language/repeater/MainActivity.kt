@@ -20,6 +20,7 @@ import androidx.navigation.fragment.fragment
 import com.language.repeater.playvideo.PlayVideoFragment
 import com.language.repeater.playcore.PlaybackCore.Companion.TAG
 import com.language.repeater.playcore.PlaybackService
+import com.language.repeater.setting.SettingFragment
 import com.language.repeater.test.TestFragment
 import kotlinx.serialization.Serializable
 
@@ -28,6 +29,9 @@ object PlayVideoPageKey
 
 @Serializable
 object TestPageKey
+
+@Serializable
+object SettingPageKey
 
 val defaultNavOptions = NavOptions.Builder()
   .setEnterAnim(R.anim.slide_in_right)
@@ -62,11 +66,10 @@ class MainActivity : AppCompatActivity() {
     val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
     val navController = navHostFragment.navController
     navController.graph = navController.createGraph(startDestination = PlayVideoPageKey) {
-      // Associate each destination with one of the route constants.
-      fragment<TestFragment, TestPageKey> {
-        label = "TestPageKey"
-      }
       fragment<PlayVideoFragment, PlayVideoPageKey> {
+        label = "PlayVideoPageKey"
+      }
+      fragment<SettingFragment, SettingPageKey> {
         label = "PlayVideoPageKey"
       }
       //Add other fragment destinations similarly.

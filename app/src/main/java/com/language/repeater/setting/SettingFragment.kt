@@ -1,0 +1,124 @@
+package com.language.repeater.setting
+
+import android.R.attr.fragment
+import android.annotation.SuppressLint
+import android.os.Bundle
+import android.util.Log
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.datastore.preferences.core.edit
+import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.findNavController
+import com.language.repeater.R
+import com.language.repeater.dataStore
+import com.language.repeater.databinding.SetttingFragmentBinding
+import com.language.repeater.foundation.BaseFragment
+import com.language.repeater.pcm.FFmpegUtil
+import com.language.repeater.playvideo.PlayVideoFragment
+import com.language.repeater.playvideo.PlayerViewModel
+import com.language.repeater.sentence.SentenceStoreUtil
+import com.language.repeater.utils.DataStoreKey
+import com.language.repeater.utils.DataStoreKey.KEY_SUBTITLE_FOLDER
+import com.language.repeater.utils.FileUtil
+import com.language.repeater.utils.ToastUtil
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
+
+
+@SuppressLint("SetTextI18n")
+class SettingFragment: BaseFragment() {
+  private var _binding: SetttingFragmentBinding? = null
+  private val binding get() = _binding!!
+
+  companion object {
+    const val TAG = "wangzixu_SettingFragment"
+  }
+
+  private val viewModel: PlayerViewModel by activityViewModels()
+
+  val openDirLauncher = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+    val context = context ?: return@registerForActivityResult
+    Log.d(PlayVideoFragment.TAG, "OpenDocumentTree uri: $uri")
+    if (uri != null) {
+      FileUtil.takePersistablePermission(context, uri)
+      lifecycleScope.launch {
+        DataStoreKey.saveSubTitleFolder(uri.toString())
+      }
+    }
+  }
+
+  override fun onCreateView(
+    inflater: LayoutInflater,
+    container: ViewGroup?,
+    savedInstanceState: Bundle?,
+  ): View {
+    _binding = SetttingFragmentBinding.inflate(inflater, container, false)
+    val view = binding.root
+    return view
+  }
+
+  override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+    super.onViewCreated(view, savedInstanceState)
+    ViewCompat.setOnApplyWindowInsetsListener(binding.root) { v, insets ->
+      val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+      v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+      insets
+    }
+
+    setUIAction()
+    observeData()
+  }
+
+  private fun setUIAction() {
+    binding.ibBack.setOnClickListener {
+      findNavController().navigateUp()
+    }
+
+    binding.settingClearTemp.setOnClickListener {
+      val player = viewModel.getPlayer()
+      if (player != null) {
+        // 必须在主线程提取数据
+        val items = mutableListOf<String>()
+        for (i in 0 until player.mediaItemCount) {
+          items.add(player.getMediaItemAt(i).mediaId)
+        }
+        lifecycleScope.launch {
+          FFmpegUtil.clearTempData(requireContext(), items)
+          SentenceStoreUtil.clearTempData(requireContext(), items)
+          binding.settingClearTempDesc.text = "0 M"
+          ToastUtil.toast("清除成功")
+        }
+      }
+    }
+
+    binding.settingSubFolder.setOnClickListener {
+      openDirLauncher.launch(null)
+    }
+  }
+
+  @SuppressLint("DefaultLocale")
+  private fun observeData() {
+    viewLifecycleOwner.lifecycleScope.launch {
+      val size1 = FFmpegUtil.getDirectorySize(requireContext())
+      val size2 = SentenceStoreUtil.getDirectorySize(requireContext())
+      val totalSizeBytes = size1 + size2
+      val totalSizeMB = totalSizeBytes / (1024 * 1024).toDouble()
+      binding.settingClearTempDesc.text = "${String.format("%.2f", totalSizeMB)} MB"
+    }
+
+    DataStoreKey.observeSubTitleFolder().onEach {
+      if (it.isEmpty()) {
+        binding.settingSubFolderDesc.setText(R.string.setting_sub_folder_desc)
+      } else {
+        val name = FileUtil.getUriFileName(requireContext(), it)
+        binding.settingSubFolderDesc.text = name
+      }
+    }.launchIn(viewLifecycleOwner.lifecycleScope)
+  }
+}

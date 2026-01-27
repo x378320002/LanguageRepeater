@@ -20,10 +20,6 @@ class HistoryListAdapter(
   private val onMenuAction: (VideoEntity, Int) -> Unit
 ) : ListAdapter<VideoEntity, HistoryListAdapter.ViewHolder>(VideoEntityDiffCallback()) {
 
-  companion object {
-    private val COVER_RADIUS = 6f.toDp()
-  }
-
   inner class ViewHolder(val binding: HistorySheetItemBinding) :
     RecyclerView.ViewHolder(binding.root) {
 

@@ -12,6 +12,8 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
 import com.language.repeater.dataStore
+import com.language.repeater.db.videoInfoDao
+import com.language.repeater.playvideo.model.toEntity
 import com.language.repeater.subtitleStore
 import com.language.repeater.utils.DataStoreKey.KEY_SUBTITLE_FOLDER
 import kotlinx.coroutines.CoroutineScope
@@ -42,7 +44,9 @@ class SubtitleAutoLoader(
       // 简单的一层遍历，不递归，防止性能爆炸
       folder.listFiles().forEach { file ->
         val name = file.name
-        if (name != null && name.endsWith(".srt", ignoreCase = true)) {
+        if (name != null
+          && (name.endsWith(".srt", ignoreCase = true)
+              || name.endsWith(".vtt", ignoreCase = true))) {
           // key = 文件名 (不含后缀)
           map[name.substringBeforeLast(".")] = file.uri
         }
@@ -144,6 +148,9 @@ class SubtitleAutoLoader(
     val prefKey = stringPreferencesKey(currentItem.mediaId)
     scope.launch(Dispatchers.IO) {
       context.subtitleStore.edit { it[prefKey] = subtitleUri.toString() }
+      val newEntity = currentItem.toEntity()
+      newEntity.subUri = subtitleUri.toString()
+      context.videoInfoDao.insertOrUpdateInfo(newEntity)
     }
 
     // 执行热替换
@@ -185,6 +192,10 @@ class SubtitleAutoLoader(
         val newItem = buildItemWithSubtitle(item, subtitleUri)
         newItems.add(newItem)
         hasChange = true
+
+        scope.launch(Dispatchers.IO) {
+          context.videoInfoDao.insertOrUpdateInfo(newItem.toEntity())
+        }
       } else {
         newItems.add(item)
       }

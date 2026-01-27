@@ -13,10 +13,11 @@
   <color name="PastelOrawhite_20nge">#FFFFD6A5</color>
   <color name="PastelGreen">#86A9A2</color>
 
-  <color name="PlayListTextColorSelected">#008577</color>
-  <color name="PlayListTextColor">#333333</color>
+  <color name="PlayListTextColorSelected">@color/white</color>
+  <color name="PlayListTextColor">#B2B1B1</color>
 
-  <color name="main_text_color">#CACACA</color>
+  <color name="main_text_color">#E2E2E2</color>
+  <color name="sub_text_color">#B2B1B1</color>
   <color name="main_bg_color">#1C1D1D</color>
   <color name="main_bg_color_2">#383939</color>
   <color name="main_bg_color_3">#595B5B</color>
@@ -55,4 +56,6 @@
   <color name="ic_tint_bg">#393939</color>
   <color name="ic_tint_bg_pressed">#252525</color>
   <color name="bg_selected">#252525</color>
+
+  <color name="divider_color">#5B5B5B</color>
 </resources>

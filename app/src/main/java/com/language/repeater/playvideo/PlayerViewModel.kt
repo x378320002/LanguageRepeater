@@ -4,11 +4,13 @@ import kotlin.collections.map
 import android.app.Application
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.application
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.C
 import androidx.media3.common.Player
+import com.dotlottie.dlplayer.Mode
+import com.language.repeater.db.historyDao
 import com.language.repeater.playcore.PlaybackCore
-import com.language.repeater.playvideo.history.HistoryManager
 import com.language.repeater.playvideo.model.VideoEntity
 import com.language.repeater.playvideo.model.toMediaItem
 import com.language.repeater.playcore.SleepTimerManager
@@ -38,7 +40,6 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
   val currentMediaItem = playbackCore.currentMediaItem
   val mediaItemCount = playbackCore.mediaItemCount
   val playlistRefreshEvent = playbackCore.playlistRefreshEvent
-  val playerRepeatMode = playbackCore.playerRepeatMode
   //val isPlayingState = playbackCore.isPlaying
 
   // 业务数据流
@@ -124,6 +125,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     val items = list.map { it.toMediaItem() }
     if (isReplace) {
       player.setMediaItems(items)
+      player.seekTo(0, C.TIME_UNSET)
       player.prepare()
       player.play()
     } else {
@@ -168,17 +170,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     }
   }
 
-  // 2. 切换逻辑
-  fun togglePlayerRepeatMode() {
-    val currentMode = playerRepeatMode.value
-    // 定义切换顺序: 列表不循环 -> 列表循环 -> 单曲循环 -> 列表不循环
-    val nextMode = when (currentMode) {
-      Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ALL
-      Player.REPEAT_MODE_ALL -> Player.REPEAT_MODE_ONE
-      Player.REPEAT_MODE_ONE -> Player.REPEAT_MODE_OFF
-      else -> Player.REPEAT_MODE_OFF
-    }
-    playbackCore.setPlayerRepeatMode(nextMode)
+  fun setPlayerRepeatMode(mode: Int) {
+    playbackCore.setPlayerRepeatMode(mode)
   }
 
   fun deleteCurrentSentence() {
@@ -187,7 +180,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
   // --- 历史记录 ---
   // 直接暴露 Flow 给 UI 监听
-  fun getHistoryFlow() = HistoryManager.observeHistory(getApplication())
+  fun getHistoryFlow() = application.historyDao.getAllHistory()
 
   // 播放历史记录中的某一项
   fun playHistoryItem(item: VideoEntity) {
@@ -210,7 +203,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     if (existingIndex != -1) {
       // 3. 如果存在，直接切过去
-      player.seekTo(existingIndex, item.positionMs)
+      player.seekTo(existingIndex, 0)
       player.play()
     } else {
       // 4. 如果不存在，添加到当前播放位置的下一首，并播放
@@ -218,7 +211,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
       val mediaItem = item.toMediaItem()
       //val nextIndex = if (player.currentMediaItemIndex == C.INDEX_UNSET) 0 else player.currentMediaItemIndex + 1
       player.addMediaItem(0, mediaItem)
-      player.seekTo(0, item.positionMs)
+      player.seekTo(0, 0)
       player.prepare()
       player.play()
     }
@@ -257,7 +250,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
   // 删除历史记录
   fun deleteHistory(item: VideoEntity) {
     viewModelScope.launch(Dispatchers.IO) {
-      HistoryManager.deleteHistory(getApplication(), item)
+      //HistoryManager.deleteHistory(getApplication(), item)
+      application.historyDao.deleteByVideoId(item.id)
     }
   }
 

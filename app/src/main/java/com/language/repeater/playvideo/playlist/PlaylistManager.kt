@@ -1,21 +1,23 @@
 package com.language.repeater.playvideo.playlist
 
 import android.content.Context
+import android.util.Log
 import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.media3.common.MediaItem
+import coil3.util.Logger
 import com.language.repeater.dataStore
+import com.language.repeater.db.curPlayListDao
+import com.language.repeater.db.videoInfoDao
 import com.language.repeater.json
 import com.language.repeater.playvideo.model.CurrentPlayVideoEntity
 import com.language.repeater.playvideo.model.VideoEntity
 import com.language.repeater.playvideo.model.toEntity
-import com.language.repeater.subtitleStore
-import com.language.repeater.utils.DataStoreKey.KEY_CURRENT_PLAYLIST
 import com.language.repeater.utils.DataStoreKey.KEY_CURRENT_PLAY_INFO
+import com.language.repeater.utils.FileUtil
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
@@ -24,48 +26,66 @@ import kotlinx.coroutines.withContext
  * Description:
  */
 object PlaylistManager {
-  const val TAG = "wangzixu"
+  const val TAG = "wangzixu_PlaylistManager"
 
   /**
    * 保存当前播放器的列表到本地
    */
-  suspend fun saveCurrentPlaylist(context: Context, items: List<MediaItem>) =
-    withContext(Dispatchers.IO) {
+  suspend fun saveCurrentPlaylist(context: Context, items: List<MediaItem>) = withContext(Dispatchers.IO) {
       val list = items.map { item ->
         item.toEntity()
       }
-
-      // 【修改】使用 Kotlinx Serialization 序列化
-      val jsonString = json.encodeToString(list)
-      context.dataStore.edit { prefs ->
-        prefs[KEY_CURRENT_PLAYLIST] = jsonString
-      }
+      //
+      //// 【修改】使用 Kotlinx Serialization 序列化
+      //val jsonString = json.encodeToString(list)
+      //context.dataStore.edit { prefs ->
+      //  prefs[KEY_CURRENT_PLAYLIST] = jsonString
+      //}
+      context.curPlayListDao.replacePlaylist(list)
     }
 
   /**
    * 读取本地列表并转换为 List<MediaItem>
    */
   suspend fun loadLastPlaylist(context: Context): List<VideoEntity> = withContext(Dispatchers.IO) {
-    val jsonString = context.dataStore.data.map { prefs ->
-      prefs[KEY_CURRENT_PLAYLIST]
-    }.firstOrNull()
-
-    if (jsonString.isNullOrEmpty()) return@withContext emptyList()
-
-    return@withContext try {
-      val entities: List<VideoEntity> = json.decodeFromString(jsonString)
-      entities.forEach {
-        if (it.subUri == null) {
-          val prefKey = stringPreferencesKey(it.id)
-          val preferences = context.subtitleStore.data.first()
-          it.subUri = preferences[prefKey]
-        }
+    //val jsonString = context.dataStore.data.map { prefs ->
+    //  prefs[KEY_CURRENT_PLAYLIST]
+    //}.firstOrNull()
+    //
+    //if (jsonString.isNullOrEmpty()) return@withContext emptyList()
+    //
+    //return@withContext try {
+    //  val entities: List<VideoEntity> = json.decodeFromString(jsonString)
+    //  entities.forEach {
+    //    if (it.subUri == null) {
+    //      val prefKey = stringPreferencesKey(it.id)
+    //      val preferences = context.subtitleStore.data.first()
+    //      it.subUri = preferences[prefKey]
+    //    }
+    //  }
+    //  entities
+    //} catch (e: Exception) {
+    //  e.printStackTrace()
+    //  emptyList()
+    //}
+    val toDelete = mutableListOf<VideoEntity>()
+    val list = context.curPlayListDao.getCurrentPlaylist().mapNotNull {
+      //如果原文件没了, 删除本条记录
+      val available = FileUtil.isSafUriAvailable(context, it.videoInfo.uri)
+      if (available) {
+        it.videoInfo
+      } else {
+        Log.i(TAG, "loadLastPlaylist 原文件找不到了: ${it.videoInfo.uri}")
+        toDelete.add(it.videoInfo)
+        null
       }
-      entities
-    } catch (e: Exception) {
-      e.printStackTrace()
-      emptyList()
     }
+    if (toDelete.isNotEmpty()) {
+      launch(Dispatchers.IO) {
+        context.videoInfoDao.deleteAll(toDelete)
+      }
+    }
+    return@withContext list
   }
 
   suspend fun saveCurrentPlayIndex(context: Context, info: CurrentPlayVideoEntity) = withContext(Dispatchers.IO) {
