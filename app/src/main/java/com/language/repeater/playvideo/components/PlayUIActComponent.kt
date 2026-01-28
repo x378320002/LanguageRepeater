@@ -1,9 +1,11 @@
 package com.language.repeater.playvideo.components
 
+import android.R.attr.fragment
 import android.view.View
 import androidx.appcompat.view.ContextThemeWrapper
 import androidx.appcompat.widget.PopupMenu
 import androidx.core.content.ContentProviderCompat.requireContext
+import androidx.lifecycle.lifecycleScope
 import androidx.media3.common.util.UnstableApi
 import androidx.navigation.fragment.findNavController
 import androidx.transition.TransitionManager
@@ -12,12 +14,15 @@ import com.language.repeater.R
 import com.language.repeater.SettingPageKey
 import com.language.repeater.foundation.BaseComponent
 import com.language.repeater.pcm.FFmpegUtil
+import com.language.repeater.playcore.SleepTimerManager
 import com.language.repeater.playvideo.PlayVideoFragment
 import com.language.repeater.playvideo.history.HistorySheetFragment
 import com.language.repeater.playvideo.playlist.PlaylistSheetFragment
+import com.language.repeater.playvideo.sleeptimer.SleepTimerSheetFragment
 import com.language.repeater.sentence.SentenceStoreUtil
 import com.language.repeater.utils.ResourcesUtil
 import com.language.repeater.utils.ToastUtil
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
@@ -46,8 +51,10 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
     fragment.binding.mergeNext.setOnClickListener(this)
     fragment.binding.deleteSentence.setOnClickListener(this)
     fragment.binding.splitSentence.setOnClickListener(this)
+    fragment.binding.insertSentence.setOnClickListener(this)
     fragment.binding.subActionMore.setOnClickListener(this)
     fragment.binding.ivSetting.setOnClickListener(this)
+    fragment.binding.setTimer.setOnClickListener(this)
     //fragment.binding.voiceNext.setOnClickListener(this)
     //fragment.binding.voicePrevious.setOnClickListener(this)
     //fragment.binding.reloadSentence.setOnClickListener(this)
@@ -74,15 +81,33 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
         }
       }
     }.launchIn(uiScope)
+
+    uiScope.launch {
+      SleepTimerManager.remainingSeconds.collectLatest { seconds ->
+        if (seconds > 0) {
+          fragment.binding.setTimerTv.visibility = View.VISIBLE
+          fragment.binding.setTimerTv.text = SleepTimerManager.formatTime(seconds)
+        } else {
+          fragment.binding.setTimerTv.visibility = View.GONE
+        }
+      }
+    }
   }
 
   override fun onClick(v: View?) {
     when (v) {
+      fragment.binding.setTimer -> {
+        val sheet = SleepTimerSheetFragment()
+        sheet.show(fragment.childFragmentManager, "SleepTimer")
+      }
       fragment.binding.ivSetting -> {
         fragment.findNavController().navigate(SettingPageKey)
       }
       fragment.binding.subActionMore -> {
         showMoreMenu()
+      }
+      fragment.binding.insertSentence -> {
+        fragment.viewModel.insertSentence()
       }
       fragment.binding.mergePre -> {
         fragment.viewModel.mergePreSentence()

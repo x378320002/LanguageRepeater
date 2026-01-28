@@ -38,7 +38,7 @@ class SleepTimerSheetFragment : BasePlaySheetFragment() {
 
   private fun setupClickListeners() {
     binding.btnOff.setOnClickListener {
-      viewModel.stopSleepTimer()
+      SleepTimerManager.stopTimer()
       dismiss()
       ToastUtil.toast("定时已关闭")
     }
@@ -73,7 +73,7 @@ class SleepTimerSheetFragment : BasePlaySheetFragment() {
 
   private fun startTimer(seconds: Long) {
     // 直接调用 ViewModel，不传 Player
-    viewModel.startSleepTimer(seconds)
+    SleepTimerManager.startTimer(seconds)
     dismiss()
     ToastUtil.toast("将在 ${SleepTimerManager.formatTime(seconds)} 后停止播放")
   }
@@ -84,10 +84,8 @@ class SleepTimerSheetFragment : BasePlaySheetFragment() {
         if (seconds > 0) {
           binding.tvCountdownStatus.visibility = View.VISIBLE
           binding.tvCountdownStatus.text = getString(R.string.sleep_time, SleepTimerManager.formatTime(seconds))
-          binding.btnOff.text = "关闭定时 (运行中)"
         } else {
           binding.tvCountdownStatus.visibility = View.GONE
-          binding.btnOff.text = "不开启"
         }
       }
     }

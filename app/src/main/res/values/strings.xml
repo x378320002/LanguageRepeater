@@ -27,10 +27,18 @@
 
   <string name="merge_pre">合并上句</string>
   <string name="merge_next">合并下句</string>
-  <string name="delete_sentence">删除</string>
-  <string name="split_sentence">分句</string>
+  <string name="delete_sentence">删除句子</string>
+  <string name="insert_sentence">插入句子</string>
+  <string name="split_sentence">分割句子</string>
 
   <string name="current_no_sentence">当前没有选中任何句子</string>
 
   <string name="history_title">播放记录</string>
+
+  <string name="timer_turn_off">关闭定时</string>
+  <string name="timer_ten_minutes">10 分钟</string>
+  <string name="timer_twenty_minutes">20 分钟</string>
+  <string name="timer_thirty_minutes">30 分钟</string>
+  <string name="timer_sixty_minutes">60 分钟</string>
+  <string name="timer_complete">播放完当前视频后</string>
 </resources>

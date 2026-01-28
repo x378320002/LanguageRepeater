@@ -53,7 +53,6 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
-import kotlin.math.max
 
 /**
  * Repository层, 比ViewModel更低一个层级
@@ -294,7 +293,7 @@ class PlaybackCore(private val context: Context) {
     progressJob = scope.launch {
       while (isActive) {
         if (_playerState.value?.isPlaying == true) {
-          updatePosition(true)
+          updatePosition()
         }
         delay(16)
       }
@@ -345,10 +344,6 @@ class PlaybackCore(private val context: Context) {
         Log.i(TAG, "parseUriToPcm Loaded cached sentences: ${cachedSentences.size}")
       } else {
         loadSentences(item)
-      }
-
-      withContext(Dispatchers.Main) {
-        updatePosition()
       }
     } catch (e: Exception) {
       Log.e(TAG, "Parse error", e)
@@ -458,7 +453,7 @@ class PlaybackCore(private val context: Context) {
 
   private fun findSentenceByTime(currentSec: Float): Sentence? {
     // 优化：二分查找或简单遍历
-    return _sentencesFlow.value.firstOrNull { currentSec <= it.end }
+    return _sentencesFlow.value.firstOrNull { currentSec < it.end }
   }
 
   // --- 基础播放器同步逻辑 ---
@@ -547,7 +542,7 @@ class PlaybackCore(private val context: Context) {
     updatePosition()
   }
 
-  fun updatePosition(checkAb: Boolean = false, seekPosition: Long? = null) {
+  fun updatePosition(checkRepeat: Boolean = true, seekPosition: Long? = null) {
     val pos = seekPosition ?: (_playerState.value?.currentPosition ?: 0L)
 
     _currentPosition.value = pos
@@ -555,7 +550,7 @@ class PlaybackCore(private val context: Context) {
     _currentPositionSeconds.value = curSec
 
     val curAbSen = _curAbSentenceFlow.value
-    if (checkAb && curAbSen != null && _repeatable.value) {
+    if (checkRepeat && curAbSen != null && _repeatable.value) {
       if (_playerState.value?.isPlaying == true && curSec >= curAbSen.end) {
         seekTo((curAbSen.start * 1000).toLong())
       }
@@ -637,7 +632,7 @@ class PlaybackCore(private val context: Context) {
     }
 
     // 1. 检查总长度 ( < 1.0s 不分)
-    if (sen.end - sen.start < 1.0f) {
+    if (sen.end - sen.start < 0.1f) {
       ToastUtil.toast("当前句子太短，无法继续分割")
       return
     }
@@ -655,12 +650,12 @@ class PlaybackCore(private val context: Context) {
 
     if (index != -1) {
       // 3. 执行分割
-      // 新的前半段：End = currentPos - 0.1s
-      val newEndTime = (currentPos - 0.1f).coerceIn(sen.start, currentPos)
+      // 新的前半段：End = currentPos + 0.1s
+      val newEndTime = currentPos + 0.1f
       val newSen = Sentence(sen.start, newEndTime)
 
       // 修改后半段(原句)：Start = currentPos
-      sen.start = currentPos
+      sen.start = currentPos + 0.15f
 
       // 4. 插入列表
       currentList.add(index, newSen)
@@ -719,6 +714,55 @@ class PlaybackCore(private val context: Context) {
     _sentencesFlow.value = sentences
   }
 
+  //插入句子
+  fun insertSentence() {
+    val player = _playerState.value ?: return
+    val curPos = _currentPositionSeconds.value
+    val maxPos = player.duration / 1000f
+    if (maxPos < 1.0f) return
+    val curSen = _curAbSentenceFlow.value
+    val sentences = _sentencesFlow.value.toMutableList()
+
+    if (curSen == null || curSen.end <= curPos || curSen.start >= curPos) {
+      //当前位置在句子外
+      val newSentence = Sentence(curPos - 0.5f, curPos + 0.5f)
+      var index = sentences.indexOf(curSen)
+      if (index == -1) index = 0
+      sentences.add(index, newSentence)
+      _sentencesFlow.value = sentences
+      _curAbSentenceFlow.value = newSentence
+      scope.launch {
+        saveSentencesToDisk(sentences)
+      }
+    } else {
+      //当前位置在句子内, 这是插入句子, 会把当前句子一分为三
+      //分离后的中间的句子
+      val newSentence = Sentence(curPos - 0.5f, curPos + 0.5f)
+      val index = sentences.indexOf(curSen)
+      sentences.add(index + 1, newSentence)
+
+      //分离后的后面的句子
+      val newSenNext = Sentence(newSentence.end, curSen.end)
+      if (newSenNext.start < newSenNext.end - 0.1f) {
+        //插入分离后的后半部分个句子
+        sentences.add(index + 2, newSenNext)
+      }
+
+      //分离后的开头的句子
+      curSen.end = newSentence.start
+      if (curSen.start >= curSen.end - 0.1f) {
+        //这个句子没意义了, 直接删除
+        sentences.remove(curSen)
+      }
+
+      _sentencesFlow.value = sentences
+      _curAbSentenceFlow.value = newSentence
+      scope.launch {
+        saveSentencesToDisk(sentences)
+      }
+    }
+  }
+
   /**
    * 辅助方法：保存句子改动到本地
    */
@@ -735,33 +779,28 @@ class PlaybackCore(private val context: Context) {
   fun mergeAndSaveSentences() {
     val list = _sentencesFlow.value
     if (list.isEmpty()) return
-
     scope.launch(Dispatchers.IO) {
       // 1. 按 start 升序排列
       val sorted = list.sortedBy { it.start }
       val merged = ArrayList<Sentence>()
-
-      if (sorted.isNotEmpty()) {
-        var current = sorted.first()
-        for (i in 1 until sorted.size) {
-          val next = sorted[i]
-          if (next.start <= current.end) {
-            // 有重叠：取较大的 end 值进行合并
-            current.end = max(current.end, next.end)
-            Log.i(TAG, "Merge overlap sentences at index $i")
-            //合并后本质上会删掉后一个sentence, 如果删掉的正好是curAbSen, 需要特殊处理
-            if (next == _curAbSentenceFlow.value) {
-              _curAbSentenceFlow.value = current
-            }
-          } else {
-            // 无重叠：保存当前区间，移动到下一个
-            merged.add(current)
-            current = next
+      var current = sorted.first()
+      for (i in 1 until sorted.size) {
+        val next = sorted[i]
+        if (next.end <= current.end) {
+          // 完全重叠了
+          Log.i(TAG, "Merge overlap sentences at index $i")
+          //合并后本质上会删掉后一个sentence, 如果删掉的正好是curAbSen, 需要特殊处理
+          if (next == _curAbSentenceFlow.value) {
+            _curAbSentenceFlow.value = current
           }
+        } else {
+          // 无重叠：保存当前区间，移动到下一个
+          merged.add(current)
+          current = next
         }
-        // 最后一个也别忘了加进去
-        merged.add(current)
       }
+      // 最后一个也别忘了加进去
+      merged.add(current)
 
       // 2. 更新内存数据流 (UI 会自动刷新显示新的合并后的列表)
       _sentencesFlow.value = merged
@@ -773,27 +812,27 @@ class PlaybackCore(private val context: Context) {
 
   fun deleteCurSentence() {
     val currentPos = _currentPositionSeconds.value
-    val sen = _curAbSentenceFlow.value
-    if (sen == null || sen.start > currentPos || sen.end < currentPos) {
+    val curSen = _curAbSentenceFlow.value
+    if (curSen == null) {
       ToastUtil.toast(R.string.current_no_sentence)
       return
     }
 
     val sentences = _sentencesFlow.value.toMutableList()
-    val index = sentences.indexOf(sen)
+    val index = sentences.indexOf(curSen)
     if (index != -1) {
       //if (repeatable.value && _curAbSentenceFlow.value != null) {
       //  seekToNextSentence()
       //}
 
       if (sentences.size > 1) {
-        sentences.remove(sen)
+        sentences.remove(curSen)
         _sentencesFlow.value = sentences
       } else {
         //如果当前只有这一个句子, 不删除, 把它变成从头到尾
         playerState.value?.also {
-          sen.start = 0f
-          sen.end = it.duration.toFloat() / 1000
+          curSen.start = 0f
+          curSen.end = it.duration.toFloat() / 1000
         }
       }
       _curAbSentenceFlow.value = findSentenceByTime(currentPos)

@@ -166,7 +166,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
    */
   fun saveSentenceData() {
     viewModelScope.launch {
-      playbackCore.saveSentencesToDisk()
+      playbackCore.mergeAndSaveSentences()
     }
   }
 
@@ -255,25 +255,16 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     }
   }
 
-  fun startSleepTimer(seconds: Long) {
-    SleepTimerManager.startTimer(seconds) {
-      // 时间到了执行的操作：调用 Repository 暂停播放
-      // 注意：这里是在主线程回调的，且 connection.pause() 内部安全
-      playbackCore.pause()
-      ToastUtil.toast("睡眠定时已结束，停止播放")
-    }
-  }
-
-  fun stopSleepTimer() {
-    SleepTimerManager.stopTimer()
-  }
-
   fun mergePreSentence() {
     playbackCore.mergePre()
   }
 
   fun mergeNextSentence() {
     playbackCore.mergeNext()
+  }
+
+  fun insertSentence() {
+    playbackCore.insertSentence()
   }
 
   fun editMode(edit: Boolean) {

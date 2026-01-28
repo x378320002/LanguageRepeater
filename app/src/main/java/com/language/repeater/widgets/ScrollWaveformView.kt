@@ -15,7 +15,6 @@ import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.View
 import androidx.appcompat.content.res.AppCompatResources
-import androidx.core.graphics.toRegion
 import com.language.repeater.R
 import com.language.repeater.pcm.PCMSegmentLoader
 import com.language.repeater.sentence.Sentence
@@ -138,21 +137,25 @@ class ScrollWaveformView @JvmOverloads constructor(
   private val senStartPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
     color = ResourcesUtil.getColor(R.color.wave_sentence_begin_sign)
     strokeWidth = 1f.toDp()
+    strokeCap = Paint.Cap.ROUND
   }
   //voice结束指示器
   private val senEndPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
     color = ResourcesUtil.getColor(R.color.wave_sentence_end_sign)
     strokeWidth = 1f.toDp()
+    strokeCap = Paint.Cap.ROUND
   }
   //voice开始指示器
   private val curSenStartPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
     color = ResourcesUtil.getColor(R.color.wave_sentence_begin_sign_cur)
-    strokeWidth = 1f.toDp()
+    strokeWidth = 2f.toDp()
+    strokeCap = Paint.Cap.ROUND
   }
   //voice结束指示器
   private val curSenEndPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
     color = ResourcesUtil.getColor(R.color.wave_sentence_end_sign_cur)
-    strokeWidth = 1f.toDp()
+    strokeWidth = 2f.toDp()
+    strokeCap = Paint.Cap.ROUND
   }
 
   //中线画笔
@@ -451,7 +454,7 @@ class ScrollWaveformView @JvmOverloads constructor(
         val dragResult = dragABResult
         if (dragResult != null) {
           //拖动AB的逻辑
-          handleABDrag(distanceX)
+          handleABDrag(distanceX, dragResult)
         } else {
           if (!isDragging) {
             // 开始拖动
@@ -581,17 +584,15 @@ class ScrollWaveformView @JvmOverloads constructor(
     //  return
     //}
     sentences?.forEach { sen ->
-      if (sen == curABSentence) {
-        drawSignPoint(canvas, sen.start, curSenStartPaint)
-        drawSignPoint(canvas, sen.end, curSenEndPaint)
-      } else {
-        drawSignPoint(canvas, sen.start, senStartPaint)
-        drawSignPoint(canvas, sen.end, senEndPaint)
-      }
+      drawSignPoint(canvas, sen.start, senStartPaint)
+      drawSignPoint(canvas, sen.end, senEndPaint)
     }
 
-    if (isRepeated && curABSentence != null) {
-      curABSentence?.also {
+    curABSentence?.also {
+      drawSignPoint(canvas, it.start, curSenStartPaint)
+      drawSignPoint(canvas, it.end, curSenEndPaint)
+
+      if (isRepeated) {
         drawAB(canvas, it.start, "A")
         drawAB(canvas, it.end, "B")
       }
@@ -763,7 +764,7 @@ class ScrollWaveformView @JvmOverloads constructor(
    */
   data class ABHitResult(
     val sentence: Sentence,
-    val abType: String, // "A" 或 "B"
+    val abLeft: Boolean, // 是否是句子的左边缘
   )
 
   var curABSentence: Sentence? = null
@@ -779,8 +780,7 @@ class ScrollWaveformView @JvmOverloads constructor(
     val sentence = curABSentence ?: return null
     if (sentences == null || !editMode) return null
 
-    val hitRadius = abBgRadius * 2 //点击检测范围
-
+    //val hitRadius = abBgRadius * 2 //点击检测范围
     //// 检查是否点击在A边界上
     //val curABA = timeToX(sentence.start)
     //if (curABA >= 0f
@@ -802,10 +802,10 @@ class ScrollWaveformView @JvmOverloads constructor(
     //}
 
     if (editRectA.contains(x, y)) {
-      return ABHitResult(sentence, "A")
+      return ABHitResult(sentence, true)
     }
     if (editRectB.contains(x, y)) {
-      return ABHitResult(sentence, "B")
+      return ABHitResult(sentence, false)
     }
     return null
   }
@@ -814,30 +814,25 @@ class ScrollWaveformView @JvmOverloads constructor(
    * 处理AB边界拖动
    * @param distanceX 拖动的距离（像素）
    */
-  private fun handleABDrag(distanceX: Float) {
-    val result = dragABResult ?: return
+  private fun handleABDrag(distanceX: Float, result: ABHitResult) {
     val sentence = result.sentence
     val deltaTime = distanceX / pixelsPerSecond
 
     // 根据拖动的AB类型更新时间
     var hasChanged = false
-    when (result.abType) {
-      "A" -> {
-        val newStartTime = sentence.start - deltaTime
-        // 确保A不能超过B
-        if (newStartTime >= 0 && newStartTime < sentence.end) {
-          sentence.start = newStartTime
-          hasChanged = true
-        }
+    if (result.abLeft) {
+      val newStartTime = sentence.start - deltaTime
+      // 确保A不能超过B
+      if (newStartTime >= 0 && newStartTime <= sentence.end - 0.5f) {
+        sentence.start = newStartTime
+        hasChanged = true
       }
-
-      "B" -> {
-        val newEndTime = sentence.end - deltaTime
-        // 确保B不能小于A
-        if (newEndTime > sentence.start && newEndTime <= totalDuration) {
-          sentence.end = newEndTime
-          hasChanged = true
-        }
+    } else {
+      val newEndTime = sentence.end - deltaTime
+      // 确保B不能小于A
+      if (newEndTime >= sentence.start + 0.5f && newEndTime <= totalDuration) {
+        sentence.end = newEndTime
+        hasChanged = true
       }
     }
 

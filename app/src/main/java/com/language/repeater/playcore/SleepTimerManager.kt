@@ -1,6 +1,7 @@
 package com.language.repeater.playcore
 
 import android.annotation.SuppressLint
+import com.language.repeater.MyApp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -29,7 +30,7 @@ object SleepTimerManager {
    * @param seconds 秒数
    * @param onTimeout 倒计时结束时执行的回调
    */
-  fun startTimer(seconds: Long, onTimeout: () -> Unit) {
+  fun startTimer(seconds: Long, onTimeout: (() -> Unit)? = null) {
     stopTimer()
 
     if (seconds <= 0) return
@@ -44,7 +45,8 @@ object SleepTimerManager {
 
       // 倒计时结束，执行回调
       if (_remainingSeconds.value == 0L) {
-        onTimeout()
+        onTimeout?.invoke()
+        PlaybackCore.getInstance(MyApp.instance).pause()
       }
 
       // 重置状态
