@@ -1,5 +1,6 @@
 package com.language.repeater.playvideo.model
 
+import android.os.Bundle
 import android.util.Log
 import androidx.core.net.toUri
 import androidx.media3.common.C
@@ -21,6 +22,24 @@ data class VideoEntity(
   val name: String, //文件名
   var subUri: String? = null, //字幕文件地址
 )
+
+//把当前条目转成一个占位的条目
+fun MediaItem.toPlaceHold(): MediaItem {
+  return this.buildUpon().setMediaMetadata(
+    MediaMetadata
+      .Builder()
+      .setTitle(this.mediaMetadata.title)
+      .setArtworkUri(this.mediaMetadata.artworkUri)
+      .setExtras(Bundle().apply {
+        putBoolean("MediaPlaceHold", true)
+      })
+      .build()
+  ).build()
+}
+
+fun MediaItem.isPlaceHold(): Boolean {
+  return this.mediaMetadata.extras?.getBoolean("MediaPlaceHold") == true
+}
 
 fun MediaItem.toEntity(): VideoEntity {
   val item = this

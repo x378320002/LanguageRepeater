@@ -32,6 +32,9 @@ import com.language.repeater.playvideo.model.toEntity
 import com.language.repeater.playvideo.model.toMediaItem
 import com.language.repeater.playvideo.playlist.PlaylistManager
 import com.language.repeater.pcm.FFmpegUtil
+import com.language.repeater.playvideo.model.VideoEntity
+import com.language.repeater.playvideo.model.isPlaceHold
+import com.language.repeater.playvideo.model.toPlaceHold
 import com.language.repeater.sentence.SentenceStoreUtil
 import com.language.repeater.utils.DataStoreKey
 import com.language.repeater.utils.DataStoreKey.KEY_AB_REPEATED
@@ -53,6 +56,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import kotlin.collections.HashSet
 
 /**
  * Repository层, 比ViewModel更低一个层级
@@ -259,29 +263,19 @@ class PlaybackCore(private val context: Context) {
     scope.launch(Dispatchers.IO) {
       // 1. 读取列表 (返回 List<VideoEntity>)
       val videoEntities = PlaylistManager.loadLastPlaylist(context)
-      if (videoEntities.isNotEmpty()) {
-        // 2. 转换为 MediaItem
-        var mediaItems = videoEntities.map { it.toMediaItem() }
+      // 3. 读取上次播放位置 (VideoEntity -> Index/Pos)
+      val playInfo = PlaylistManager.loadCurrentPlayIndex(context)
+      val startIndex = playInfo?.index ?: 0
+      val startPos = playInfo?.positionMs ?: C.TIME_UNSET
 
-        // 3. 读取上次播放位置 (VideoEntity -> Index/Pos)
-        val playInfo = PlaylistManager.loadCurrentPlayIndex(context)
-
-        val startIndex = playInfo?.index ?: 0
-        val startPos = playInfo?.positionMs ?: C.TIME_UNSET
-
-        //保证一定有下一个视频,激活seekToNext功能
-        if (startIndex == mediaItems.lastIndex) {
-          val addToLast = mediaItems[mediaItems.lastIndex]
-          mediaItems = mediaItems.toMutableList()
-          mediaItems.add(addToLast)
-        }
-
-        withContext(Dispatchers.Main) {
-          Log.i(TAG, "Restoring playlist: ${mediaItems.size} items, index: $startIndex")
-          player.playWhenReady = false // 恢复时不自动播放
-          player.setMediaItems(mediaItems, startIndex, startPos)
-          player.prepare()
-        }
+      withContext(Dispatchers.Main) {
+        addPlayList(
+          list = videoEntities,
+          isReplace = true,
+          playWhenReady = false,
+          index = startIndex,
+          position = startPos
+        )
       }
     }
   }
@@ -341,7 +335,9 @@ class PlaybackCore(private val context: Context) {
       val cachedSentences = SentenceStoreUtil.loadData(context, currentId)
       if (!cachedSentences.isNullOrEmpty()) {
         _sentencesFlow.value = cachedSentences
-        scope.launch(Dispatchers.Main) { updatePosition(false) }
+        scope.launch(Dispatchers.Main) {
+          updatePosition(false)
+        }
         Log.i(TAG, "parseUriToPcm Loaded cached sentences: ${cachedSentences.size}")
       } else {
         loadSentences(item)
@@ -377,7 +373,9 @@ class PlaybackCore(private val context: Context) {
 
     _sentencesFlow.value = newSentences
     saveSentencesToDisk(newSentences)
-    scope.launch(Dispatchers.Main) { updatePosition(false) }
+    scope.launch(Dispatchers.Main) {
+      updatePosition(false)
+    }
     Log.i(TAG, "loadSentences sentences: ${newSentences.size}")
   }
 
@@ -480,21 +478,25 @@ class PlaybackCore(private val context: Context) {
     }
 
     override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
-      val preItem = _currentMediaItem.value
-      Log.i(TAG, "onMediaItemTransition reason: $reason, pre:${preItem?.mediaId}, mediaItem:${mediaItem?.mediaId}")
-      if (mediaItem != preItem) {
-        _currentMediaItem.value = mediaItem
-        handleMediaItemTransition(mediaItem)
+      if (mediaItem?.isPlaceHold() == true) {
+        _playerState.value?.seekTo(0, C.TIME_UNSET)
+      } else {
+        val preItem = _currentMediaItem.value
+        Log.i(TAG, "onMediaItemTransition reason: $reason, pre:${preItem?.mediaId}, mediaItem:${mediaItem?.mediaId}")
+        if (mediaItem != preItem) {
+          _currentMediaItem.value = mediaItem
+          handleMediaItemTransition(mediaItem)
 
-        // 保存历史记录
-        mediaItem?.toEntity()?.also {
-          scope.launch(Dispatchers.IO) {
-            //HistoryManager.addHistory(context, entity)
-            context.historyDao.saveHistory(it)
+          // 保存历史记录
+          mediaItem?.toEntity()?.also {
+            scope.launch(Dispatchers.IO) {
+              //HistoryManager.addHistory(context, entity)
+              context.historyDao.saveHistory(it)
+            }
           }
-        }
 
-        saveCurrentState()
+          saveCurrentState()
+        }
       }
     }
 
@@ -514,7 +516,12 @@ class PlaybackCore(private val context: Context) {
       Log.i(TAG, "onTimelineChanged reason: $reason")
       //如果是列表增删改，保存列表
       if (reason == Player.TIMELINE_CHANGE_REASON_PLAYLIST_CHANGED) {
-        _mediaItemCount.value = _playerState.value?.mediaItemCount ?: 0
+        val player = _playerState.value ?: return
+        var count = player.mediaItemCount
+        if (count > 0 && player.getMediaItemAt(count - 1).isPlaceHold()) {
+          count--
+        }
+        _mediaItemCount.value = count
         scope.launch { _playlistRefreshEvent.emit(Unit) }
         saveCurrentPlaylist()
         saveCurrentState()
@@ -857,10 +864,94 @@ class PlaybackCore(private val context: Context) {
   fun play() = _playerState.value?.play()
   fun pause() = _playerState.value?.pause()
   fun seekTo(positionMs: Long) = _playerState.value?.seekTo(positionMs)
-  fun seekToDefaultPosition(index: Int) = _playerState.value?.seekToDefaultPosition(index)
-  fun removeMediaItem(index: Int) = _playerState.value?.removeMediaItem(index)
-  fun hasNextMediaItem() = _playerState.value?.hasNextMediaItem() ?: false
-  fun seekToNextMediaItem() = _playerState.value?.seekToNextMediaItem()
-  fun hasPreviousMediaItem() = _playerState.value?.hasPreviousMediaItem() ?: false
-  fun seekToPreviousMediaItem() = _playerState.value?.seekToPreviousMediaItem()
+  fun seekToItem(index: Int) = _playerState.value?.seekTo(index, C.TIME_UNSET)
+  fun removeMediaItem(index: Int) {
+    val player = _playerState.value ?: return
+    val count = player.mediaItemCount
+    if (count == 2 && player.getMediaItemAt(1).isPlaceHold()) {
+      player.clearMediaItems()
+    } else {
+      player.removeMediaItem(index)
+    }
+  }
+
+  // 播放历史记录中的某一项
+  fun addAndPlay(item: VideoEntity) {
+    val player = _playerState.value?: return
+    // 1. 如果就是当前播放的，直接返回
+    if (item.id == currentId) {
+      return
+    }
+
+    // 2. 检查播放列表中是否已存在该视频
+    var existingIndex = -1
+    for (i in 0 until player.mediaItemCount) {
+      if (player.getMediaItemAt(i).mediaId == item.id) {
+        existingIndex = i
+        break
+      }
+    }
+
+    if (existingIndex != -1) {
+      // 3. 如果存在，直接切过去
+      player.seekTo(existingIndex, C.TIME_UNSET)
+      player.play()
+    } else {
+      // 4. 如果不存在，添加到当前播放位置，并播放
+      val mediaItem = item.toMediaItem()
+      val index = if (player.currentMediaItemIndex == C.INDEX_UNSET) {
+        0
+      } else {
+        player.currentMediaItemIndex
+      }
+      player.addMediaItem(index, mediaItem)
+      player.seekTo(index, C.TIME_UNSET)
+      player.prepare()
+      player.play()
+    }
+  }
+
+  fun addPlayList(
+    list: List<VideoEntity>,
+    isReplace: Boolean = true,
+    playWhenReady: Boolean = true,
+    index: Int = 0,
+    position: Long = C.TIME_UNSET,
+  ) {
+    val player = _playerState.value ?: return
+    if (list.isEmpty()) return
+
+    Log.i(TAG, "addPlayList : ${list.size} items, index: $index")
+    var items: MutableList<MediaItem>
+    val count = player.mediaItemCount
+    if (isReplace || count <= 0 || (count == 1 && player.getMediaItemAt(0).isPlaceHold())) {
+      //保证一定有下一个视频,激活seekToNext功能
+      items = list
+        .distinctBy { it.id }
+        .map { it.toMediaItem() }
+        .toMutableList()
+    } else {
+      //手动去重, 不用distinctBy了, 提高一点效率
+      items = mutableListOf()
+      val set = HashSet<String>()
+      for (i in list.indices) {
+        val item = list[i]
+        if (set.add(item.id)) {
+          items.add(item.toMediaItem())
+        }
+      }
+      for (i in 0 until player.mediaItemCount) {
+        val item = player.getMediaItemAt(i)
+        if (set.add(item.mediaId)) {
+          items.add(item)
+        }
+      }
+    }
+
+    val placeHolder = items.last().toPlaceHold()
+    items.add(placeHolder)
+    player.playWhenReady = playWhenReady
+    player.setMediaItems(items, index, position)
+    player.prepare()
+  }
 }

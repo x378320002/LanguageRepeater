@@ -138,8 +138,8 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
       }
 
       fragment.binding.playList -> {
-        val sheet = HistorySheetFragment()
-        sheet.show(fragment.childFragmentManager, "HistorySheet")
+        val sheet = PlaylistSheetFragment()
+        sheet.show(fragment.childFragmentManager, "PlaylistSheet")
       }
       fragment.binding.editSwitch -> {
         if (fragment.binding.editSwitch.isSelected) {
@@ -223,6 +223,10 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
         }
         R.id.action_split_subtitle -> {
           autoLoadSentences(false)
+        }
+        R.id.action_history_list -> {
+          val sheet = HistorySheetFragment()
+          sheet.show(fragment.childFragmentManager, "HistorySheet")
         }
       }
       true

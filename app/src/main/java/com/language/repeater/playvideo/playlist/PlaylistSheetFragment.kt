@@ -17,6 +17,8 @@ import com.language.repeater.databinding.PlaylistSheetFragmentBinding
 import com.language.repeater.playvideo.PlayerViewModel // 确保导入正确的 VM
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
+import com.language.repeater.R
+import com.language.repeater.playvideo.model.isPlaceHold
 import kotlinx.coroutines.launch
 
 class PlaylistSheetFragment : BasePlaySheetFragment() {
@@ -46,6 +48,8 @@ class PlaylistSheetFragment : BasePlaySheetFragment() {
   }
 
   private fun setupRecyclerView() {
+    binding.tvSheetTitle.setText(R.string.current_list_title)
+
     // 初始化 Adapter，传入点击回调
     adapter = PlaylistAdapter(
       onItemClick = { index ->
@@ -122,7 +126,10 @@ class PlaylistSheetFragment : BasePlaySheetFragment() {
     val player = player ?: return
     val currentItems = ArrayList<MediaItem>()
     for (i in 0 until player.mediaItemCount) {
-      currentItems.add(player.getMediaItemAt(i))
+      val item = player.getMediaItemAt(i)
+      if (!item.isPlaceHold()) {
+        currentItems.add(item)
+      }
     }
     adapter.submitList(currentItems)
   }

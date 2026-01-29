@@ -3,17 +3,20 @@ package com.language.repeater.playvideo
 import kotlin.collections.map
 import android.app.Application
 import android.net.Uri
+import android.os.Bundle
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.application
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.C
 import androidx.media3.common.Player
 import com.dotlottie.dlplayer.Mode
+import com.google.common.collect.Multimaps.index
 import com.language.repeater.db.historyDao
 import com.language.repeater.playcore.PlaybackCore
 import com.language.repeater.playvideo.model.VideoEntity
 import com.language.repeater.playvideo.model.toMediaItem
 import com.language.repeater.playcore.SleepTimerManager
+import com.language.repeater.playvideo.model.toPlaceHold
 import com.language.repeater.utils.ToastUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -112,28 +115,12 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
   }
 
   fun playItem(index: Int) {
-    playbackCore.seekToDefaultPosition(index)
+    playbackCore.seekToItem(index)
     playbackCore.play()
   }
 
   fun deleteItem(index: Int) {
     playbackCore.removeMediaItem(index)
-  }
-
-  fun addPlayList(list: List<VideoEntity>, isReplace: Boolean) {
-    val player = getPlayer() ?: return
-    val items = list.map { it.toMediaItem() }
-    if (isReplace) {
-      player.setMediaItems(items)
-      player.seekTo(0, C.TIME_UNSET)
-      player.prepare()
-      player.play()
-    } else {
-      player.addMediaItems(0, items)
-      player.seekTo(0, C.TIME_UNSET)
-      player.prepare()
-      player.play()
-    }
   }
 
   // 复读控制直接调 Repository
@@ -178,73 +165,40 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     playbackCore.deleteCurSentence()
   }
 
-  // --- 历史记录 ---
   // 直接暴露 Flow 给 UI 监听
   fun getHistoryFlow() = application.historyDao.getAllHistory()
 
+  fun addPlayList(
+    list: List<VideoEntity>,
+    isReplace: Boolean
+  ) {
+    playbackCore.addPlayList(list, isReplace)
+  }
+
   // 播放历史记录中的某一项
   fun playHistoryItem(item: VideoEntity) {
-    val player = getPlayer() ?: return
-    val currentId = playbackCore.currentMediaItem.value?.mediaId
-
-    // 1. 如果就是当前播放的，直接跳转进度并播放
-    if (item.id == currentId) {
-      return
-    }
-
-    // 2. 检查播放列表中是否已存在该视频
-    var existingIndex = -1
-    for (i in 0 until player.mediaItemCount) {
-      if (player.getMediaItemAt(i).mediaId == item.id) {
-        existingIndex = i
-        break
-      }
-    }
-
-    if (existingIndex != -1) {
-      // 3. 如果存在，直接切过去
-      player.seekTo(existingIndex, 0)
-      player.play()
-    } else {
-      // 4. 如果不存在，添加到当前播放位置的下一首，并播放
-      // 这样既保留了原列表，又让用户立刻看到了点击的历史记录
-      val mediaItem = item.toMediaItem()
-      //val nextIndex = if (player.currentMediaItemIndex == C.INDEX_UNSET) 0 else player.currentMediaItemIndex + 1
-      player.addMediaItem(0, mediaItem)
-      player.seekTo(0, 0)
-      player.prepare()
-      player.play()
-    }
+    playbackCore.addAndPlay(item)
   }
 
   // 下一首播放
   fun addNext(item: VideoEntity) {
-    val player = getPlayer() ?: return
-    val mediaItem = item.toMediaItem()
-    if (player.currentMediaItemIndex == C.INDEX_UNSET) {
-      player.setMediaItem(mediaItem)
-      player.prepare()
-      player.play()
-    } else {
-      val nextIndex = player.currentMediaItemIndex + 1
-      player.addMediaItem(nextIndex, mediaItem)
-    }
-    ToastUtil.toast("已添加到下一首播放")
+    //val player = getPlayer() ?: return
+    //val mediaItem = item.toMediaItem()
+    //if (player.currentMediaItemIndex == C.INDEX_UNSET) {
+    //  player.setMediaItem(mediaItem)
+    //  player.prepare()
+    //  player.play()
+    //} else {
+    //  val nextIndex = player.currentMediaItemIndex + 1
+    //  player.addMediaItem(nextIndex, mediaItem)
+    //}
+    //ToastUtil.toast("已添加到下一首播放")
   }
 
   // 添加到末尾
   fun addToEnd(item: VideoEntity) {
-    val player = getPlayer() ?: return
-    val mediaItem = item.toMediaItem()
-    if (player.currentMediaItemIndex == C.INDEX_UNSET) {
-      player.setMediaItem(mediaItem)
-      player.prepare()
-      player.play()
-    } else {
-      val nextIndex = player.currentMediaItemIndex + 1
-      player.addMediaItem(nextIndex, mediaItem)
-    }
-    ToastUtil.toast("已添加到播放列表末尾")
+    //val player = getPlayer() ?: return
+    //ToastUtil.toast("已添加到播放列表末尾")
   }
 
   // 删除历史记录

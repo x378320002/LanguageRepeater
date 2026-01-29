@@ -11,6 +11,7 @@ import com.language.repeater.db.videoInfoDao
 import com.language.repeater.json
 import com.language.repeater.playvideo.model.CurrentPlayVideoEntity
 import com.language.repeater.playvideo.model.VideoEntity
+import com.language.repeater.playvideo.model.isPlaceHold
 import com.language.repeater.playvideo.model.toEntity
 import com.language.repeater.utils.DataStoreKey.KEY_CURRENT_PLAY_INFO
 import com.language.repeater.utils.FileUtil
@@ -32,15 +33,14 @@ object PlaylistManager {
    * 保存当前播放器的列表到本地
    */
   suspend fun saveCurrentPlaylist(context: Context, items: List<MediaItem>) = withContext(Dispatchers.IO) {
-      val list = items.map { item ->
-        item.toEntity()
+      val list = items.mapNotNull { item ->
+        if (item.isPlaceHold()) {
+          null
+        } else {
+          item.toEntity()
+        }
       }
-      //
-      //// 【修改】使用 Kotlinx Serialization 序列化
-      //val jsonString = json.encodeToString(list)
-      //context.dataStore.edit { prefs ->
-      //  prefs[KEY_CURRENT_PLAYLIST] = jsonString
-      //}
+
       context.curPlayListDao.replacePlaylist(list)
     }
 

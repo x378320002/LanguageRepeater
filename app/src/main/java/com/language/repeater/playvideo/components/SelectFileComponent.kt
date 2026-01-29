@@ -31,7 +31,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class LocalOnlyOpenMultipleDocuments : ActivityResultContracts.OpenDocument() {
+class LocalOnlyOpenMultipleDocuments : ActivityResultContracts.OpenMultipleDocuments() {
   override fun createIntent(context: Context, input: Array<String>): Intent {
     return super.createIntent(context, input).apply {
       putExtra(Intent.EXTRA_LOCAL_ONLY, true)
@@ -46,9 +46,9 @@ class LocalOnlyOpenMultipleDocuments : ActivityResultContracts.OpenDocument() {
  */
 class SelectFileComponent : BaseComponent<PlayVideoFragment>() {
   val openFileLauncher by lazy {
-    fragment.registerForActivityResult(LocalOnlyOpenMultipleDocuments()) { uri->
-      Log.d(PlayVideoFragment.TAG, "OpenMultipleDocuments uris size = ${uri}")
-      if (uri == null) return@registerForActivityResult
+    fragment.registerForActivityResult(LocalOnlyOpenMultipleDocuments()) {
+      Log.d(PlayVideoFragment.TAG, "OpenMultipleDocuments uris size = ${it.size}")
+      if (it.isEmpty()) return@registerForActivityResult
 
       fragment.showLoading()
       fScope.launch {
@@ -56,18 +56,23 @@ class SelectFileComponent : BaseComponent<PlayVideoFragment>() {
 
         //转成info给视频播放器
         var needToCheckSubFolder = false
+        val infos = it.map { uri ->
+          takePersistablePermission(context, uri)
 
-        takePersistablePermission(context, uri)
-        val info = FileUtil.getFileInfo(context, uri)
-        val prefKey = stringPreferencesKey(info.id)
-        val sub = preferences?.get(prefKey)
-        if (!sub.isNullOrEmpty()) {
-          info.subUri = sub
-        } else {
-          needToCheckSubFolder = true
+          val info = FileUtil.getFileInfo(context, uri)
+          val prefKey = stringPreferencesKey(info.id)
+          val sub = preferences?.get(prefKey)
+          if (!sub.isNullOrEmpty()) {
+            info.subUri = sub
+          } else {
+            needToCheckSubFolder = true
+          }
+          val wav = FFmpegUtil.extractWavFileByFFmpeg(context, info.uri.toUri(), info.id)
+          Log.d(PlayVideoFragment.TAG, "Selected video name:${info.name}, 字幕: ${info.subUri}, wav:$wav")
+          info
         }
-        val wav = FFmpegUtil.extractWavFileByFFmpeg(context, info.uri.toUri(), info.id)
-        Log.d(PlayVideoFragment.TAG, "Selected video name:${info.name}, 字幕: ${info.subUri}, wav:$wav")
+
+        if (infos.isEmpty()) return@launch
 
         //去文件夹寻找字幕
         if (needToCheckSubFolder) {
@@ -75,21 +80,23 @@ class SelectFileComponent : BaseComponent<PlayVideoFragment>() {
           Log.d(PlayVideoFragment.TAG, "needToCheckSubFolder folder: $folder")
           val map = SubtitleAutoLoader.scanSubtitleFolder(context, folder)
           if (map.isNotEmpty()) {
-            if (info.subUri == null) {
-              val key = info.name.substringBeforeLast(".")
-              val tempUri = map[key]
-              info.subUri = tempUri.toString()
-              if (tempUri != null) {
-                val prefKey = stringPreferencesKey(info.id)
-                context.subtitleStore.edit { sp-> sp[prefKey] = tempUri.toString() }
+            infos.forEach {info->
+              if (info.subUri == null) {
+                val key = info.name.substringBeforeLast(".")
+                val tempUri = map[key]
+                info.subUri = tempUri.toString()
+                if (tempUri != null) {
+                  val prefKey = stringPreferencesKey(info.id)
+                  context.subtitleStore.edit { sp-> sp[prefKey] = tempUri.toString() }
+                }
               }
             }
           }
         }
 
         withContext(Dispatchers.Main) {
-          //构造两个使其永远后下一个, 激活下一个按钮
-          fragment.viewModel.addPlayList(listOf(info, info), true)
+          //fragment.viewModel.addPlayList(listOf(info, info), true)
+          fragment.viewModel.addPlayList(infos, false)
           fragment.hideLoading()
         }
       }

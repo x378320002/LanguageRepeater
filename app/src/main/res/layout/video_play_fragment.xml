@@ -141,7 +141,7 @@
       android:id="@+id/merge_pre"
       android:orientation="vertical"
       android:gravity="center"
-      android:layout_width="50dp"
+      android:layout_width="@dimen/play_video_edit_action_w"
       android:layout_height="60dp">
       <ImageView
         android:src="@drawable/place_hold"
@@ -154,7 +154,7 @@
         android:layout_marginTop="4dp"
         android:gravity="center"
         android:textColor="@color/color_tint_edit_selector"
-        android:textSize="10dp"
+        android:textSize="@dimen/play_video_edit_text_size"
         android:text="@string/merge_pre"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -167,7 +167,7 @@
       android:id="@+id/merge_next"
       android:orientation="vertical"
       android:gravity="center"
-      android:layout_width="50dp"
+      android:layout_width="@dimen/play_video_edit_action_w"
       android:layout_height="60dp">
       <ImageView
         android:src="@drawable/place_hold"
@@ -180,7 +180,7 @@
         android:gravity="center"
         android:layout_marginTop="4dp"
         android:textColor="@color/color_tint_edit_selector"
-        android:textSize="10dp"
+        android:textSize="@dimen/play_video_edit_text_size"
         android:text="@string/merge_next"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -192,7 +192,7 @@
       android:id="@+id/split_sentence"
       android:orientation="vertical"
       android:gravity="center"
-      android:layout_width="50dp"
+      android:layout_width="@dimen/play_video_edit_action_w"
       android:layout_height="60dp">
       <ImageView
         android:src="@drawable/place_hold"
@@ -205,7 +205,7 @@
         android:layout_marginTop="4dp"
         android:gravity="center"
         android:textColor="@color/color_tint_edit_selector"
-        android:textSize="10dp"
+        android:textSize="@dimen/play_video_edit_text_size"
         android:text="@string/split_sentence"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -217,7 +217,7 @@
       android:id="@+id/delete_sentence"
       android:orientation="vertical"
       android:gravity="center"
-      android:layout_width="50dp"
+      android:layout_width="@dimen/play_video_edit_action_w"
       android:layout_height="60dp">
       <ImageView
         android:src="@drawable/place_hold"
@@ -230,7 +230,7 @@
         android:layout_marginTop="4dp"
         android:gravity="center"
         android:textColor="@color/color_tint_edit_selector"
-        android:textSize="10dp"
+        android:textSize="@dimen/play_video_edit_text_size"
         android:text="@string/delete_sentence"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -242,7 +242,7 @@
       android:id="@+id/insert_sentence"
       android:orientation="vertical"
       android:gravity="center"
-      android:layout_width="50dp"
+      android:layout_width="@dimen/play_video_edit_action_w"
       android:layout_height="60dp">
       <ImageView
         android:src="@drawable/place_hold"
@@ -255,14 +255,13 @@
         android:layout_marginTop="4dp"
         android:gravity="center"
         android:textColor="@color/color_tint_edit_selector"
-        android:textSize="10dp"
+        android:textSize="@dimen/play_video_edit_text_size"
         android:text="@string/insert_sentence"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:maxLines="2"
         tools:ignore="SpUsage" />
     </LinearLayout>
-
   </com.google.android.flexbox.FlexboxLayout>
 
   <androidx.appcompat.widget.LinearLayoutCompat
