@@ -11,4 +11,6 @@ object PcmConfig {
   const val PCM_CHANNEL = 1
   const val PCM_BIT_DEPTH = 16
   const val BYTES_PER_SAMPLE = 2 //每个采样有几个字节, 根据采样深度和通道数计算 = (btiDepth/8)*channel
+
+  const val WAV_HEAD_SIZE = 44
 }

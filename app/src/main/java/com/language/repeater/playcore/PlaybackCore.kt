@@ -260,7 +260,6 @@ class PlaybackCore(private val context: Context) {
       // 1. 读取列表 (返回 List<VideoEntity>)
       val videoEntities = PlaylistManager.loadLastPlaylist(context)
       if (videoEntities.isNotEmpty()) {
-
         // 2. 转换为 MediaItem
         var mediaItems = videoEntities.map { it.toMediaItem() }
 
@@ -303,9 +302,9 @@ class PlaybackCore(private val context: Context) {
   // --- 核心业务：媒体切换处理 ---
   private fun handleMediaItemTransition(item: MediaItem?) {
     val key = item?.mediaId ?: return
+
     // 【关键修复】如果 ID 没变，说明是同源切换(比如加字幕)，不要重新解析 PCM
     if (key == currentId && _sentencesFlow.value.isNotEmpty()) return
-
     currentId = key
     Log.i(TAG, "handleMediaItemTransition ID: $key")
 
@@ -323,6 +322,7 @@ class PlaybackCore(private val context: Context) {
     _curAbSentenceFlow.value = null
 
     val uri = item.localConfiguration?.uri ?: return@launch
+    val currentId = item.mediaId
     try {
       Log.i(TAG, "parseUriToPcm Start parsing: $currentId, uri: $uri")
       // 提取 PCM 文件
@@ -341,6 +341,7 @@ class PlaybackCore(private val context: Context) {
       val cachedSentences = SentenceStoreUtil.loadData(context, currentId)
       if (!cachedSentences.isNullOrEmpty()) {
         _sentencesFlow.value = cachedSentences
+        scope.launch(Dispatchers.Main) { updatePosition(false) }
         Log.i(TAG, "parseUriToPcm Loaded cached sentences: ${cachedSentences.size}")
       } else {
         loadSentences(item)
@@ -358,12 +359,14 @@ class PlaybackCore(private val context: Context) {
 
     val uri = item.localConfiguration?.uri ?: return@withContext
     val subUri = item.localConfiguration?.subtitleConfigurations?.firstOrNull()?.uri
+    val currentId = item.mediaId
 
     val newSentences = if (subUri == null || forceUseVad) {
       val path = FFmpegUtil.extractWavFileByFFmpeg(context, uri, currentId)
       val pcmFile = File(path)
       Log.i(TAG, "loadSentences from pcmFile, size: ${pcmFile.length()/1048576}MB")
-      LocalVoiceSentenceDetector().detectSentences(PcmDataUtil.readPcmFile(pcmFile))
+      //LocalVoiceSentenceDetector().detectSentences(PcmDataUtil.readPcmFile(pcmFile))
+      LocalVoiceSentenceDetector().detectSentences(pcmFile)
     } else {
       Log.i(TAG, "loadSentences from subtitle : $subUri")
       val subList = SrtParser.parse(context, subUri)
@@ -371,10 +374,10 @@ class PlaybackCore(private val context: Context) {
         Sentence(it.startTime.toFloat() / 1000, it.endTime.toFloat() / 1000)
       }
     }
-    scope.launch {
-      SentenceStoreUtil.saveData(context, currentId, newSentences)
-    }
+
     _sentencesFlow.value = newSentences
+    saveSentencesToDisk(newSentences)
+    scope.launch(Dispatchers.Main) { updatePosition(false) }
     Log.i(TAG, "loadSentences sentences: ${newSentences.size}")
   }
 
@@ -444,11 +447,11 @@ class PlaybackCore(private val context: Context) {
     }
   }
 
-  private fun seekToSentence(sentence: Sentence) {
-    if (_repeatable.value) {
-      _curAbSentenceFlow.value = sentence
+  private fun seekToSentence(sentence: Sentence?) {
+    _curAbSentenceFlow.value = sentence
+    if (sentence != null) {
+      seekTo((sentence.start * 1000).toLong())
     }
-    seekTo((sentence.start * 1000).toLong())
   }
 
   private fun findSentenceByTime(currentSec: Float): Sentence? {
@@ -514,6 +517,7 @@ class PlaybackCore(private val context: Context) {
         _mediaItemCount.value = _playerState.value?.mediaItemCount ?: 0
         scope.launch { _playlistRefreshEvent.emit(Unit) }
         saveCurrentPlaylist()
+        saveCurrentState()
       }
     }
 
@@ -523,6 +527,7 @@ class PlaybackCore(private val context: Context) {
       reason: Int,
     ) {
       updatePosition()
+      saveCurrentState()
     }
 
     // 监听播放器内部模式变化 (比如用户通过通知栏改了模式)
@@ -663,9 +668,7 @@ class PlaybackCore(private val context: Context) {
       // 5. 更新流和磁盘
       _sentencesFlow.value = currentList
 
-      scope.launch {
-        saveSentencesToDisk(currentList)
-      }
+      saveSentencesToDisk(currentList)
       ToastUtil.toast("分割成功")
     }
   }
@@ -690,6 +693,8 @@ class PlaybackCore(private val context: Context) {
     _curAbSentenceFlow.value = sen
     sentences.remove(nextSen)
     _sentencesFlow.value = sentences
+
+    saveSentencesToDisk(sentences)
   }
 
   fun mergeNext() {
@@ -712,6 +717,8 @@ class PlaybackCore(private val context: Context) {
     _curAbSentenceFlow.value = sen
     sentences.remove(nextSen)
     _sentencesFlow.value = sentences
+
+    saveSentencesToDisk(sentences)
   }
 
   //插入句子
@@ -731,9 +738,8 @@ class PlaybackCore(private val context: Context) {
       sentences.add(index, newSentence)
       _sentencesFlow.value = sentences
       _curAbSentenceFlow.value = newSentence
-      scope.launch {
-        saveSentencesToDisk(sentences)
-      }
+
+      saveSentencesToDisk(sentences)
     } else {
       //当前位置在句子内, 这是插入句子, 会把当前句子一分为三
       //分离后的中间的句子
@@ -757,16 +763,15 @@ class PlaybackCore(private val context: Context) {
 
       _sentencesFlow.value = sentences
       _curAbSentenceFlow.value = newSentence
-      scope.launch {
-        saveSentencesToDisk(sentences)
-      }
+
+      saveSentencesToDisk(sentences)
     }
   }
 
   /**
    * 辅助方法：保存句子改动到本地
    */
-  suspend fun saveSentencesToDisk(list: List<Sentence> = _sentencesFlow.value) = withContext(Dispatchers.IO) {
+  fun saveSentencesToDisk(list: List<Sentence> = _sentencesFlow.value) = scope.launch(Dispatchers.IO) {
     if (currentId.isNotEmpty()) {
       SentenceStoreUtil.saveData(context, currentId, list)
       Log.i(TAG, "Sentences updated and saved to disk.")
@@ -835,11 +840,9 @@ class PlaybackCore(private val context: Context) {
           curSen.end = it.duration.toFloat() / 1000
         }
       }
-      _curAbSentenceFlow.value = findSentenceByTime(currentPos)
+      seekToSentence(findSentenceByTime(currentPos))
 
-      scope.launch {
-        saveSentencesToDisk(sentences)
-      }
+      saveSentencesToDisk(sentences)
     }
   }
 

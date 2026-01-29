@@ -2,19 +2,18 @@ package com.language.repeater.sentence
 
 import android.util.Log
 import com.language.repeater.pcm.PcmConfig
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.FileInputStream
 import kotlin.collections.forEachIndexed
 import kotlin.collections.lastIndex
 import kotlin.collections.map
 import kotlin.math.sqrt
 
-private typealias SentenceByTime = Sentence
-
 class LocalVoiceSentenceDetector(
   private val sampleRate: Int = PcmConfig.PCM_SAMPLE_RATE,  // 采样率
 ) {
-  /**
-   * 配置参数
-   */
   data class SentenceDetectorConfig(
     /** 能量检测窗口大小(毫秒) */
     val windowSizeMs: Int = 30,
@@ -38,7 +37,8 @@ class LocalVoiceSentenceDetector(
     val minSpeechDurationMs: Int = 50,
 
     /** 句子前后的额外补偿扩展 */
-    var paddingMs: Int = 100,
+    var paddingBeginMs: Int = 100,
+    var paddingEndMs: Int = 200,
 
     /** 句子前后追加清辅音和低音量的检查计算区间,多少帧 */
     var expandEdgeStartCount: Int = 10, //20帧=300ms
@@ -76,22 +76,21 @@ class LocalVoiceSentenceDetector(
 
   /**
    * 主函数：分离语音片段
-   * @param pcmData 原始PCM数据
+   * @param file 原始PCM数据
    * @param config 配置参数
    * @return 每句话的起始和结束采样点位置 List<Pair<起始索引, 结束索引>>
    */
-  fun detectSentences(
-    pcmData: ShortArray,
+  suspend fun detectSentences(
+    file: File,
     con: SentenceDetectorConfig? = null,
-  ): List<SentenceByTime> {
-    if (pcmData.isEmpty()) return emptyList()
+  ): List<Sentence> {
 
     if (con != null) {
       config = con
     }
 
     // 提取音频特征
-    val features = extractFeatures(pcmData)
+    val features = extractFeatures(file)
 
     // 启用自适应阈值，计算阈值
     calculateThreshold(features)
@@ -102,53 +101,219 @@ class LocalVoiceSentenceDetector(
     // 中值滤波平滑（去除孤立的噪点）, 复读机的环境没必要开启
     //medianFilter(features)
 
-    // 分离出语音片段
-    val segments = extractSegments(features)
+    val totalSamples = ((file.length() - PcmConfig.WAV_HEAD_SIZE) / PcmConfig.BYTES_PER_SAMPLE).toInt()
+    return extractSentence(features, totalSamples)
 
-    //扩展语音片段的边缘
-    expandSegmentEdge(features, segments)
-
-    //片段转成句子
-    val sentences = convertToSentence(features, segments, pcmData.lastIndex)
-
-    return sentences.map {
-      SentenceByTime(
-        it.sampleStart.toFloat() / sampleRate,
-        it.sampleEnd.toFloat() / sampleRate
-      )
-    }
+    // 分离出语音片段 //旧的写法
+    //val segments = extractSegments(features)
+    ////扩展语音片段的边缘
+    //expandSegmentEdge(features, segments)
+    ////片段转成句子
+    //val sentences = convertToSentence(features, segments, pcmData.lastIndex)
+    //return sentences.map {
+    //  Sentence(
+    //    it.sampleStart.toFloat() / sampleRate,
+    //    it.sampleEnd.toFloat() / sampleRate
+    //  )
+    //}
   }
 
   /**
    * 提取音频特征（能量和过零率）
    */
-  private fun extractFeatures(
-    pcmData: ShortArray,
-  ): List<AudioFrame> {
-    val windowSizeSamples = (config.windowSizeMs * sampleRate / 1000)
-    val hopSize = (windowSizeSamples * (1 - config.overlapRatio)).toInt()
-
+  private suspend fun extractFeatures(file: File): List<AudioFrame> = withContext(Dispatchers.IO) {
     val features = mutableListOf<AudioFrame>()
-    var position = 0
 
-    while (position + windowSizeSamples <= pcmData.size) {
-      val window = pcmData.sliceArray(position until position + windowSizeSamples)
+    // 1. 基础参数计算
+    val windowSizeSamples = (config.windowSizeMs * sampleRate / 1000)
+    // hopSize 是每次向前滑动的距离，也是每次需要从文件新读取的数据量
+    val hopSize = (windowSizeSamples * (1 - config.overlapRatio)).toInt()
+    // overlapSize 是保留下来的旧数据长度
+    val overlapSize = windowSizeSamples - hopSize
 
-      val energy = calculateEnergy(window)
-      //暂时不需要过零率
-      //val zcr = calculateZCR(window)
-      features.add(
-        AudioFrame(
-          sampleIndex = position + windowSizeSamples / 2,
-          energy = energy
+    // 2. 准备缓冲区
+    // windowBuffer 用于存放当前窗口的 Short 数据
+    val windowBuffer = ShortArray(windowSizeSamples)
+
+    // readBuffer 用于从流中读取字节，大小等于 hopSize * 2 (因为 1 Short = 2 Bytes)
+    // 初始读取时需要读满整个窗口，所以取最大值
+    val byteBuffer = ByteArray(windowSizeSamples * 2)
+
+    var position = 0 // 当前处理到的采样点位置
+    FileInputStream(file).buffered().use { input ->
+      // 跳过 WAV 头部 44 字节
+      input.skip(PcmConfig.WAV_HEAD_SIZE.toLong())
+
+      // --- 阶段 A: 第一次填满窗口 ---
+      // 我们需要先读取 windowSizeSamples 长度的数据来启动第一个窗口
+      val firstReadBytes = input.read(byteBuffer, 0, windowSizeSamples * 2)
+      if (firstReadBytes < windowSizeSamples * 2) {
+        // 文件太小，连一个窗口都凑不齐，直接返回空或做特殊处理
+        return@withContext features
+      }
+
+      // 将字节转换为 Short 填入 windowBuffer
+      bytesToShorts(byteBuffer, windowBuffer, 0, windowSizeSamples)
+
+      // --- 阶段 B: 循环滑动处理 ---
+      while (true) {
+        // 1. 提取当前窗口特征
+        // 注意：calculateEnergy 不能修改 windowBuffer 的内容，也不能长期持有它的引用
+        val energy = calculateEnergy(windowBuffer)
+
+        features.add(
+          AudioFrame(
+            sampleIndex = position + windowSizeSamples / 2,
+            energy = energy
+          )
         )
-      )
 
-      position += hopSize
+        // 更新位置
+        position += hopSize
+
+        // 2. 移动数据 (Shift)
+        // 将重叠部分 (overlapSize) 从尾部搬运到头部
+        // System.arraycopy(源数组, 源起始, 目标数组, 目标起始, 长度)
+        if (overlapSize > 0) {
+          System.arraycopy(windowBuffer, hopSize, windowBuffer, 0, overlapSize)
+        }
+
+        // 3. 读取新数据 (Refill)
+        // 我们只需要读取 hopSize 长度的新数据
+        val bytesToRead = hopSize * 2
+        val bytesRead = input.read(byteBuffer, 0, bytesToRead)
+
+        // 如果读不到数据了，或者数据不够凑满一个 hop，说明文件结束
+        if (bytesRead < bytesToRead) {
+          break
+        }
+
+        // 4. 将新读取的字节转换并填入 windowBuffer 的尾部
+        // 填充起始位置是 overlapSize
+        bytesToShorts(byteBuffer, windowBuffer, overlapSize, hopSize)
+      }
     }
 
-    return features
+    return@withContext features
   }
+
+  /**
+   * 辅助方法：将字节数组转换为 Short 数组 (小端序)
+   * @param byteArray 源字节数组
+   * @param shortArray 目标 Short 数组
+   * @param offsetInShorts 目标数组的起始填充索引
+   * @param lengthInShorts 要转换的 Short 数量
+   */
+  private fun bytesToShorts(
+    byteArray: ByteArray,
+    shortArray: ShortArray,
+    offsetInShorts: Int,
+    lengthInShorts: Int
+  ) {
+    for (i in 0 until lengthInShorts) {
+      val byteIndex = i * 2
+      // 小端序转换: 低位在前，高位在后
+      val low = byteArray[byteIndex].toInt() and 0xFF
+      val high = byteArray[byteIndex + 1].toInt() and 0xFF
+      val shortVal = ((high shl 8) or low).toShort()
+      shortArray[offsetInShorts + i] = shortVal
+    }
+  }
+
+  /**
+   * @param features 音频特征列表
+   * @param totalDataLength PCM数据的总采样数 (用于防止尾部填充越界)
+   */
+  private fun extractSentence(features: List<AudioFrame>, totalDataLength: Int): List<Sentence> {
+    val sentences = mutableListOf<Sentence>()
+    if (features.isEmpty()) return sentences
+
+    // 预计算阈值 (将毫秒转换为采样点数)
+    val minSilenceSamples = (config.minSilenceDurationMs * sampleRate / 1000).toLong()
+    val minSpeechSamples = (config.minSpeechDurationMs * sampleRate / 1000).toLong()
+    // 预计算 Padding 采样数
+    val paddingBeginSamples = (config.paddingBeginMs * sampleRate / 1000).toInt()
+    val paddingEndSamples = (config.paddingEndMs * sampleRate / 1000).toInt()
+
+    fun addSentence(start: Int, end: Int) {
+      val coreDuration = end - start
+      if (coreDuration >= minSpeechSamples) {
+        var finalStart = start - paddingBeginSamples
+        if (finalStart < 0) finalStart = 0
+
+        var finalEnd = end + paddingEndSamples
+        if (finalEnd > totalDataLength) finalEnd = totalDataLength
+        sentences.add(
+          Sentence(
+            start = finalStart.toFloat() / sampleRate,
+            end = finalEnd.toFloat() / sampleRate
+          )
+        )
+      }
+    }
+
+    // 状态变量
+    var coreStartSample: Int? = null // 核心语音段起始
+    var lastSpeechSample: Int? = null // 核心语音段结束 (最后一次检测到语音的位置)
+    for (frame in features) {
+      if (frame.isSpeech) {
+        // 如果是新句子的开始
+        if (coreStartSample == null) {
+          coreStartSample = frame.sampleIndex
+        }
+        // 更新最后一次说话的位置
+        lastSpeechSample = frame.sampleIndex
+      } else {
+        // 如果处于静音段，检查是否达到了断句阈值
+        if (coreStartSample != null && lastSpeechSample != null) {
+          val silenceGap = frame.sampleIndex - lastSpeechSample
+          if (silenceGap > minSilenceSamples) {
+            // --- 触发断句逻辑 ---
+            addSentence(coreStartSample, lastSpeechSample)
+            // 重置状态，准备捕捉下一句
+            coreStartSample = null
+            lastSpeechSample = null
+          }
+        }
+      }
+    }
+
+    // --- 循环结束后的收尾处理 ---
+    // 处理文件末尾可能存在的最后一句话
+    if (coreStartSample != null && lastSpeechSample != null) {
+      addSentence(coreStartSample, lastSpeechSample)
+    }
+
+    return sentences
+  }
+
+  //private fun extractFeatures(
+  //  pcmData: ShortArray,
+  //): List<AudioFrame> {
+  //  val windowSizeSamples = (config.windowSizeMs * sampleRate / 1000)
+  //  val hopSize = (windowSizeSamples * (1 - config.overlapRatio)).toInt()
+  //
+  //  val features = mutableListOf<AudioFrame>()
+  //  var position = 0
+  //
+  //  while (position + windowSizeSamples <= pcmData.size) {
+  //    val window = pcmData.sliceArray(position until position + windowSizeSamples)
+  //
+  //    val energy = calculateEnergy(window)
+  //    //暂时不需要过零率
+  //    //val zcr = calculateZCR(window)
+  //    features.add(
+  //      AudioFrame(
+  //        sampleIndex = position + windowSizeSamples / 2,
+  //        energy = energy
+  //      )
+  //    )
+  //
+  //    position += hopSize
+  //  }
+  //
+  //  return features
+  //}
 
   /**
    * 计算短时能量（归一化到0-1）
@@ -283,7 +448,7 @@ class LocalVoiceSentenceDetector(
 
     val energies = features.map { it.energy }.sorted()
     val averageEnergy = energies
-      .subList(0, (energies.size * 0.99f).toInt())
+      .subList(0, (energies.size * 0.95f).toInt())
       .average()
     config.energyThreshold = averageEnergy.toFloat()
     Log.i("wangzixu", "calculateThreshold, averageEnergy: $averageEnergy")
@@ -343,10 +508,11 @@ class LocalVoiceSentenceDetector(
       SentenceBySample(start, end)
     }
 
-    val paddingSample = config.paddingMs * sampleRate / 1000
+    val paddingStart = config.paddingBeginMs * sampleRate / 1000
+    val paddingEnd = config.paddingEndMs * sampleRate / 1000
     sentences.forEach {
-      it.sampleStart = (it.sampleStart - paddingSample).coerceAtLeast(0)
-      it.sampleEnd = (it.sampleEnd + paddingSample * 2).coerceAtMost(maxSampleIndex)
+      it.sampleStart = (it.sampleStart - paddingStart).coerceAtLeast(0)
+      it.sampleEnd = (it.sampleEnd + paddingEnd).coerceAtMost(maxSampleIndex)
     }
 
     sentences = mergeSentence(sentences)

@@ -279,7 +279,7 @@
 
     <ImageView
       android:id="@+id/edit_switch"
-      android:layout_width="60dp"
+      android:layout_width="@dimen/play_video_sub_action_w"
       android:layout_height="match_parent"
       android:scaleType="centerInside"
       android:src="@drawable/place_hold"
@@ -288,7 +288,7 @@
 
     <ImageView
       android:id="@+id/play_speed"
-      android:layout_width="60dp"
+      android:layout_width="@dimen/play_video_sub_action_w"
       android:layout_height="match_parent"
       android:scaleType="centerInside"
       android:src="@drawable/place_hold"
@@ -297,7 +297,7 @@
 
     <ImageView
       android:id="@+id/voice_repeat_switch"
-      android:layout_width="60dp"
+      android:layout_width="@dimen/play_video_sub_action_w"
       android:layout_height="match_parent"
       android:scaleType="centerInside"
       android:src="@drawable/ic_ab_selector"
@@ -306,7 +306,7 @@
 
     <FrameLayout
       android:id="@+id/set_timer"
-      android:layout_width="60dp"
+      android:layout_width="@dimen/play_video_sub_action_w"
       android:layout_height="match_parent">
       <ImageView
         android:layout_width="match_parent"
@@ -331,7 +331,7 @@
 
     <ImageView
       android:id="@+id/sub_action_more"
-      android:layout_width="60dp"
+      android:layout_width="@dimen/play_video_sub_action_w"
       android:layout_height="match_parent"
       android:scaleType="centerInside"
       android:src="@drawable/more_vert"

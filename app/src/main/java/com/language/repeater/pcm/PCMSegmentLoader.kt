@@ -9,12 +9,11 @@ class PCMSegmentLoader(
   private val pcmFile: File,
   private val sampleRate: Int = PcmConfig.PCM_SAMPLE_RATE
 ) {
-  val totalSamples = ((pcmFile.length() - 44) / PcmConfig.BYTES_PER_SAMPLE).toInt()
+  //val offset = PcmDataUtil.getDataOffset(pcmFile).also {
+  //  Log.i("wangzixu_PCMSegmentLoader", "PCMSegmentLoader getDataOffset : $it")
+  //}
+  val totalSamples = ((pcmFile.length() - PcmConfig.WAV_HEAD_SIZE) / PcmConfig.BYTES_PER_SAMPLE).toInt()
   val totalDuration = totalSamples.toFloat() / sampleRate
-
-  val offset = PcmDataUtil.getDataOffset(pcmFile).also {
-    Log.i("wangzixu_PCMSegmentLoader", "PCMSegmentLoader getDataOffset : $it")
-  }
 
   /** 波形数据缓存：时间窗口 -> 波形数据 */
   val waveformCache = mutableMapOf<Int, List<WaveformPoint>>()
@@ -42,7 +41,7 @@ class PCMSegmentLoader(
     val buffer = ByteArray(byteCount)
 
     RandomAccessFile(pcmFile, "r").use { raf ->
-      raf.seek(startByte + offset)
+      raf.seek(startByte + PcmConfig.WAV_HEAD_SIZE)
       raf.readFully(buffer)
     }
 

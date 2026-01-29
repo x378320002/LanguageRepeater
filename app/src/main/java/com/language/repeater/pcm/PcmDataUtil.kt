@@ -145,12 +145,12 @@ object PcmDataUtil {
 
   //从指定pcm文件中读取字节数组, 转成short数组
   suspend fun readPcmFile(file: File): ShortArray = withContext(Dispatchers.IO) {
-    val totalSamples = ((file.length()-44) / PcmConfig.BYTES_PER_SAMPLE).toInt()
+    val totalSamples = ((file.length() - 44) / PcmConfig.BYTES_PER_SAMPLE).toInt()
     val arr = ShortArray(totalSamples)
     var index = 0
     val buffer = ByteArray(2)
     FileInputStream(file).buffered().use { input ->
-      input.skip(44)
+      input.skip(PcmConfig.WAV_HEAD_SIZE.toLong())
       while (input.read(buffer) != -1) {
         // s16le -> 2字节小端
         val byteIndex = 0

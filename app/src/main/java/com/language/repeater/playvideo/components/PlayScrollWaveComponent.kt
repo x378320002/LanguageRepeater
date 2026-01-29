@@ -78,9 +78,7 @@ class PlayScrollWaveComponent: BaseComponent<PlayVideoFragment>() {
       override fun onSeekStart() {
         viewModel.getPlayer() ?: return
         isPlayWhenStart = viewModel.isUiPlaying.value
-        if (isPlayWhenStart) {
-          viewModel.pause()
-        }
+        viewModel.pause()
       }
 
       override fun onSeeking(position: Float) {
