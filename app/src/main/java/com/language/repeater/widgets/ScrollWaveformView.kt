@@ -21,6 +21,7 @@ import com.language.repeater.sentence.Sentence
 import com.language.repeater.pcm.WaveformPoint
 import com.language.repeater.utils.ResourcesUtil
 import com.language.repeater.utils.ResourcesUtil.toDp
+import com.language.repeater.utils.ScreenUtil
 import com.language.repeater.utils.TimeFormatUtil
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -290,6 +291,7 @@ class ScrollWaveformView @JvmOverloads constructor(
     visibleEndTime = (currentTime + visibleDuration).coerceAtMost(totalDuration)
 
     checkAndLoadData()
+    prepareWaveData()
     invalidate()
   }
 
@@ -305,15 +307,15 @@ class ScrollWaveformView @JvmOverloads constructor(
     val preloadEnd = endWindow + preloadWindowCount
 
     // 加载缺失的窗口
-    for (windowIndex in startWindow..preloadEnd) {
-      if (!loader.waveformCache.containsKey(windowIndex)) {
-        val windowStartTime = windowIndex * cacheWindowSize
+    // 异步加载
+    scope.launch(Dispatchers.IO) {
+      for (windowIndex in startWindow..preloadEnd) {
+        if (!loader.waveformCache.containsKey(windowIndex)) {
+          val windowStartTime = windowIndex * cacheWindowSize
 
-        // 超出音频范围则跳过
-        if (windowStartTime >= totalDuration) continue
+          // 超出音频范围则跳过
+          if (windowStartTime >= totalDuration) continue
 
-        // 异步加载
-        scope.launch(Dispatchers.IO) {
           try {
             val windowEndTime = min(
               windowStartTime + cacheWindowSize,
@@ -329,9 +331,10 @@ class ScrollWaveformView @JvmOverloads constructor(
               durationSeconds = duration,
               targetPoints = pointsNeeded
             )
+            loader.waveformCache[windowIndex] = waveformData
 
             withContext(Dispatchers.Main) {
-              loader.waveformCache[windowIndex] = waveformData
+              prepareWaveData()
               invalidate()
             }
           } catch (e: Exception) {
@@ -346,8 +349,8 @@ class ScrollWaveformView @JvmOverloads constructor(
   }
 
   //需要绘制的数据
-  private val leftData = mutableListOf<WaveformPoint>()
-  private val rightData = mutableListOf<WaveformPoint>()
+  private val leftData = ArrayList<WaveformPoint>(ScreenUtil.getScreenSize().width / 2 + 2)
+  private val rightData = ArrayList<WaveformPoint>(ScreenUtil.getScreenSize().width / 2 + 2)
   private fun prepareWaveData() {
     val loader = pcmLoader ?: return
     val startTime = visibleStartTime
@@ -545,9 +548,7 @@ class ScrollWaveformView @JvmOverloads constructor(
     val centerY = height / 2f
     val centerX = width / 2f
 
-    // 准备已播放和未播放的波形数据
     // 分别绘制已播放和未播放的波形
-    prepareWaveData()
     drawWaveformSection(canvas, leftData, waveOutlinePaint, playedPaint)
     //drawWaveformSection(canvas, midData, waveOutlinePaint, unPlayPaint)
     drawWaveformSection(canvas, rightData, waveOutlinePaint, unPlayPaint)
