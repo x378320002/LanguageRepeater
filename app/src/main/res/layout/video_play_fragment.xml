@@ -50,7 +50,7 @@
       app:layout_constraintTop_toTopOf="parent"
       app:layout_constraintBottom_toBottomOf="parent"
       app:layout_constraintEnd_toEndOf="parent"
-      android:src="@drawable/media3_icon_settings"
+      android:src="@drawable/ic_setting"
       android:scaleType="center"
       android:layout_width="66dp"
       android:layout_height="0dp"
@@ -145,7 +145,7 @@
       android:layout_width="@dimen/play_video_edit_action_w"
       android:layout_height="60dp">
       <ImageView
-        android:src="@drawable/place_hold"
+        android:src="@drawable/ic_edit_merge_left"
         android:scaleType="centerInside"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -171,7 +171,7 @@
       android:layout_width="@dimen/play_video_edit_action_w"
       android:layout_height="60dp">
       <ImageView
-        android:src="@drawable/place_hold"
+        android:src="@drawable/ic_edit_merge_right"
         android:scaleType="centerInside"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -196,7 +196,7 @@
       android:layout_width="@dimen/play_video_edit_action_w"
       android:layout_height="60dp">
       <ImageView
-        android:src="@drawable/place_hold"
+        android:src="@drawable/ic_edit_split"
         android:scaleType="centerInside"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -221,7 +221,7 @@
       android:layout_width="@dimen/play_video_edit_action_w"
       android:layout_height="60dp">
       <ImageView
-        android:src="@drawable/place_hold"
+        android:src="@drawable/ic_edit_delete"
         android:scaleType="centerInside"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -246,7 +246,7 @@
       android:layout_width="@dimen/play_video_edit_action_w"
       android:layout_height="60dp">
       <ImageView
-        android:src="@drawable/place_hold"
+        android:src="@drawable/ic_edit_insert"
         android:scaleType="centerInside"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -282,7 +282,7 @@
       android:layout_width="@dimen/play_video_sub_action_w"
       android:layout_height="match_parent"
       android:scaleType="centerInside"
-      android:src="@drawable/place_hold"
+      android:src="@drawable/ic_sub_action_edit"
       app:tint="@color/color_tint_selected_selector"
       tools:ignore="ContentDescription,HardcodedText" />
 
@@ -290,18 +290,19 @@
       android:id="@+id/play_speed"
       android:layout_width="@dimen/play_video_sub_action_w"
       android:layout_height="match_parent">
-      <!--<ImageView-->
-      <!--  android:layout_width="match_parent"-->
-      <!--  android:layout_height="match_parent"-->
-      <!--  android:scaleType="centerInside"-->
-      <!--  android:src="@drawable/place_hold"-->
-      <!--  app:tint="@color/color_tint_selected_selector"-->
-      <!--  tools:ignore="ContentDescription,HardcodedText" />-->
+      <ImageView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerInside"
+        android:src="@drawable/ic_sub_action_speed"
+        app:tint="@color/color_tint_selected_selector"
+        tools:ignore="ContentDescription,HardcodedText" />
       <TextView
         android:id="@+id/play_speed_tv"
-        android:layout_gravity="center"
+        android:layout_gravity="top"
+        android:layout_marginTop="30dp"
         android:gravity="center"
-        android:textSize="12dp"
+        android:textSize="10dp"
         android:textStyle="bold"
         android:textColor="@color/color_tint_selected_selector"
         android:background="@color/main_bg_color"
@@ -327,7 +328,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:scaleType="centerInside"
-        android:src="@drawable/place_hold"
+        android:src="@drawable/ic_sub_action_time"
         app:tint="@color/color_tint_selected_selector"
         tools:ignore="ContentDescription,HardcodedText" />
       <TextView
@@ -337,6 +338,7 @@
         android:layout_marginTop="30dp"
         android:gravity="center"
         android:textSize="10dp"
+        android:textStyle="bold"
         android:textColor="@color/color_tint_selected_selector"
         android:background="@color/main_bg_color"
         android:layout_width="match_parent"
@@ -349,7 +351,7 @@
       android:layout_width="@dimen/play_video_sub_action_w"
       android:layout_height="match_parent"
       android:scaleType="centerInside"
-      android:src="@drawable/more_vert"
+      android:src="@drawable/ic_more_vert"
       app:tint="@color/color_tint_selected_selector"
       tools:ignore="ContentDescription,HardcodedText" />
   </androidx.appcompat.widget.LinearLayoutCompat>

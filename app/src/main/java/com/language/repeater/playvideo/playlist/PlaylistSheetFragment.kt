@@ -100,13 +100,13 @@ class PlaylistSheetFragment : BasePlaySheetFragment() {
             currentRepeatMode = it
             when (it) {
               Player.REPEAT_MODE_ONE -> {
-                binding.repeatMode.setImageResource(androidx.media3.session.R.drawable.media3_icon_repeat_one)
+                binding.repeatMode.setImageResource(R.drawable.ic_repeat_one)
               }
               Player.REPEAT_MODE_ALL -> {
-                binding.repeatMode.setImageResource(androidx.media3.session.R.drawable.media3_icon_repeat_all)
+                binding.repeatMode.setImageResource(R.drawable.ic_repeat_all)
               }
               else -> {
-                binding.repeatMode.setImageResource(androidx.media3.session.R.drawable.media3_icon_repeat_off)
+                binding.repeatMode.setImageResource(R.drawable.ic_repeat_off)
               }
             }
           }

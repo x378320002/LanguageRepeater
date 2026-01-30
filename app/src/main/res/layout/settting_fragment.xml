@@ -16,7 +16,7 @@
       android:layout_height="wrap_content">
       <ImageView
         android:id="@+id/ib_back"
-        android:src="@drawable/back_1"
+        android:src="@drawable/ic_back"
         android:paddingStart="19dp"
         android:paddingEnd="15dp"
         android:paddingTop="10dp"

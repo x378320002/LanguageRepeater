@@ -1,6 +1,7 @@
 package com.language.repeater.playvideo.components
 
 import android.R.attr.fragment
+import android.annotation.SuppressLint
 import android.view.View
 import androidx.appcompat.view.ContextThemeWrapper
 import androidx.appcompat.widget.PopupMenu
@@ -12,6 +13,7 @@ import androidx.transition.TransitionManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.language.repeater.R
 import com.language.repeater.SettingPageKey
+import com.language.repeater.defaultNavOptions
 import com.language.repeater.foundation.BaseComponent
 import com.language.repeater.pcm.FFmpegUtil
 import com.language.repeater.playcore.SleepTimerManager
@@ -37,6 +39,7 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
     const val TAG = PlayVideoFragment.Companion.TAG
   }
 
+  @SuppressLint("SetTextI18n")
   @UnstableApi
   override fun onCreateView() {
     super.onCreateView()
@@ -85,13 +88,13 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
 
     fragment.viewModel.playSpeedState.onEach { speed ->
       when (speed) {
-        0.25f -> fragment.binding.playSpeedTv.text = "0.25x"
-        0.5f -> fragment.binding.playSpeedTv.text = "0.5x"
-        0.75f -> fragment.binding.playSpeedTv.text = "0.75x"
-        1.0f -> fragment.binding.playSpeedTv.text = "1.0x"
-        1.25f -> fragment.binding.playSpeedTv.text = "1.25x"
-        1.5f -> fragment.binding.playSpeedTv.text = "1.5x"
-        2.0f -> fragment.binding.playSpeedTv.text = "2.0x"
+        0.25f -> fragment.binding.playSpeedTv.text = "0.25"
+        0.5f -> fragment.binding.playSpeedTv.text = "0.5X"
+        0.75f -> fragment.binding.playSpeedTv.text = "0.75"
+        1.0f -> fragment.binding.playSpeedTv.text = "1.0X"
+        1.25f -> fragment.binding.playSpeedTv.text = "1.25"
+        1.5f -> fragment.binding.playSpeedTv.text = "1.5X"
+        2.0f -> fragment.binding.playSpeedTv.text = "2.0X"
         else -> fragment.binding.playSpeedTv.text = "未知速度" // 如果有其他速度值，显示为未知速度
       }
     }.launchIn(uiScope)
@@ -118,7 +121,7 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
         sheet.show(fragment.childFragmentManager, "SleepTimer")
       }
       fragment.binding.ivSetting -> {
-        fragment.findNavController().navigate(SettingPageKey)
+        fragment.findNavController().navigate(SettingPageKey, defaultNavOptions)
       }
       fragment.binding.subActionMore -> {
         showMoreMenu()

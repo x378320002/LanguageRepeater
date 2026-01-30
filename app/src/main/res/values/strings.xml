@@ -6,8 +6,8 @@
   <string name="setting_sub_folder_desc">选择音视频后自动搜索字幕文件的位置</string>
   <string name="setting_clear_temp">清理缓存</string>
 
-  <string name="re_split_auto">分割句子(依据波形)</string>
-  <string name="re_split_subtitle">分割句子(依据字幕)</string>
+  <string name="re_split_auto">自动分句(依波形)</string>
+  <string name="re_split_subtitle">自动分句(依字幕)</string>
 
 
   <string name="select_file">选择音视频</string>

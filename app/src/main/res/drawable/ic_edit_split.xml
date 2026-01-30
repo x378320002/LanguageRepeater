@@ -32,17 +32,23 @@ SOFTWARE.
     android:strokeLineCap="round"
     android:strokeLineJoin="round"
     android:strokeWidth="2"
-    android:pathData="M10,20.415a8,8 0 1,0 3,-15.415h-3" />
+    android:pathData="M6,7m-3,0a3,3 0 1,0 6,0a3,3 0 1,0 -6,0" />
   <path
     android:strokeColor="@color/black"
     android:strokeLineCap="round"
     android:strokeLineJoin="round"
     android:strokeWidth="2"
-    android:pathData="M13,8l-3,-3l3,-3" />
+    android:pathData="M6,17m-3,0a3,3 0 1,0 6,0a3,3 0 1,0 -6,0" />
   <path
     android:strokeColor="@color/black"
     android:strokeLineCap="round"
     android:strokeLineJoin="round"
     android:strokeWidth="2"
-    android:pathData="M7,17l4,-4l-4,-4l-4,4Z" />
+    android:pathData="M8.6,8.6l10.4,10.4" />
+  <path
+    android:strokeColor="@color/black"
+    android:strokeLineCap="round"
+    android:strokeLineJoin="round"
+    android:strokeWidth="2"
+    android:pathData="M8.6,15.4l10.4,-10.4" />
 </vector>

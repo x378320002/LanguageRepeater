@@ -64,7 +64,7 @@
       android:layout_height="24dp"
       android:layout_gravity="center"
       android:scaleType="center"
-      android:src="@drawable/more_vert"
+      android:src="@drawable/ic_more_vert"
       app:tint="@color/ic_tint_color"
       tools:ignore="ContentDescription" />
   </FrameLayout>
