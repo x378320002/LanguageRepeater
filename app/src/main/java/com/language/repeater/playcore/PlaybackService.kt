@@ -1,9 +1,12 @@
 package com.language.repeater.playcore
 
 import android.app.PendingIntent
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
+import android.media.AudioManager
 import android.os.Build
-import android.os.Bundle
 import android.os.Process
 import android.util.Log
 import androidx.annotation.OptIn
@@ -11,14 +14,9 @@ import androidx.media3.common.ForwardingPlayer
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.session.CommandButton
 import androidx.media3.session.DefaultMediaNotificationProvider
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
-import androidx.media3.session.SessionCommand
-import com.google.common.collect.ImmutableList
-import com.google.common.util.concurrent.Futures
-import com.google.common.util.concurrent.ListenableFuture
 import com.language.repeater.MainActivity
 import com.language.repeater.R
 
@@ -33,6 +31,50 @@ class PlaybackService : MediaSessionService() {
 
   private var player: Player? = null
   private var mediaSession: MediaSession? = null
+
+  private val becomingNoisyReceiver = object : BroadcastReceiver() {
+    override fun onReceive(context: Context?, intent: Intent?) {
+      if (AudioManager.ACTION_AUDIO_BECOMING_NOISY == intent?.action) {
+        Log.i(TAG, "ACTION_AUDIO_BECOMING_NOISY → pause")
+        // 统一走你的播放核心逻辑
+        PlaybackCore.getInstance(this@PlaybackService).pause()
+      }
+    }
+  }
+
+  private lateinit var audioManager: AudioManager
+  private var resumeOnFocusGain = false
+  private var hasAudioFocus = false
+  private val audioFocusListener =
+    AudioManager.OnAudioFocusChangeListener { focus ->
+      val core = PlaybackCore.getInstance(this@PlaybackService)
+      when (focus) {
+
+        AudioManager.AUDIOFOCUS_LOSS -> {
+          resumeOnFocusGain = false
+          core.pause()
+          abandonAudioFocus()
+        }
+
+        AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
+          resumeOnFocusGain = core.isPlaying.value
+          core.pause()
+        }
+
+        AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
+          // 学习类音频，直接暂停更合理
+          //resumeOnFocusGain = core.isPlaying.value
+          //core.pause()
+        }
+
+        AudioManager.AUDIOFOCUS_GAIN -> {
+          if (resumeOnFocusGain) {
+            core.play()
+            resumeOnFocusGain = false
+          }
+        }
+      }
+    }
 
   @OptIn(UnstableApi::class)
   override fun onCreate() {
@@ -56,6 +98,14 @@ class PlaybackService : MediaSessionService() {
         Log.i(TAG, "interceptingPlayer seekToPrevious")
         PlaybackCore.getInstance(this@PlaybackService).seekToPreviousSentence()
       }
+
+      override fun play() {
+        if (!requestAudioFocusIfNeeded()) {
+          Log.i(TAG, "interceptingPlayer play() but requestAudioFocusIfNeeded false")
+          return
+        }
+        super.play()
+      }
     }
 
     player = interceptingPlayer
@@ -76,29 +126,41 @@ class PlaybackService : MediaSessionService() {
     notificationProvider.setSmallIcon(R.drawable.ic_launcher_foreground)
     setMediaNotificationProvider(notificationProvider)
 
+    //监听耳机拔出
+    val filter = IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY)
+    registerReceiver(becomingNoisyReceiver, filter)
+
+    //监听其他声音播放
+    audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
     Log.i(TAG, "PlaybackService onCreate, pid:${Process.myPid()}, currentThread:${Thread.currentThread().name}")
   }
 
-  override fun onUpdateNotification(session: MediaSession, startInForegroundRequired: Boolean) {
-    //Log.i(TAG, "PlaybackService onUpdateNotification:${startInForegroundRequired}")
-    super.onUpdateNotification(session, startInForegroundRequired)
+  private fun requestAudioFocusIfNeeded(): Boolean {
+    if (hasAudioFocus) {
+      return true
+    }
+
+    //audioManager.abandonAudioFocus(audioFocusListener)
+    val result = audioManager.requestAudioFocus(
+      audioFocusListener,
+      AudioManager.STREAM_MUSIC,
+      AudioManager.AUDIOFOCUS_GAIN
+    )
+    hasAudioFocus = result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
+    return hasAudioFocus
   }
 
-  //override fun onTaskRemoved(rootIntent: Intent?) {
-  //  //val p = player
-  //  // 如果暂停了且用户划掉了 App，彻底停止服务
-  //  //if (p != null && !p.playWhenReady) {
-  //  //  p.stop()
-  //  //  stopSelf()
-  //  //}
-  //  Log.i(TAG, "PlaybackService onTaskRemoved")
-  //  player?.stop()
-  //  stopSelf()
-  //  super.onTaskRemoved(rootIntent)
-  //}
+  private fun abandonAudioFocus() {
+    if (!hasAudioFocus) return
+
+    audioManager.abandonAudioFocus(audioFocusListener)
+    hasAudioFocus = false
+  }
 
   override fun onDestroy() {
     // 服务销毁，断开连接
+    unregisterReceiver(becomingNoisyReceiver)
+    abandonAudioFocus()
     PlaybackCore.getInstance(this).initPlayer(null)
 
     mediaSession?.run {

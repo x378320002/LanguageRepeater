@@ -1,30 +1,15 @@
-package com.language.repeater.playvideo
+package com.language.repeater.foundation
 
 import android.annotation.SuppressLint
 import android.app.Dialog
 import android.os.Bundle
-import android.util.Log
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
 import androidx.core.view.updateLayoutParams
-import androidx.lifecycle.lifecycleScope
-import androidx.media3.common.MediaItem
-import androidx.media3.common.Player
-import androidx.media3.common.Player.TIMELINE_CHANGE_REASON_PLAYLIST_CHANGED
-import androidx.media3.common.Player.TIMELINE_CHANGE_REASON_SOURCE_UPDATE
-import androidx.media3.common.Timeline
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.SimpleItemAnimator
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.language.repeater.R
-import com.language.repeater.databinding.PlaylistSheetFragmentBinding
-import com.language.repeater.playvideo.PlayVideoFragment
-import com.language.repeater.playvideo.playlist.PlaylistAdapter
 import com.language.repeater.utils.ScreenUtil
-import kotlinx.coroutines.launch
 
 @SuppressLint("SetTextI18n")
 open class BasePlaySheetFragment : BottomSheetDialogFragment() {

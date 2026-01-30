@@ -38,7 +38,7 @@ class LocalVoiceSentenceDetector(
 
     /** 句子前后的额外补偿扩展 */
     var paddingBeginMs: Int = 100,
-    var paddingEndMs: Int = 200,
+    var paddingEndMs: Int = 250,
 
     /** 句子前后追加清辅音和低音量的检查计算区间,多少帧 */
     var expandEdgeStartCount: Int = 10, //20帧=300ms

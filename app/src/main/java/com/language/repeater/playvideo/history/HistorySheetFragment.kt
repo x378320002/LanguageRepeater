@@ -17,7 +17,7 @@ import com.dotlottie.dlplayer.Fit
 import com.language.repeater.R
 import com.language.repeater.dataStore
 import com.language.repeater.databinding.PlaylistSheetFragmentBinding
-import com.language.repeater.playvideo.BasePlaySheetFragment
+import com.language.repeater.foundation.BasePlaySheetFragment
 import com.language.repeater.playvideo.PlayerViewModel
 import com.language.repeater.utils.DataStoreKey
 import com.lottiefiles.dotlottie.core.model.Config
@@ -35,8 +35,6 @@ class HistorySheetFragment : BasePlaySheetFragment() {
   private val binding get() = _binding!!
 
   private lateinit var adapter: HistoryListAdapter
-
-  private var currentRepeatMode: Int = Player.REPEAT_MODE_ONE
 
   override fun onCreateView(
     inflater: LayoutInflater,
@@ -83,28 +81,11 @@ class HistorySheetFragment : BasePlaySheetFragment() {
       (itemAnimator as? SimpleItemAnimator)?.supportsChangeAnimations = false
     }
 
-    binding.repeatMode.setOnClickListener {
-      if (currentRepeatMode == Player.REPEAT_MODE_OFF) {
-        viewModel.setPlayerRepeatMode(Player.REPEAT_MODE_ONE)
-      } else {
-        viewModel.setPlayerRepeatMode(Player.REPEAT_MODE_OFF)
-      }
-    }
+    binding.repeatMode.visibility = View.GONE
   }
 
   private fun observeData() {
     viewLifecycleOwner.lifecycleScope.launch {
-      launch {
-        DataStoreKey.observeRepeatMode().collect {
-          currentRepeatMode = it
-          if (it == Player.REPEAT_MODE_OFF) {
-            binding.repeatMode.setImageResource(R.drawable.place_hold)
-          } else {
-            binding.repeatMode.setImageResource(R.drawable.back_2)
-          }
-        }
-      }
-
       repeatOnLifecycle(Lifecycle.State.STARTED) {
         // 显示 Loading
         showLoading()

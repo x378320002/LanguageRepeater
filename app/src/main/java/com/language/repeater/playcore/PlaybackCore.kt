@@ -12,6 +12,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
+import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 import androidx.media3.common.Timeline
 import androidx.media3.session.MediaController
@@ -77,6 +78,9 @@ class PlaybackCore(private val context: Context) {
   // null = 未连接/断开, 非null = 已连接
   private val _playerState = MutableStateFlow<Player?>(null)
   val playerState = _playerState.asStateFlow()
+
+  private val _playSpeed = MutableStateFlow(1.0f)
+  val playSpeed = _playSpeed.asStateFlow()
 
   private val _isPlaying = MutableStateFlow(false)
   val isPlaying = _isPlaying.asStateFlow()
@@ -394,9 +398,17 @@ class PlaybackCore(private val context: Context) {
     val list = _sentencesFlow.value
     if (list.isEmpty()) return
 
-    val nextSen = list.firstOrNull {
-        it.start > _currentPositionSeconds.value + 0.05f
-      } ?: list.firstOrNull()
+    //val nextSen = list.firstOrNull {
+    //    it.start > _currentPositionSeconds.value + 0.05f
+    //  } ?: list.firstOrNull()
+
+    val curSen = _curAbSentenceFlow.value ?: return
+    val index = list.indexOf(curSen)
+    val nextSen = if (index >= list.size) {
+      list.firstOrNull()
+    } else {
+      list[index + 1]
+    }
     if (nextSen != null) {
       seekToSentence(nextSen)
     }
@@ -406,20 +418,20 @@ class PlaybackCore(private val context: Context) {
     val list = _sentencesFlow.value
     if (list.isEmpty()) return
 
-    val nextSen = list.lastOrNull {
-      it.end < _currentPositionSeconds.value
-    } ?: list.lastOrNull()
+    //val nextSen = list.lastOrNull {
+    //  it.end < _currentPositionSeconds.value
+    //} ?: list.lastOrNull()
+
+    val curSen = _curAbSentenceFlow.value ?: return
+    val index = list.indexOf(curSen)
+    val nextSen = if (index <= 0) {
+      list.lastOrNull()
+    } else {
+      list[index - 1]
+    }
     if (nextSen != null) {
       seekToSentence(nextSen)
     }
-    //val curSen = _curAbSentenceFlow.value ?: return
-    //val index = list.indexOf(curSen)
-    //if (index == 0) {
-    //  seekToSentence(list.last())
-    //} else {
-    //  val prevIndex = (index - 1).coerceAtLeast(0)
-    //  seekToSentence(list[prevIndex])
-    //}
   }
 
   fun backToSentenceHead() {
@@ -462,6 +474,11 @@ class PlaybackCore(private val context: Context) {
     override fun onPlayerError(error: PlaybackException) {
       super.onPlayerError(error)
       Log.i(TAG, "onPlayerError reason: ${error.message}")
+    }
+
+    override fun onPlaybackParametersChanged(playbackParameters: PlaybackParameters) {
+      super.onPlaybackParametersChanged(playbackParameters)
+      _playSpeed.value = playbackParameters.speed
     }
 
     override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -567,8 +584,10 @@ class PlaybackCore(private val context: Context) {
         seekTo((curAbSen.start * 1000).toLong())
       }
     } else {
-      val curSen = findSentenceByTime(curSec)
-      _curAbSentenceFlow.value = curSen
+      val curSen = _curAbSentenceFlow.value
+      if (curSen == null || curSec < curSen.start || curSec > curSen.end) {
+        _curAbSentenceFlow.value = findSentenceByTime(curSec)
+      }
     }
     //Log.i(TAG, "====== updatePosition _currentPositionSeconds:${_currentPositionSeconds.value}, pos:${pos}")
   }
@@ -662,15 +681,13 @@ class PlaybackCore(private val context: Context) {
 
     if (index != -1) {
       // 3. 执行分割
-      // 新的前半段：End = currentPos + 0.1s
-      val newEndTime = currentPos + 0.1f
-      val newSen = Sentence(sen.start, newEndTime)
+      val newSen = Sentence(currentPos + 0.25f, sen.end)
 
       // 修改后半段(原句)：Start = currentPos
-      sen.start = currentPos + 0.15f
+      sen.end = currentPos + 0.05f
 
       // 4. 插入列表
-      currentList.add(index, newSen)
+      currentList.add(index + 1, newSen)
 
       // 5. 更新流和磁盘
       _sentencesFlow.value = currentList

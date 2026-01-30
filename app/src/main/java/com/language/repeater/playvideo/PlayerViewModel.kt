@@ -38,6 +38,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
   // --- 1. 直接透传 Repository 的数据流 ---
   val playerState = playbackCore.playerState
+  val playSpeedState = playbackCore.playSpeed
   val currentPositionSeconds = playbackCore.currentPositionSeconds
   val currentPosition = playbackCore.currentPosition
   val currentMediaItem = playbackCore.currentMediaItem

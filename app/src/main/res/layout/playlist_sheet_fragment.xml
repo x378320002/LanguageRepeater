@@ -25,6 +25,7 @@
     <!-- 标题栏 -->
     <androidx.constraintlayout.widget.ConstraintLayout
       android:layout_width="match_parent"
+      android:layout_marginTop="12dp"
       android:layout_height="wrap_content">
 
       <TextView
@@ -51,33 +52,32 @@
         android:textSize="16sp"
         android:textColor="@color/main_text_color"
         tools:text="(5)" />
-
-      <ImageView
-        android:id="@+id/repeat_mode"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:paddingEnd="25dp"
-        android:paddingStart="15dp"
-        android:paddingTop="15dp"
-        android:paddingBottom="15dp"
-        android:scaleType="centerInside"
-        android:src="@drawable/place_hold"
-        app:tint="@color/color_tint_selector"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        tools:ignore="ContentDescription" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 
     <!-- 列表 -->
     <androidx.recyclerview.widget.RecyclerView
       android:id="@+id/rv_playlist"
+      android:layout_marginTop="18dp"
       android:layout_weight="1"
       android:layout_width="match_parent"
       android:layout_height="0dp"
       android:clipToPadding="false"
       />
   </LinearLayout>
+
+  <ImageView
+    android:id="@+id/repeat_mode"
+    android:layout_gravity="top|end"
+    android:paddingEnd="25dp"
+    android:paddingStart="15dp"
+    android:paddingTop="26dp"
+    android:paddingBottom="15dp"
+    android:scaleType="centerInside"
+    android:src="@drawable/place_hold"
+    app:tint="@color/color_tint_selector"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    tools:ignore="ContentDescription" />
 
   <com.lottiefiles.dotlottie.core.widget.DotLottieAnimation
     android:id="@+id/lottie_animation"

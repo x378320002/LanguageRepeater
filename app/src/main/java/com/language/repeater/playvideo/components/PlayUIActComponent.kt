@@ -55,6 +55,7 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
     fragment.binding.subActionMore.setOnClickListener(this)
     fragment.binding.ivSetting.setOnClickListener(this)
     fragment.binding.setTimer.setOnClickListener(this)
+    fragment.binding.playSpeed.setOnClickListener(this)
     //fragment.binding.voiceNext.setOnClickListener(this)
     //fragment.binding.voicePrevious.setOnClickListener(this)
     //fragment.binding.reloadSentence.setOnClickListener(this)
@@ -82,6 +83,19 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
       }
     }.launchIn(uiScope)
 
+    fragment.viewModel.playSpeedState.onEach { speed ->
+      when (speed) {
+        0.25f -> fragment.binding.playSpeedTv.text = "0.25x"
+        0.5f -> fragment.binding.playSpeedTv.text = "0.5x"
+        0.75f -> fragment.binding.playSpeedTv.text = "0.75x"
+        1.0f -> fragment.binding.playSpeedTv.text = "1.0x"
+        1.25f -> fragment.binding.playSpeedTv.text = "1.25x"
+        1.5f -> fragment.binding.playSpeedTv.text = "1.5x"
+        2.0f -> fragment.binding.playSpeedTv.text = "2.0x"
+        else -> fragment.binding.playSpeedTv.text = "未知速度" // 如果有其他速度值，显示为未知速度
+      }
+    }.launchIn(uiScope)
+
     uiScope.launch {
       SleepTimerManager.remainingSeconds.collectLatest { seconds ->
         if (seconds > 0) {
@@ -96,6 +110,9 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
 
   override fun onClick(v: View?) {
     when (v) {
+      fragment.binding.playSpeed -> {
+        showSpeedMenu()
+      }
       fragment.binding.setTimer -> {
         val sheet = SleepTimerSheetFragment()
         sheet.show(fragment.childFragmentManager, "SleepTimer")
@@ -136,7 +153,6 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
       fragment.binding.backSentenceHead -> {
         fragment.viewModel.backToSentenceHead()
       }
-
       fragment.binding.playList -> {
         val sheet = PlaylistSheetFragment()
         sheet.show(fragment.childFragmentManager, "PlaylistSheet")
@@ -211,6 +227,38 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
     //    }
     //  }
     //}
+  }
+
+  private fun showSpeedMenu() {
+    val popup = ResourcesUtil.createLightPopMenu(context, fragment.binding.playSpeed)
+    popup.menuInflater.inflate(R.menu.menu_play_speed, popup.menu)
+    popup.setOnMenuItemClickListener { menuItem ->
+      when (menuItem.itemId) {
+        R.id.action_0_25 -> {
+          fragment.viewModel.getPlayer()?.setPlaybackSpeed(0.25f)
+        }
+        R.id.action_0_5 -> {
+          fragment.viewModel.getPlayer()?.setPlaybackSpeed(0.5f)
+        }
+        R.id.action_0_75 -> {
+          fragment.viewModel.getPlayer()?.setPlaybackSpeed(0.75f)
+        }
+        R.id.action_1_0 -> {
+          fragment.viewModel.getPlayer()?.setPlaybackSpeed(1.0f)
+        }
+        R.id.action_1_25 -> {
+          fragment.viewModel.getPlayer()?.setPlaybackSpeed(1.25f)
+        }
+        R.id.action_1_5 -> {
+          fragment.viewModel.getPlayer()?.setPlaybackSpeed(1.5f)
+        }
+        R.id.action_2_0 -> {
+          fragment.viewModel.getPlayer()?.setPlaybackSpeed(2.0f)
+        }
+      }
+      true
+    }
+    popup.show()
   }
 
   private fun showMoreMenu() {

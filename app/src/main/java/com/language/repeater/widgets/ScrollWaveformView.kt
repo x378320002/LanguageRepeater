@@ -224,9 +224,6 @@ class ScrollWaveformView @JvmOverloads constructor(
   /** 是否正在拖动 */
   private var isDragging = false
 
-  /** 拖动开始时的播放位置 */
-  private var dragStartTime = 0f
-
   private var dragABResult: ABHitResult? = null
 
   // ========== 公共方法 ==========
@@ -378,7 +375,7 @@ class ScrollWaveformView @JvmOverloads constructor(
     val loader = pcmLoader ?: return
     val startTime = visibleStartTime
     val endTime = visibleEndTime
-    val curTime = currentTime
+    currentTime
     val startWindow = (startTime / cacheWindowSize).toInt()
     val endWindow = (endTime / cacheWindowSize).toInt()
     leftData.clear()
@@ -426,20 +423,27 @@ class ScrollWaveformView @JvmOverloads constructor(
   /** 手势检测器 */
   private val gestureDetector =
     GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
-
       override fun onDown(e: MotionEvent): Boolean {
-        // 记录拖动开始时的播放位置
-        dragStartTime = currentTime
         dragABResult = checkABHit(e.x.toInt(), e.y.toInt())?.apply {
           onABChangeListener?.onABDragStart(this)
         }
         return true
       }
 
+      override fun onShowPress(e: MotionEvent) {
+        Log.i(TAG, "gestureDetector onShowPress")
+        super.onShowPress(e)
+      }
+
       override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
-        Log.i(TAG, "onSingleTapConfirmed")
+        Log.i(TAG, "gestureDetector onSingleTapConfirmed")
         onCustomClickListener?.onClick(this@ScrollWaveformView)
         return onCustomClickListener != null
+      }
+
+      override fun onLongPress(e: MotionEvent) {
+        Log.i(TAG, "gestureDetector onLongPress")
+        super.onLongPress(e)
       }
 
       override fun onScroll(
@@ -477,7 +481,9 @@ class ScrollWaveformView @JvmOverloads constructor(
         }
         return true
       }
-    })
+    }).apply {
+      setIsLongpressEnabled(false)
+    }
 
   @SuppressLint("ClickableViewAccessibility")
   override fun onTouchEvent(event: MotionEvent): Boolean {
@@ -521,6 +527,15 @@ class ScrollWaveformView @JvmOverloads constructor(
     return centerX + offsetFromCurrent * pixelsPerSecond
   }
 
+  /**
+   * X坐标转换成事件
+   */
+  private fun xToTime(x: Float): Float {
+    val centerX = width / 2f
+    val offsetFromCurrent = x - centerX
+    return currentTime + offsetFromCurrent / pixelsPerSecond
+  }
+
   override fun onDraw(canvas: Canvas) {
     super.onDraw(canvas)
 
@@ -556,9 +571,10 @@ class ScrollWaveformView @JvmOverloads constructor(
 
   private fun drawEditSign(canvas: Canvas, time: Float, rect: Rect) {
     if (time < visibleStartTime || time > visibleEndTime) {
-      editRectA.set(0, 0, 0, 0)
+      rect.set(0, 0, 0, 0)
       return
     }
+
     val x = timeToX(time).toInt()
     val y = height / 2 + 15
 
@@ -801,10 +817,13 @@ class ScrollWaveformView @JvmOverloads constructor(
     //  return ABHitResult(sentence, "B")
     //}
 
+    Log.i(TAG, "checkABHit rectA:$editRectA, rectB:$editRectB, x:$x, y:$y")
     if (editRectA.contains(x, y)) {
+      Log.i(TAG, "checkABHit Hit left")
       return ABHitResult(sentence, true)
     }
     if (editRectB.contains(x, y)) {
+      Log.i(TAG, "checkABHit Hit right")
       return ABHitResult(sentence, false)
     }
     return null
@@ -812,7 +831,6 @@ class ScrollWaveformView @JvmOverloads constructor(
 
   /**
    * 处理AB边界拖动
-   * @param distanceX 拖动的距离（像素）
    */
   private fun handleABDrag(distanceX: Float, result: ABHitResult) {
     val sentence = result.sentence

@@ -2,7 +2,7 @@ package com.language.repeater.playvideo.playlist
 
 import android.annotation.SuppressLint
 import androidx.media3.common.C
-import com.language.repeater.playvideo.BasePlaySheetFragment
+import com.language.repeater.foundation.BasePlaySheetFragment
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -19,6 +19,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import com.language.repeater.R
 import com.language.repeater.playvideo.model.isPlaceHold
+import com.language.repeater.utils.DataStoreKey
 import kotlinx.coroutines.launch
 
 class PlaylistSheetFragment : BasePlaySheetFragment() {
@@ -30,6 +31,7 @@ class PlaylistSheetFragment : BasePlaySheetFragment() {
 
   private var player: Player? = null
   private lateinit var adapter: PlaylistAdapter
+  private var currentRepeatMode: Int = Player.REPEAT_MODE_ONE
 
   override fun onCreateView(
     inflater: LayoutInflater,
@@ -43,12 +45,26 @@ class PlaylistSheetFragment : BasePlaySheetFragment() {
   override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
     super.onViewCreated(view, savedInstanceState)
 
-    setupRecyclerView()
+    setupUi()
     observeViewModel()
   }
 
-  private fun setupRecyclerView() {
+  private fun setupUi() {
     binding.tvSheetTitle.setText(R.string.current_list_title)
+    binding.repeatMode.visibility = View.VISIBLE
+    binding.repeatMode.setOnClickListener {
+      when (currentRepeatMode) {
+        Player.REPEAT_MODE_OFF -> {
+          viewModel.setPlayerRepeatMode(Player.REPEAT_MODE_ONE)
+        }
+        Player.REPEAT_MODE_ONE -> {
+          viewModel.setPlayerRepeatMode(Player.REPEAT_MODE_ALL)
+        }
+        else -> {
+          viewModel.setPlayerRepeatMode(Player.REPEAT_MODE_OFF)
+        }
+      }
+    }
 
     // 初始化 Adapter，传入点击回调
     adapter = PlaylistAdapter(
@@ -79,6 +95,23 @@ class PlaylistSheetFragment : BasePlaySheetFragment() {
   private fun observeViewModel() {
     viewLifecycleOwner.lifecycleScope.launch {
       repeatOnLifecycle(Lifecycle.State.STARTED) {
+        launch {
+          DataStoreKey.observeRepeatMode().collect {
+            currentRepeatMode = it
+            when (it) {
+              Player.REPEAT_MODE_ONE -> {
+                binding.repeatMode.setImageResource(androidx.media3.session.R.drawable.media3_icon_repeat_one)
+              }
+              Player.REPEAT_MODE_ALL -> {
+                binding.repeatMode.setImageResource(androidx.media3.session.R.drawable.media3_icon_repeat_all)
+              }
+              else -> {
+                binding.repeatMode.setImageResource(androidx.media3.session.R.drawable.media3_icon_repeat_off)
+              }
+            }
+          }
+        }
+
         // 1. 监听连接状态 & 初始化数据
         // 只有连接成功后，才能获取到 Player 里的列表数据
         launch {

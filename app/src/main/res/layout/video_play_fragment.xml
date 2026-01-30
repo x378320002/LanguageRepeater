@@ -75,6 +75,7 @@
       app:shutter_background_color="@color/main_bg_color_2"
       android:background="@color/main_bg_color_2"
       app:surface_type="texture_view"
+      app:resize_mode="fit"
       app:show_buffering="always"
       app:auto_show="false"
       app:show_subtitle_button="true"
@@ -285,14 +286,29 @@
       app:tint="@color/color_tint_selected_selector"
       tools:ignore="ContentDescription,HardcodedText" />
 
-    <ImageView
+    <FrameLayout
       android:id="@+id/play_speed"
       android:layout_width="@dimen/play_video_sub_action_w"
-      android:layout_height="match_parent"
-      android:scaleType="centerInside"
-      android:src="@drawable/place_hold"
-      app:tint="@color/color_tint_selected_selector"
-      tools:ignore="ContentDescription,HardcodedText" />
+      android:layout_height="match_parent">
+      <!--<ImageView-->
+      <!--  android:layout_width="match_parent"-->
+      <!--  android:layout_height="match_parent"-->
+      <!--  android:scaleType="centerInside"-->
+      <!--  android:src="@drawable/place_hold"-->
+      <!--  app:tint="@color/color_tint_selected_selector"-->
+      <!--  tools:ignore="ContentDescription,HardcodedText" />-->
+      <TextView
+        android:id="@+id/play_speed_tv"
+        android:layout_gravity="center"
+        android:gravity="center"
+        android:textSize="12dp"
+        android:textStyle="bold"
+        android:textColor="@color/color_tint_selected_selector"
+        android:background="@color/main_bg_color"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        tools:ignore="SpUsage" />
+    </FrameLayout>
 
     <ImageView
       android:id="@+id/voice_repeat_switch"
@@ -318,7 +334,7 @@
         android:visibility="gone"
         android:id="@+id/set_timer_tv"
         android:layout_gravity="top"
-        android:layout_marginTop="32dp"
+        android:layout_marginTop="30dp"
         android:gravity="center"
         android:textSize="10dp"
         android:textColor="@color/color_tint_selected_selector"
