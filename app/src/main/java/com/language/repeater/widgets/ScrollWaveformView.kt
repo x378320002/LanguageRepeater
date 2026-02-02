@@ -30,6 +30,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.min
+
 /**
  * 滚动音频波形View
  * 特点：
@@ -65,10 +66,13 @@ class ScrollWaveformView @JvmOverloads constructor(
   /** AB边界变化监听器 */
   private var onABChangeListener: OnABChangeListener? = null
   private var onCustomClickListener: OnClickListener? = null
-  var editMode = false
+  var isEditMode = false
   private val editRectA = Rect()
   private val editRectB = Rect()
-  private val editDrawable: Drawable = AppCompatResources.getDrawable(context, R.drawable.place_hold)!!
+  private val editDrawable =
+    AppCompatResources.getDrawable(context, R.drawable.ic_hand_point_move)?.also {
+      it.setTint(ResourcesUtil.getColor(R.color.ic_tint_color))
+    }
 
   /**
    * 拖动监听器
@@ -140,18 +144,21 @@ class ScrollWaveformView @JvmOverloads constructor(
     strokeWidth = 1f.toDp()
     strokeCap = Paint.Cap.ROUND
   }
+
   //voice结束指示器
   private val senEndPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
     color = ResourcesUtil.getColor(R.color.wave_sentence_end_sign)
     strokeWidth = 1f.toDp()
     strokeCap = Paint.Cap.ROUND
   }
+
   //voice开始指示器
   private val curSenStartPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
     color = ResourcesUtil.getColor(R.color.wave_sentence_begin_sign_cur)
     strokeWidth = 2f.toDp()
     strokeCap = Paint.Cap.ROUND
   }
+
   //voice结束指示器
   private val curSenEndPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
     color = ResourcesUtil.getColor(R.color.wave_sentence_end_sign_cur)
@@ -562,7 +569,7 @@ class ScrollWaveformView @JvmOverloads constructor(
     //绘制每句话的起始点标记
     drawSentenceSign(canvas)
 
-    if (editMode && curABSentence != null) {
+    if (isEditMode && curABSentence != null) {
       editRectA.set(0, 0, 0, 0)
       editRectB.set(0, 0, 0, 0)
       drawEditSign(canvas, curABSentence?.start ?: -1f, editRectA)
@@ -575,6 +582,8 @@ class ScrollWaveformView @JvmOverloads constructor(
       rect.set(0, 0, 0, 0)
       return
     }
+
+    val editDrawable = editDrawable ?: return
 
     val x = timeToX(time).toInt()
     val y = height / 2 + 15
@@ -795,7 +804,7 @@ class ScrollWaveformView @JvmOverloads constructor(
    */
   private fun checkABHit(x: Int, y: Int): ABHitResult? {
     val sentence = curABSentence ?: return null
-    if (sentences == null || !editMode) return null
+    if (sentences == null || !isEditMode) return null
 
     //val hitRadius = abBgRadius * 2 //点击检测范围
     //// 检查是否点击在A边界上

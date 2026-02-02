@@ -45,7 +45,7 @@ class PlayScrollWaveComponent: BaseComponent<PlayVideoFragment>() {
     }.launchIn(uiScope)
 
     viewModel.editMode.onEach {
-      waveformView.editMode = it
+      waveformView.isEditMode = it
       waveformView.invalidate()
     }.launchIn(uiScope)
 
