@@ -7,11 +7,12 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.textfield.TextInputEditText
+import com.language.repeater.MyApp
 import com.language.repeater.R
 import com.language.repeater.databinding.SetttingFragmentBinding
 import com.language.repeater.foundation.BaseFragment
@@ -90,6 +91,28 @@ class SettingFragment: BaseFragment() {
     binding.settingSubFolder.setOnClickListener {
       openDirLauncher.launch(null)
     }
+
+    binding.settingSentenceGap.setOnClickListener {
+      val dialogView = LayoutInflater.from(context)
+        .inflate(R.layout.dialog_edit_num, null)
+      val etNumber = dialogView.findViewById<TextInputEditText>(R.id.et_number)
+      etNumber.setText("${MyApp.instance.sentenceGap}")
+      etNumber.setSelection(etNumber.text?.length ?: 0)
+      MaterialAlertDialogBuilder(requireContext())
+        .setTitle("设置最小间隔")
+        .setView(dialogView)
+        .setMessage("自动分割句子时, 小于此间隔的连续句子被视作成同一句")
+        .setPositiveButton("确认") { _, _ ->
+          val value = etNumber.text.toString().toIntOrNull()
+          if (value != null) {
+            lifecycleScope.launch {
+              DataStoreKey.saveSentenceGap(value)
+            }
+          }
+        }
+        .setNegativeButton("取消", null)
+        .show()
+    }
   }
 
   @SuppressLint("DefaultLocale")
@@ -109,6 +132,10 @@ class SettingFragment: BaseFragment() {
         val name = FileUtil.getUriFileName(requireContext(), it)
         binding.settingSubFolderDesc.text = name
       }
+    }.launchIn(viewLifecycleOwner.lifecycleScope)
+
+    DataStoreKey.observeSentenceGap().onEach {
+      binding.settingSentenceGapDesc.text = "$it"
     }.launchIn(viewLifecycleOwner.lifecycleScope)
   }
 }

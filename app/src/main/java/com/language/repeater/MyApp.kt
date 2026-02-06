@@ -11,10 +11,15 @@ import coil3.PlatformContext
 import coil3.SingletonImageLoader
 import coil3.request.crossfade
 import coil3.video.VideoFrameDecoder
+import com.language.repeater.utils.DataStoreKey
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 
 val Context.subtitleStore: DataStore<Preferences> by preferencesDataStore(name = "video_subtitle_map")
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "app_config")
+val Context.sentenceDetectStore: DataStore<Preferences> by preferencesDataStore(name = "sentence_store")
 
 // 配置 Json 实例 (可选配置)
 val json = Json {
@@ -33,11 +38,21 @@ class MyApp : Application(), SingletonImageLoader.Factory {
       private set
   }
 
+  //自动断句用的配置
+  var sentenceGap = 500
+
+  @OptIn(DelicateCoroutinesApi::class)
   override fun onCreate() {
     super.onCreate()
     instance = this
 
     AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
+
+    GlobalScope.launch {
+      DataStoreKey.observeSentenceGap().collect {
+        sentenceGap = it
+      }
+    }
   }
 
   override fun newImageLoader(context: PlatformContext): ImageLoader {

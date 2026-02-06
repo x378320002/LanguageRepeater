@@ -1,6 +1,7 @@
 package com.language.repeater.sentence
 
 import android.util.Log
+import com.language.repeater.MyApp
 import com.language.repeater.pcm.PcmConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -30,9 +31,6 @@ class LocalVoiceSentenceDetector(
     /** 过零率阈值(0.0-1.0)，用于辅助判断 */
     var zcrThreshold: Float = 0.12f,
 
-    /** 最小静音持续时间(毫秒)，低于此值不算句子间隔 */
-    val minSilenceDurationMs: Int = 500,
-
     /** 最小语音持续时间(毫秒)，低于此值不算一句话 */
     val minSpeechDurationMs: Int = 50,
 
@@ -45,6 +43,9 @@ class LocalVoiceSentenceDetector(
     var expandEdgeEndCount: Int = 15, //20帧=300ms
     var expandEdgeCheckEnergyFactor: Float = 0.3f, //20帧=300ms
   )
+
+  /** 最小静音持续时间(毫秒)，低于此值不算句子间隔 */
+  val minSilenceDurationMs: Int = MyApp.instance.sentenceGap
 
   /**
    * 音频的一帧数据
@@ -229,7 +230,7 @@ class LocalVoiceSentenceDetector(
     if (features.isEmpty()) return sentences
 
     // 预计算阈值 (将毫秒转换为采样点数)
-    val minSilenceSamples = (config.minSilenceDurationMs * sampleRate / 1000).toLong()
+    val minSilenceSamples = (minSilenceDurationMs * sampleRate / 1000).toLong()
     val minSpeechSamples = (config.minSpeechDurationMs * sampleRate / 1000).toLong()
     // 预计算 Padding 采样数
     val paddingBeginSamples = (config.paddingBeginMs * sampleRate / 1000).toInt()
@@ -406,7 +407,7 @@ class LocalVoiceSentenceDetector(
           val beginSampleIndex = features[begin].sampleIndex
           val endSampleIndex = features[end].sampleIndex
           val silenceDuration = (cur.sampleIndex - endSampleIndex) * 1000 / sampleRate
-          if (silenceDuration >= config.minSilenceDurationMs) {
+          if (silenceDuration >= minSilenceDurationMs) {
             // 静音足够长，结束当前语音片段, 并检测句子的长度
             val duration = (endSampleIndex - beginSampleIndex) * 1000 / sampleRate
             if (duration >= config.minSpeechDurationMs) {
@@ -530,7 +531,7 @@ class LocalVoiceSentenceDetector(
     //再次合并间隔过短的区间
     val sentences = mutableListOf<SentenceBySample>()
     var last = tempSentences[0]
-    //val minGapSample = config.minSilenceDurationMs * sampleRate / 1000
+    //val minGapSample = minSilenceDurationMs * sampleRate / 1000
     for (i in 1..tempSentences.lastIndex) {
       val cur = tempSentences[i]
       if (cur.sampleStart <= last.sampleEnd) {

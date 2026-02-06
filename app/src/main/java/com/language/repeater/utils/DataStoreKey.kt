@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.language.repeater.MyApp
 import com.language.repeater.dataStore
@@ -39,6 +40,8 @@ object DataStoreKey {
   //当前的播放模式
   val KEY_PLAYER_PLAY_MODE = intPreferencesKey("key_player_play_mode")
 
+  val KEY_SENTENCE_GAP = intPreferencesKey("key_sentence_gap")
+
   fun observeRepeatMode(): Flow<Int> {
     return MyApp.instance.dataStore.observe(KEY_PLAYER_PLAY_MODE, 1)
   }
@@ -56,6 +59,16 @@ object DataStoreKey {
   suspend fun saveSubTitleFolder(dir: String) {
     MyApp.instance.dataStore.edit { preferences ->
       preferences[KEY_SUBTITLE_FOLDER] = dir
+    }
+  }
+
+  fun observeSentenceGap(): Flow<Int> {
+    return MyApp.instance.dataStore.observe(KEY_SENTENCE_GAP, 600)
+  }
+
+  suspend fun saveSentenceGap(gap: Int) {
+    MyApp.instance.dataStore.edit { preferences ->
+      preferences[KEY_SENTENCE_GAP] = gap
     }
   }
 }
