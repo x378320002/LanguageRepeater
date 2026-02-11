@@ -4,4 +4,11 @@
   <dimen name="play_video_edit_action_w">45dp</dimen>
   <dimen name="play_video_edit_text_size">10dp</dimen>
 
+  <dimen name="setting_item_small">44dp</dimen>
+  <dimen name="setting_item_big">62dp</dimen>
+  <dimen name="setting_item_top">11dp</dimen>
+  <dimen name="setting_item_bottom">11dp</dimen>
+  <dimen name="setting_item_title_size">15dp</dimen>
+  <dimen name="setting_item_info_size">12dp</dimen>
+  <dimen name="setting_item_padding_horizontal">15dp</dimen>
 </resources>

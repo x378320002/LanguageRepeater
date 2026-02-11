@@ -125,7 +125,6 @@ class PlaylistAdapter(
 
     // 3. 样式与图标
     if (isCurrentItem) {
-      binding.tvTitle.setTextColor(ResourcesUtil.getColor(R.color.PlayListTextColorSelected))
       binding.ivPlayState.visibility = View.VISIBLE
 
       if (isPlayerPlaying) {
@@ -134,7 +133,6 @@ class PlaylistAdapter(
         binding.ivPlayState.setImageResource(androidx.media3.session.R.drawable.media3_icon_pause)
       }
     } else {
-      binding.tvTitle.setTextColor(ResourcesUtil.getColor(R.color.PlayListTextColor))
       binding.ivPlayState.visibility = View.INVISIBLE
     }
   }

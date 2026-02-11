@@ -885,8 +885,15 @@ class PlaybackCore(private val context: Context) {
   fun removeMediaItem(index: Int) {
     val player = _playerState.value ?: return
     val count = player.mediaItemCount
-    if (count == 2 && player.getMediaItemAt(1).isPlaceHold()) {
+    if (count < 2 || (count == 2 && player.getMediaItemAt(1).isPlaceHold())) {
       player.clearMediaItems()
+      //清空旧数据
+      currentId = ""
+      _currentMediaItem.value = null
+      _pcmLoaderStateFlow.value = null
+      _allWaveDataFlow.value = emptyList()
+      _sentencesFlow.value = emptyList()
+      _curAbSentenceFlow.value = null
     } else {
       player.removeMediaItem(index)
     }

@@ -44,8 +44,8 @@
     android:layout_height="0dp">
     <androidx.media3.ui.PlayerView
       android:id="@+id/exo_video_view"
-      app:shutter_background_color="@color/main_bg_color_2"
-      android:background="@color/main_bg_color_2"
+      app:shutter_background_color="@color/main_bg_color_on"
+      android:background="@color/main_bg_color_on"
       app:surface_type="texture_view"
       app:show_buffering="always"
       app:auto_show="false"

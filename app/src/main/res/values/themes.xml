@@ -8,7 +8,7 @@
     <item name="android:activityCloseExitAnimation">@anim/slide_out_right</item>
   </style>
 
-  <style name="PopupMenu.Light" parent="Theme.Material3.Light.NoActionBar">
+  <style name="PopupMenu.Light" parent="Theme.Material3.DynamicColors.Light.NoActionBar">
   </style>
 
   <style name="Base.Theme.LanguageRepeater" parent="Theme.Material3.DynamicColors.DayNight.NoActionBar">

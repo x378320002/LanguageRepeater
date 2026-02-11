@@ -8,7 +8,6 @@ import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.Rect
 import android.graphics.Typeface
-import android.graphics.drawable.Drawable
 import android.util.AttributeSet
 import android.util.Log
 import android.view.GestureDetector
@@ -107,7 +106,7 @@ class ScrollWaveformView @JvmOverloads constructor(
 
   // ========== 画笔 ==========
   /** 背景颜色 */
-  val waveBackgroundColor: Int = ResourcesUtil.getColor(R.color.main_bg_color_2)
+  val waveBackgroundColor: Int = ResourcesUtil.getColor(R.color.main_bg_color_on)
 
   //波形图边缘颜色
   private val waveOutlinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {

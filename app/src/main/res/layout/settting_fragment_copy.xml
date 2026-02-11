@@ -1,0 +1,172 @@
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+  xmlns:app="http://schemas.android.com/apk/res-auto"
+  xmlns:tools="http://schemas.android.com/tools"
+  android:background="@color/main_bg_color"
+  android:orientation="vertical"
+  android:layout_width="match_parent"
+  android:layout_height="match_parent">
+  <LinearLayout
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+    <FrameLayout
+      android:orientation="horizontal"
+      android:gravity="center_vertical"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content">
+      <ImageView
+        android:id="@+id/ib_back"
+        android:src="@drawable/ic_back"
+        android:paddingStart="19dp"
+        android:paddingEnd="15dp"
+        android:paddingTop="10dp"
+        android:paddingBottom="10dp"
+        app:tint="@color/color_tint_selector"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"/>
+      <TextView
+        android:textSize="18dp"
+        android:textColor="@color/main_text_color"
+        tools:text="Setting"
+        android:layout_gravity="center"
+        android:text="@string/setting_title"
+        app:layout_constrainedWidth="true"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        tools:ignore="SpUsage" />
+    </FrameLayout>
+
+    <View
+      android:background="@color/divider_color"
+      android:layout_width="match_parent"
+      android:layout_height="1px"/>
+
+    <LinearLayout
+      android:id="@+id/setting_sub_folder"
+      android:orientation="vertical"
+      android:paddingHorizontal="19dp"
+      android:paddingVertical="10dp"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content">
+      <TextView
+        android:textSize="13dp"
+        android:textColor="@color/main_text_color"
+        android:text="@string/setting_sub_folder"
+        app:layout_constrainedWidth="true"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        tools:ignore="SpUsage" />
+
+      <TextView
+        android:id="@+id/setting_sub_folder_desc"
+        android:layout_marginTop="5dp"
+        android:textSize="11dp"
+        android:maxLines="1"
+        android:ellipsize="end"
+        android:textColor="@color/second_text_color"
+        android:text="@string/setting_sub_folder_desc"
+        app:layout_constrainedWidth="true"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        tools:ignore="SpUsage" />
+    </LinearLayout>
+
+    <View
+      android:background="@color/divider_color"
+      android:layout_width="match_parent"
+      android:layout_marginHorizontal="15dp"
+      android:layout_height="1px"/>
+
+    <LinearLayout
+      android:id="@+id/setting_clear_temp"
+      android:orientation="vertical"
+      android:paddingHorizontal="19dp"
+      android:paddingVertical="10dp"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content">
+      <TextView
+        android:textSize="13dp"
+        android:textColor="@color/main_text_color"
+        android:text="@string/setting_clear_temp"
+        app:layout_constrainedWidth="true"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        tools:ignore="SpUsage" />
+
+      <TextView
+        android:id="@+id/setting_clear_temp_desc"
+        android:layout_marginTop="5dp"
+        android:textSize="11dp"
+        android:textColor="@color/second_text_color"
+        tools:text="xx:xxM"
+        app:layout_constrainedWidth="true"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        tools:ignore="SpUsage" />
+    </LinearLayout>
+
+    <View
+      android:background="@color/divider_color"
+      android:layout_width="match_parent"
+      android:layout_marginHorizontal="15dp"
+      android:layout_height="1px"/>
+
+    <TextView
+      android:textSize="16dp"
+      android:textColor="@color/main_text_color"
+      android:text="@string/setting_sentence_title"
+      app:layout_constrainedWidth="true"
+      android:layout_marginTop="15dp"
+      android:layout_marginStart="15dp"
+      android:layout_marginBottom="5dp"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      tools:ignore="SpUsage" />
+
+    <LinearLayout
+      android:id="@+id/setting_sentence_gap"
+      android:orientation="vertical"
+      android:paddingHorizontal="19dp"
+      android:paddingVertical="10dp"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content">
+      <TextView
+        android:textSize="13dp"
+        android:textColor="@color/main_text_color"
+        android:text="@string/setting_sentence_gap"
+        app:layout_constrainedWidth="true"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        tools:ignore="SpUsage" />
+
+      <TextView
+        android:id="@+id/setting_sentence_gap_desc"
+        android:layout_marginTop="5dp"
+        android:textSize="11dp"
+        android:textColor="@color/second_text_color"
+        tools:text="500"
+        app:layout_constrainedWidth="true"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        tools:ignore="SpUsage" />
+    </LinearLayout>
+  </LinearLayout>
+</FrameLayout>

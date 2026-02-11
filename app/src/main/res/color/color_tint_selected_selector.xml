@@ -9,7 +9,7 @@
   <!-- 选中状态 -->
   <item
     android:state_selected="true"
-    android:color="@color/white"/>
+    android:color="@color/ic_tint_color"/>
 
   <!-- 未选中（默认） -->
   <item android:color="@color/ic_tint_color_sub"/>

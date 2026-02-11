@@ -1,172 +1,191 @@
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
   xmlns:app="http://schemas.android.com/apk/res-auto"
   xmlns:tools="http://schemas.android.com/tools"
-  android:background="@color/main_bg_color"
-  android:orientation="vertical"
   android:layout_width="match_parent"
-  android:layout_height="match_parent">
-  <LinearLayout
-    android:orientation="vertical"
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content">
-    <FrameLayout
-      android:orientation="horizontal"
-      android:gravity="center_vertical"
-      android:layout_width="match_parent"
-      android:layout_height="wrap_content">
-      <ImageView
-        android:id="@+id/ib_back"
-        android:src="@drawable/ic_back"
-        android:paddingStart="19dp"
-        android:paddingEnd="15dp"
-        android:paddingTop="10dp"
-        android:paddingBottom="10dp"
-        app:tint="@color/color_tint_selector"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"/>
-      <TextView
-        android:textSize="18dp"
-        android:textColor="@color/main_text_color"
-        tools:text="Setting"
-        android:layout_gravity="center"
-        android:text="@string/setting_title"
-        app:layout_constrainedWidth="true"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        tools:ignore="SpUsage" />
-    </FrameLayout>
+  android:layout_height="match_parent"
+  android:background="@color/main_bg_color"
+  android:orientation="vertical">
 
-    <View
-      android:background="@color/divider_color"
-      android:layout_width="match_parent"
-      android:layout_height="1px"/>
+  <androidx.constraintlayout.widget.ConstraintLayout
+    android:layout_width="wrap_content"
+    android:layout_marginTop="15dp"
+    android:layout_height="46dp"
+    android:gravity="center_vertical"
+    android:orientation="horizontal">
 
-    <LinearLayout
-      android:id="@+id/setting_sub_folder"
-      android:orientation="vertical"
-      android:paddingHorizontal="19dp"
-      android:paddingVertical="10dp"
-      android:layout_width="match_parent"
-      android:layout_height="wrap_content">
-      <TextView
-        android:textSize="13dp"
-        android:textColor="@color/main_text_color"
-        android:text="@string/setting_sub_folder"
-        app:layout_constrainedWidth="true"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        tools:ignore="SpUsage" />
+    <ImageView
+      android:id="@+id/ib_back"
+      app:layout_constraintTop_toTopOf="parent"
+      app:layout_constraintStart_toStartOf="parent"
+      app:layout_constraintBottom_toBottomOf="parent"
+      android:layout_width="wrap_content"
+      android:layout_height="match_parent"
+      android:paddingEnd="15dp"
+      android:paddingStart="15dp"
+      android:scaleType="centerInside"
+      android:src="@drawable/ic_arrow_left"
+      app:tint="@color/color_tint_selector"
+      tools:ignore="ContentDescription" />
 
-      <TextView
-        android:id="@+id/setting_sub_folder_desc"
-        android:layout_marginTop="5dp"
-        android:textSize="11dp"
-        android:maxLines="1"
-        android:ellipsize="end"
-        android:textColor="@color/sub_text_color"
-        android:text="@string/setting_sub_folder_desc"
-        app:layout_constrainedWidth="true"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        tools:ignore="SpUsage" />
-    </LinearLayout>
-
-    <View
-      android:background="@color/divider_color"
-      android:layout_width="match_parent"
-      android:layout_marginHorizontal="15dp"
-      android:layout_height="1px"/>
-
-    <LinearLayout
-      android:id="@+id/setting_clear_temp"
-      android:orientation="vertical"
-      android:paddingHorizontal="19dp"
-      android:paddingVertical="10dp"
-      android:layout_width="match_parent"
-      android:layout_height="wrap_content">
-      <TextView
-        android:textSize="13dp"
-        android:textColor="@color/main_text_color"
-        android:text="@string/setting_clear_temp"
-        app:layout_constrainedWidth="true"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        tools:ignore="SpUsage" />
-
-      <TextView
-        android:id="@+id/setting_clear_temp_desc"
-        android:layout_marginTop="5dp"
-        android:textSize="11dp"
-        android:textColor="@color/sub_text_color"
-        tools:text="xx:xxM"
-        app:layout_constrainedWidth="true"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        tools:ignore="SpUsage" />
-    </LinearLayout>
-
-    <View
-      android:background="@color/divider_color"
-      android:layout_width="match_parent"
-      android:layout_marginHorizontal="15dp"
-      android:layout_height="1px"/>
-
-    <TextView
-      android:textSize="16dp"
-      android:textColor="@color/main_text_color"
-      android:text="@string/setting_sentence_title"
-      app:layout_constrainedWidth="true"
-      android:layout_marginTop="15dp"
-      android:layout_marginStart="15dp"
-      android:layout_marginBottom="5dp"
+    <com.google.android.material.textview.MaterialTextView
+      app:layout_constraintTop_toTopOf="parent"
+      app:layout_constraintBottom_toBottomOf="parent"
+      app:layout_constraintStart_toEndOf="@id/ib_back"
+      app:layout_goneMarginStart="15dp"
+      android:layout_marginBottom="2dp"
+      android:fontFamily="sans-serif-medium"
       android:layout_width="wrap_content"
       android:layout_height="wrap_content"
-      tools:ignore="SpUsage" />
+      android:layout_gravity="center"
+      android:text="@string/setting_title"
+      android:textColor="@color/main_text_color"
+      android:includeFontPadding="false"
+      android:textSize="20dp"
+      app:layout_constrainedWidth="true"
+      tools:ignore="SpUsage"
+      tools:text="Setting" />
+  </androidx.constraintlayout.widget.ConstraintLayout>
 
-    <LinearLayout
-      android:id="@+id/setting_sentence_gap"
-      android:orientation="vertical"
-      android:paddingHorizontal="19dp"
-      android:paddingVertical="10dp"
+  <ScrollView
+    android:overScrollMode="always"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+    <androidx.cardview.widget.CardView
+      app:cardCornerRadius="8dp"
+      app:cardElevation="0dp"
+      android:layout_marginTop="12dp"
+      android:layout_marginStart="15dp"
+      android:layout_marginEnd="15dp"
+      android:layout_marginBottom="15dp"
+      app:cardBackgroundColor="@color/main_bg_color_on"
       android:layout_width="match_parent"
       android:layout_height="wrap_content">
-      <TextView
-        android:textSize="13dp"
-        android:textColor="@color/main_text_color"
-        android:text="@string/setting_sentence_gap"
-        app:layout_constrainedWidth="true"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        android:layout_width="wrap_content"
+      <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        tools:ignore="SpUsage" />
+        android:orientation="vertical">
 
-      <TextView
-        android:id="@+id/setting_sentence_gap_desc"
-        android:layout_marginTop="5dp"
-        android:textSize="11dp"
-        android:textColor="@color/sub_text_color"
-        tools:text="500"
-        app:layout_constrainedWidth="true"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        tools:ignore="SpUsage" />
-    </LinearLayout>
-  </LinearLayout>
-</FrameLayout>
+        <androidx.constraintlayout.widget.ConstraintLayout
+          android:id="@+id/setting_sub_folder"
+          android:background="?android:attr/selectableItemBackground"
+          android:layout_width="match_parent"
+          android:layout_height="@dimen/setting_item_big"
+          android:orientation="vertical"
+          android:paddingHorizontal="@dimen/setting_item_padding_horizontal">
+
+          <com.google.android.material.textview.MaterialTextView
+            android:layout_marginTop="@dimen/setting_item_top"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/setting_sub_folder"
+            android:textColor="@color/main_text_color"
+            android:textSize="@dimen/setting_item_title_size"
+            app:layout_constrainedWidth="true"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:ignore="SpUsage" />
+
+          <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/setting_sub_folder_desc"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dp"
+            android:ellipsize="marquee"
+            android:maxLines="1"
+            android:textColor="@color/second_text_color"
+            android:textSize="@dimen/setting_item_info_size"
+            app:layout_constrainedWidth="true"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            android:layout_marginBottom="@dimen/setting_item_bottom"
+            tools:ignore="SpUsage"
+            tools:text="123456" />
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <View
+          android:layout_width="match_parent"
+          android:layout_height="1px"
+          android:layout_marginHorizontal="@dimen/setting_item_padding_horizontal"
+          android:background="@color/divider_color" />
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+          android:id="@+id/setting_clear_temp"
+          android:background="?android:attr/selectableItemBackground"
+          android:layout_width="match_parent"
+          android:layout_height="@dimen/setting_item_big"
+          android:orientation="vertical"
+          android:paddingHorizontal="@dimen/setting_item_padding_horizontal">
+
+          <com.google.android.material.textview.MaterialTextView
+            android:layout_marginTop="@dimen/setting_item_top"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/setting_clear_temp"
+            android:textColor="@color/main_text_color"
+            android:textSize="@dimen/setting_item_title_size"
+            app:layout_constrainedWidth="true"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:ignore="SpUsage" />
+
+          <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/setting_clear_temp_desc"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dp"
+            android:ellipsize="marquee"
+            android:maxLines="1"
+            android:textColor="@color/second_text_color"
+            android:textSize="@dimen/setting_item_info_size"
+            app:layout_constrainedWidth="true"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            android:layout_marginBottom="@dimen/setting_item_bottom"
+            tools:ignore="SpUsage"
+            />
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <View
+          android:layout_width="match_parent"
+          android:layout_height="1px"
+          android:layout_marginHorizontal="@dimen/setting_item_padding_horizontal"
+          android:background="@color/divider_color" />
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+          android:id="@+id/setting_sentence_gap"
+          android:background="?android:attr/selectableItemBackground"
+          android:layout_width="match_parent"
+          android:layout_height="@dimen/setting_item_big"
+          android:orientation="vertical"
+          android:paddingHorizontal="@dimen/setting_item_padding_horizontal">
+
+          <com.google.android.material.textview.MaterialTextView
+            android:layout_marginTop="@dimen/setting_item_top"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/setting_sentence_gap"
+            android:textColor="@color/main_text_color"
+            android:textSize="@dimen/setting_item_title_size"
+            app:layout_constrainedWidth="true"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:ignore="SpUsage" />
+
+          <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/setting_sentence_gap_desc"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dp"
+            android:textColor="@color/second_text_color"
+            android:textSize="@dimen/setting_item_info_size"
+            app:layout_constrainedWidth="true"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            android:layout_marginBottom="@dimen/setting_item_bottom"
+            tools:ignore="SpUsage"
+            tools:text="500" />
+        </androidx.constraintlayout.widget.ConstraintLayout>
+      </LinearLayout>
+    </androidx.cardview.widget.CardView>
+  </ScrollView>
+</LinearLayout>
