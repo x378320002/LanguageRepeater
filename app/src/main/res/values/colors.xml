@@ -13,8 +13,8 @@
   <color name="PastelOrawhite_20nge">#FFFFD6A5</color>
   <color name="PastelGreen">#86A9A2</color>
 
-  <color name="main_text_color">#E2E2E2</color>
-  <color name="second_text_color">#B2B1B1</color>
+  <color name="main_text_color">#E0E0E0</color>
+  <color name="second_text_color">#A0A0A0</color>
   <color name="main_bg_color">#202020</color>
   <color name="main_bg_color_on">#343434</color>
   <color name="bottom_dialog_bg_color">#343434</color>
@@ -40,7 +40,7 @@
   <color name="wave_ab_sign_bg">#009688</color>
   <color name="wave_ab_sign_text">#CACACA</color>
 
-  <color name="ic_tint_color">#E2E2E2</color>
+  <color name="ic_tint_color">#D0D0D0</color>
   <color name="ic_tint_color_selected">#009688</color>
   <color name="ic_tint_color_pressed">#8D8D8D</color>
 
