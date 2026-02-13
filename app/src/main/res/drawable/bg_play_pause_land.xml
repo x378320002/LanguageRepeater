@@ -17,7 +17,7 @@
   android:color="?attr/colorControlHighlight">
   <item>
     <shape android:shape="oval">
-      <solid android:color="@color/ic_bg" />
+      <solid android:color="@color/ic_bg_land" />
     </shape>
   </item>
   <item android:id="@android:id/mask">

@@ -24,7 +24,6 @@ import com.language.repeater.dataStore
 import com.language.repeater.db.historyDao
 import com.language.repeater.sentence.LocalVoiceSentenceDetector
 import com.language.repeater.pcm.PCMSegmentLoader
-import com.language.repeater.pcm.PcmDataUtil
 import com.language.repeater.sentence.Sentence
 import com.language.repeater.pcm.WaveformPoint
 import com.language.repeater.playvideo.components.SubtitleAutoLoader
@@ -76,8 +75,8 @@ class PlaybackCore(private val context: Context) {
   private var subtitleAutoLoader: SubtitleAutoLoader? = null
 
   // null = 未连接/断开, 非null = 已连接
-  private val _playerState = MutableStateFlow<Player?>(null)
-  val playerState = _playerState.asStateFlow()
+  private val _playerInstance = MutableStateFlow<Player?>(null)
+  val playerInstance = _playerInstance.asStateFlow()
 
   private val _playSpeed = MutableStateFlow(1.0f)
   val playSpeed = _playSpeed.asStateFlow()
@@ -117,8 +116,8 @@ class PlaybackCore(private val context: Context) {
   val sentencesFlow = _sentencesFlow.asStateFlow()
 
   // --- 复读控制状态 ---
-  private val _repeatable = MutableStateFlow(false)
-  val repeatable = _repeatable.asStateFlow()
+  private val _repeatAb = MutableStateFlow(false)
+  val repeatAb = _repeatAb.asStateFlow()
 
   //当前播放的AB句子
   private val _curAbSentenceFlow = MutableStateFlow<Sentence?>(null)
@@ -170,7 +169,7 @@ class PlaybackCore(private val context: Context) {
         it[KEY_AB_REPEATED]
       }.firstOrNull() ?: false
       Log.i(TAG, "init _repeatable:$repeat")
-      _repeatable.value = repeat
+      _repeatAb.value = repeat
     }
   }
 
@@ -204,7 +203,7 @@ class PlaybackCore(private val context: Context) {
    * 注入真正的 Player 实例
    */
   fun initPlayer(newPlayer: Player?) {
-    val oldPlayer = _playerState.value
+    val oldPlayer = _playerInstance.value
     if (oldPlayer == newPlayer) return
 
     // 1. 清理旧的
@@ -213,7 +212,7 @@ class PlaybackCore(private val context: Context) {
     subtitleAutoLoader = null
 
     // 2. 更新引用
-    _playerState.value = newPlayer
+    _playerInstance.value = newPlayer
 
     // 3. 设置新的
     if (newPlayer != null) {
@@ -256,7 +255,7 @@ class PlaybackCore(private val context: Context) {
    * 使用 PlaylistManager 恢复上次会话
    */
   private fun restoreLastSessionIfNeeded() {
-    val player = _playerState.value ?: return
+    val player = _playerInstance.value ?: return
 
     // 如果 Service 已经在运行且有数据（比如后台播放中），则不恢复
     if (player.mediaItemCount > 0) {
@@ -289,7 +288,7 @@ class PlaybackCore(private val context: Context) {
     progressJob?.cancel()
     progressJob = scope.launch {
       while (isActive) {
-        if (_playerState.value?.isPlaying == true) {
+        if (_playerInstance.value?.isPlaying == true) {
           updatePosition()
         }
         delay(16)
@@ -385,8 +384,8 @@ class PlaybackCore(private val context: Context) {
 
   // 复读控制
   fun toggleRepeat() {
-    val repeat = !_repeatable.value
-    _repeatable.value = repeat
+    val repeat = !_repeatAb.value
+    _repeatAb.value = repeat
     scope.launch {
       context.dataStore.edit { prefs ->
         prefs[KEY_AB_REPEATED] = repeat
@@ -404,7 +403,7 @@ class PlaybackCore(private val context: Context) {
 
     val curSen = _curAbSentenceFlow.value ?: return
     val index = list.indexOf(curSen)
-    val nextSen = if (index >= list.size) {
+    val nextSen = if (index >= list.lastIndex) {
       list.firstOrNull()
     } else {
       list[index + 1]
@@ -496,7 +495,7 @@ class PlaybackCore(private val context: Context) {
 
     override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
       if (mediaItem?.isPlaceHold() == true) {
-        _playerState.value?.seekTo(0, C.TIME_UNSET)
+        _playerInstance.value?.seekTo(0, C.TIME_UNSET)
       } else {
         val preItem = _currentMediaItem.value
         Log.i(TAG, "onMediaItemTransition reason: $reason, pre:${preItem?.mediaId}, mediaItem:${mediaItem?.mediaId}")
@@ -533,7 +532,7 @@ class PlaybackCore(private val context: Context) {
       Log.i(TAG, "onTimelineChanged reason: $reason")
       //如果是列表增删改，保存列表
       if (reason == Player.TIMELINE_CHANGE_REASON_PLAYLIST_CHANGED) {
-        val player = _playerState.value ?: return
+        val player = _playerInstance.value ?: return
         var count = player.mediaItemCount
         if (count > 0 && player.getMediaItemAt(count - 1).isPlaceHold()) {
           count--
@@ -561,7 +560,7 @@ class PlaybackCore(private val context: Context) {
   }
 
   private fun syncState() {
-    val player = _playerState.value ?: return
+    val player = _playerInstance.value ?: return
     _isPlaying.value = player.isPlaying
     _playWhenReady.value = player.playWhenReady
     _currentMediaItem.value = player.currentMediaItem
@@ -572,15 +571,15 @@ class PlaybackCore(private val context: Context) {
   }
 
   fun updatePosition(checkRepeat: Boolean = true, seekPosition: Long? = null) {
-    val pos = seekPosition ?: (_playerState.value?.currentPosition ?: 0L)
+    val pos = seekPosition ?: (_playerInstance.value?.currentPosition ?: 0L)
 
     _currentPosition.value = pos
     val curSec = pos.toFloat() / 1000f
     _currentPositionSeconds.value = curSec
 
     val curAbSen = _curAbSentenceFlow.value
-    if (checkRepeat && curAbSen != null && _repeatable.value) {
-      if (_playerState.value?.isPlaying == true && curSec >= curAbSen.end) {
+    if (checkRepeat && curAbSen != null && _repeatAb.value) {
+      if (_playerInstance.value?.isPlaying == true && curSec >= curAbSen.end) {
         seekTo((curAbSen.start * 1000).toLong())
       }
     } else {
@@ -603,7 +602,7 @@ class PlaybackCore(private val context: Context) {
     saveStateJob = scope.launch {
       delay(1000) // 防抖时间 0.5秒
 
-      val p = _playerState.value ?: return@launch
+      val p = _playerInstance.value ?: return@launch
       val index = p.currentMediaItemIndex
       val pos = p.currentPosition
 
@@ -622,7 +621,7 @@ class PlaybackCore(private val context: Context) {
    * 在 IO 线程执行
    */
   private fun saveCurrentPlaylist() {
-    val player = _playerState.value ?: return
+    val player = _playerInstance.value ?: return
     // 必须在主线程提取数据
     val items = ArrayList<MediaItem>()
     for (i in 0 until player.mediaItemCount) {
@@ -738,6 +737,15 @@ class PlaybackCore(private val context: Context) {
     val nextSen = sentences[index + 1]
     sen.start = minOf(sen.start, nextSen.start)
     sen.end = maxOf(sen.end, nextSen.end)
+
+    val player = playerInstance.value
+    if (index + 1 == sentences.lastIndex && player != null && player.duration != C.TIME_UNSET) {
+      val max = player.duration.toFloat() / 1000f
+      if (sen.end > max) {
+        sen.end = max
+      }
+    }
+
     _curAbSentenceFlow.value = sen
     sentences.remove(nextSen)
     _sentencesFlow.value = sentences
@@ -747,7 +755,7 @@ class PlaybackCore(private val context: Context) {
 
   //插入句子
   fun insertSentence() {
-    val player = _playerState.value ?: return
+    val player = _playerInstance.value ?: return
     val curPos = _currentPositionSeconds.value
     val maxPos = player.duration / 1000f
     if (maxPos < 1.0f) return
@@ -859,7 +867,7 @@ class PlaybackCore(private val context: Context) {
         _sentencesFlow.value = sentences
       } else {
         //如果当前只有这一个句子, 不删除, 把它变成从头到尾
-        playerState.value?.also {
+        playerInstance.value?.also {
           curSen.start = 0f
           curSen.end = it.duration.toFloat() / 1000
         }
@@ -871,19 +879,19 @@ class PlaybackCore(private val context: Context) {
   }
 
   fun setPlayerRepeatMode(mode: Int) {
-    _playerState.value?.repeatMode = mode
+    _playerInstance.value?.repeatMode = mode
     scope.launch {
       DataStoreKey.saveRepeatMode(mode)
     }
   }
 
   // --- 暴露给 UI 的基础操作 ---
-  fun play() = _playerState.value?.play()
-  fun pause() = _playerState.value?.pause()
-  fun seekTo(positionMs: Long) = _playerState.value?.seekTo(positionMs)
-  fun seekToItem(index: Int) = _playerState.value?.seekTo(index, C.TIME_UNSET)
+  fun play() = _playerInstance.value?.play()
+  fun pause() = _playerInstance.value?.pause()
+  fun seekTo(positionMs: Long) = _playerInstance.value?.seekTo(positionMs)
+  fun seekToItem(index: Int) = _playerInstance.value?.seekTo(index, C.TIME_UNSET)
   fun removeMediaItem(index: Int) {
-    val player = _playerState.value ?: return
+    val player = _playerInstance.value ?: return
     val count = player.mediaItemCount
     if (count < 2 || (count == 2 && player.getMediaItemAt(1).isPlaceHold())) {
       player.clearMediaItems()
@@ -901,7 +909,7 @@ class PlaybackCore(private val context: Context) {
 
   // 播放历史记录中的某一项
   fun addAndPlay(item: VideoEntity) {
-    val player = _playerState.value?: return
+    val player = _playerInstance.value?: return
     // 1. 如果就是当前播放的，直接返回
     if (item.id == currentId) {
       return
@@ -942,7 +950,7 @@ class PlaybackCore(private val context: Context) {
     index: Int = 0,
     position: Long = C.TIME_UNSET,
   ) {
-    val player = _playerState.value ?: return
+    val player = _playerInstance.value ?: return
     if (list.isEmpty()) return
 
     Log.i(TAG, "addPlayList : ${list.size} items, index: $index")

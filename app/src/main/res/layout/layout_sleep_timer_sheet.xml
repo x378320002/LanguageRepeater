@@ -14,6 +14,7 @@
     android:layout_height="4dp"
     android:layout_gravity="center_horizontal"
     android:layout_marginTop="12dp"
+    android:layout_marginBottom="15dp"
     app:cardCornerRadius="2dp"
     app:cardElevation="0dp"
     app:cardBackgroundColor="@color/ic_tint_color" />
@@ -28,53 +29,67 @@
     android:textColor="@color/main_text_color"
     android:layout_marginBottom="20dp"/>
 
-  <!-- 选项列表 -->
-  <!-- 1. 不开启 -->
-  <TextView
-    android:id="@+id/btn_off"
-    android:layout_marginTop="15dp"
-    style="@style/SleepTimerItemStyle"
-    android:text="@string/timer_turn_off" />
-
-  <!-- 当前倒计时显示 (默认隐藏，开启时显示) -->
-  <TextView
-    android:id="@+id/tv_countdown_status"
+  <androidx.core.widget.NestedScrollView
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:gravity="center"
-    android:textColor="@color/main_text_color"
-    android:textSize="16sp"
-    android:visibility="gone"
-    android:layout_marginTop="15dp"
-    android:layout_marginBottom="15dp"/>
+    android:layout_height="wrap_content">
+    <LinearLayout
+      android:orientation="vertical"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content">
+      <!-- 选项列表 -->
+      <!-- 1. 不开启 -->
+      <TextView
+        android:id="@+id/btn_off"
+        style="@style/SleepTimerItemStyle"
+        android:text="@string/timer_turn_off" />
 
-  <!-- 2. 10分钟 -->
-  <TextView
-    android:id="@+id/btn_10_min"
-    style="@style/SleepTimerItemStyle"
-    android:text="@string/timer_ten_minutes" />
+      <!-- 当前倒计时显示 (默认隐藏，开启时显示) -->
+      <TextView
+        android:id="@+id/tv_countdown_status"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:textColor="@color/main_text_color"
+        android:textSize="16sp"
+        android:visibility="gone"
+        android:layout_marginTop="15dp"
+        android:layout_marginBottom="15dp"/>
 
-  <!-- 3. 30分钟 -->
-  <TextView
-    android:id="@+id/btn_20_min"
-    style="@style/SleepTimerItemStyle"
-    android:text="@string/timer_twenty_minutes" />
+      <!-- 2. 10分钟 -->
+      <TextView
+        android:id="@+id/btn_10_min"
+        style="@style/SleepTimerItemStyle"
+        android:text="@string/timer_10_minutes" />
 
-  <!-- 3. 30分钟 -->
-  <TextView
-    android:id="@+id/btn_30_min"
-    style="@style/SleepTimerItemStyle"
-    android:text="@string/timer_thirty_minutes" />
+      <!-- 3. 30分钟 -->
+      <TextView
+        android:id="@+id/btn_20_min"
+        style="@style/SleepTimerItemStyle"
+        android:text="@string/timer_20_minutes" />
 
-  <!-- 4. 60分钟 -->
-  <TextView
-    android:id="@+id/btn_60_min"
-    style="@style/SleepTimerItemStyle"
-    android:text="@string/timer_sixty_minutes" />
+      <!-- 3. 30分钟 -->
+      <TextView
+        android:id="@+id/btn_30_min"
+        style="@style/SleepTimerItemStyle"
+        android:text="@string/timer_30_minutes" />
 
-  <!-- 5. 播完当前首 -->
-  <TextView
-    android:id="@+id/btn_end_of_track"
-    style="@style/SleepTimerItemStyle"
-    android:text="@string/timer_complete" />
+      <!-- 45分钟 -->
+      <TextView
+        android:id="@+id/btn_45_min"
+        style="@style/SleepTimerItemStyle"
+        android:text="@string/timer_45_minutes" />
+
+      <!-- 4. 60分钟 -->
+      <TextView
+        android:id="@+id/btn_60_min"
+        style="@style/SleepTimerItemStyle"
+        android:text="@string/timer_60_minutes" />
+
+      <!-- 5. 播完当前首 -->
+      <TextView
+        android:id="@+id/btn_end_of_track"
+        style="@style/SleepTimerItemStyle"
+        android:text="@string/timer_complete" />
+    </LinearLayout>
+  </androidx.core.widget.NestedScrollView>
 </LinearLayout>

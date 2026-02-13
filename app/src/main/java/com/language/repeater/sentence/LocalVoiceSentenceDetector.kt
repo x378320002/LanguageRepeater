@@ -31,13 +31,6 @@ class LocalVoiceSentenceDetector(
     /** 过零率阈值(0.0-1.0)，用于辅助判断 */
     var zcrThreshold: Float = 0.12f,
 
-    /** 最小语音持续时间(毫秒)，低于此值不算一句话 */
-    val minSpeechDurationMs: Int = 50,
-
-    /** 句子前后的额外补偿扩展 */
-    var paddingBeginMs: Int = 100,
-    var paddingEndMs: Int = 250,
-
     /** 句子前后追加清辅音和低音量的检查计算区间,多少帧 */
     var expandEdgeStartCount: Int = 10, //20帧=300ms
     var expandEdgeEndCount: Int = 15, //20帧=300ms
@@ -46,6 +39,12 @@ class LocalVoiceSentenceDetector(
 
   /** 最小静音持续时间(毫秒)，低于此值不算句子间隔 */
   val minSilenceDurationMs: Int = MyApp.instance.sentenceGap
+
+  /** 最小语音持续时间(毫秒)，低于此值不算一句话 */
+  val minSpeechDurationMs: Int = 50
+  /** 句子前后的额外补偿扩展 */
+  var paddingBeginMs: Int = 100
+  var paddingEndMs: Int = 250
 
   /**
    * 音频的一帧数据
@@ -231,10 +230,10 @@ class LocalVoiceSentenceDetector(
 
     // 预计算阈值 (将毫秒转换为采样点数)
     val minSilenceSamples = (minSilenceDurationMs * sampleRate / 1000).toLong()
-    val minSpeechSamples = (config.minSpeechDurationMs * sampleRate / 1000).toLong()
+    val minSpeechSamples = (minSpeechDurationMs * sampleRate / 1000).toLong()
     // 预计算 Padding 采样数
-    val paddingBeginSamples = (config.paddingBeginMs * sampleRate / 1000).toInt()
-    val paddingEndSamples = (config.paddingEndMs * sampleRate / 1000).toInt()
+    val paddingBeginSamples = paddingBeginMs * sampleRate / 1000
+    val paddingEndSamples = paddingEndMs * sampleRate / 1000
 
     fun addSentence(start: Int, end: Int) {
       val coreDuration = end - start
@@ -243,7 +242,7 @@ class LocalVoiceSentenceDetector(
         if (finalStart < 0) finalStart = 0
 
         var finalEnd = end + paddingEndSamples
-        if (finalEnd > totalDataLength) finalEnd = totalDataLength
+        if (finalEnd >= totalDataLength) finalEnd = totalDataLength - 2
         sentences.add(
           Sentence(
             start = finalStart.toFloat() / sampleRate,
@@ -254,25 +253,25 @@ class LocalVoiceSentenceDetector(
     }
 
     // 状态变量
-    var coreStartSample: Int? = null // 核心语音段起始
+    var startSample: Int? = null // 核心语音段起始
     var lastSpeechSample: Int? = null // 核心语音段结束 (最后一次检测到语音的位置)
     for (frame in features) {
       if (frame.isSpeech) {
         // 如果是新句子的开始
-        if (coreStartSample == null) {
-          coreStartSample = frame.sampleIndex
+        if (startSample == null) {
+          startSample = frame.sampleIndex
         }
         // 更新最后一次说话的位置
         lastSpeechSample = frame.sampleIndex
       } else {
         // 如果处于静音段，检查是否达到了断句阈值
-        if (coreStartSample != null && lastSpeechSample != null) {
+        if (startSample != null && lastSpeechSample != null) {
           val silenceGap = frame.sampleIndex - lastSpeechSample
           if (silenceGap > minSilenceSamples) {
             // --- 触发断句逻辑 ---
-            addSentence(coreStartSample, lastSpeechSample)
+            addSentence(startSample, lastSpeechSample)
             // 重置状态，准备捕捉下一句
-            coreStartSample = null
+            startSample = null
             lastSpeechSample = null
           }
         }
@@ -281,8 +280,8 @@ class LocalVoiceSentenceDetector(
 
     // --- 循环结束后的收尾处理 ---
     // 处理文件末尾可能存在的最后一句话
-    if (coreStartSample != null && lastSpeechSample != null) {
-      addSentence(coreStartSample, lastSpeechSample)
+    if (startSample != null && lastSpeechSample != null) {
+      addSentence(startSample, lastSpeechSample)
     }
 
     return sentences
@@ -410,7 +409,7 @@ class LocalVoiceSentenceDetector(
           if (silenceDuration >= minSilenceDurationMs) {
             // 静音足够长，结束当前语音片段, 并检测句子的长度
             val duration = (endSampleIndex - beginSampleIndex) * 1000 / sampleRate
-            if (duration >= config.minSpeechDurationMs) {
+            if (duration >= minSpeechDurationMs) {
               segments.add(Segment(begin, end))
             }
             begin = -1
@@ -425,7 +424,7 @@ class LocalVoiceSentenceDetector(
       val beginSampleIndex = features[begin].sampleIndex
       val endSampleIndex = features[end].sampleIndex
       val duration = (endSampleIndex - beginSampleIndex) * 1000 / sampleRate
-      if (duration >= config.minSpeechDurationMs) {
+      if (duration >= minSpeechDurationMs) {
         segments.add(Segment(begin, end))
       }
     }
@@ -509,8 +508,8 @@ class LocalVoiceSentenceDetector(
       SentenceBySample(start, end)
     }
 
-    val paddingStart = config.paddingBeginMs * sampleRate / 1000
-    val paddingEnd = config.paddingEndMs * sampleRate / 1000
+    val paddingStart = paddingBeginMs * sampleRate / 1000
+    val paddingEnd = paddingEndMs * sampleRate / 1000
     sentences.forEach {
       it.sampleStart = (it.sampleStart - paddingStart).coerceAtLeast(0)
       it.sampleEnd = (it.sampleEnd + paddingEnd).coerceAtMost(maxSampleIndex)

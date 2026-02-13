@@ -1,7 +1,11 @@
 package com.language.repeater.playcore
 
 import android.annotation.SuppressLint
+import androidx.media3.common.Player
 import com.language.repeater.MyApp
+import com.language.repeater.R
+import com.language.repeater.utils.ResourcesUtil
+import com.language.repeater.utils.ToastUtil
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -24,6 +28,28 @@ object SleepTimerManager {
 
   val isRunning: Boolean
     get() = _remainingSeconds.value > 0
+
+  fun startByCurrentItem(player: Player?) {
+    if (player == null) {
+      ToastUtil.toast("当前播放器未就绪")
+      return
+    }
+
+    val duration = player.duration
+    val current = player.currentPosition
+    if (duration > 0 && current >= 0) {
+      val remainingMillis = duration - current
+      // 向上取整转为秒，加 1 秒缓冲
+      val seconds = (remainingMillis / 1000) + 1
+      startTimer(seconds)
+    } else {
+      ToastUtil.toast("无法获取当前时长")
+    }
+  }
+
+  fun startTimerMinutes(minutes: Int, onTimeout: (() -> Unit)? = null) {
+    startTimer(minutes * 60L, onTimeout)
+  }
 
   /**
    * 开始倒计时
@@ -52,6 +78,9 @@ object SleepTimerManager {
       // 重置状态
       _remainingSeconds.value = -1
     }
+
+    val string = MyApp.instance.resources.getString(R.string.timer_set_toast, formatTime(seconds))
+    ToastUtil.toast(string)
   }
 
   fun stopTimer() {

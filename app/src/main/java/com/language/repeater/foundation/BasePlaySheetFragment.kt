@@ -2,8 +2,16 @@ package com.language.repeater.foundation
 
 import android.annotation.SuppressLint
 import android.app.Dialog
+import android.content.res.Configuration
+import android.os.Build
 import android.os.Bundle
 import android.view.View
+import android.view.WindowManager
+import android.widget.FrameLayout
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.view.updateLayoutParams
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
@@ -28,6 +36,23 @@ open class BasePlaySheetFragment : BottomSheetDialogFragment() {
     }
   }
 
+  override fun onStart() {
+    super.onStart()
+    val window = dialog?.window ?: return
+    val isLand = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
+    if (isLand) {
+      // 2. 告诉系统：我要自己处理系统窗口的 Insets，不要自动帮我加 Padding/Margin
+      WindowCompat.setDecorFitsSystemWindows(window, false)
+      // 3. (关键！) 保持 Dialog 的沉浸式状态，防止弹出时状态栏闪烁导致跳变
+      WindowCompat.getInsetsController(window, window.decorView).apply {
+        hide(WindowInsetsCompat.Type.systemBars())
+        systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+      }
+      //window.addFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS)
+    }
+  }
+
   override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
     val dialog = super.onCreateDialog(savedInstanceState) as BottomSheetDialog
     dialog.setOnShowListener {
@@ -35,6 +60,10 @@ open class BasePlaySheetFragment : BottomSheetDialogFragment() {
       behavior.state = BottomSheetBehavior.STATE_EXPANDED
       behavior.skipCollapsed = true
       behavior.isHideable = true
+      //val isLand = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+      //if (isLand) {
+      //  behavior.maxWidth = ScreenUtil.getScreenSize().width * 6 / 10
+      //}
 
       behavior.addBottomSheetCallback(object : BottomSheetBehavior.BottomSheetCallback() {
         // 监听状态变化

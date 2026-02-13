@@ -115,7 +115,7 @@ class PlaylistSheetFragment : BasePlaySheetFragment() {
         // 1. 监听连接状态 & 初始化数据
         // 只有连接成功后，才能获取到 Player 里的列表数据
         launch {
-          viewModel.playerState.collect { p ->
+          viewModel.playerInstance.collect { p ->
             player = p
             refreshFullList() // 初始加载列表
             updateListState() // 初始同步状态

@@ -37,14 +37,20 @@
   <string name="current_no_sentence">当前没有选中任何句子</string>
 
   <string name="history_title">历史记录</string>
+  <string name="enter_edit_mode">编辑句子</string>
+  <string name="exit_edit_mode">退出编辑</string>
   <string name="current_list_title">播放列表</string>
 
   <string name="timer_turn_off">关闭定时</string>
-  <string name="timer_ten_minutes">10 分钟</string>
-  <string name="timer_twenty_minutes">20 分钟</string>
-  <string name="timer_thirty_minutes">30 分钟</string>
-  <string name="timer_sixty_minutes">60 分钟</string>
+  <string name="timer_10_minutes">10 分钟</string>
+  <string name="timer_20_minutes">20 分钟</string>
+  <string name="timer_30_minutes">30 分钟</string>
+  <string name="timer_45_minutes">45 分钟</string>
+  <string name="timer_60_minutes">60 分钟</string>
   <string name="timer_complete">播放完当前视频后</string>
+  <string name="timer_set_toast">将在 %s 后停止播放</string>
+  <string name="timer_set_off">定时已关闭</string>
+
 
   <string name="speed_0.25">0.25X</string>
   <string name="speed_0.5">0.5X</string>

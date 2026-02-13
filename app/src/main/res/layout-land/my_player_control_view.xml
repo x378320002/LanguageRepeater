@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+  xmlns:tools="http://schemas.android.com/tools"
+  android:layout_gravity="bottom|end"
+  android:layout_width="wrap_content"
+  android:layout_height="wrap_content"
+  xmlns:app="http://schemas.android.com/apk/res-auto"
+  tools:ignore="MissingDefaultResource">
+
+  <androidx.media3.ui.DefaultTimeBar
+    android:id="@id/exo_progress"
+    android:layout_width="290dp"
+    app:bar_height="2dp"
+    android:layout_height="@dimen/land_time_bar_h"
+    android:layout_marginEnd="20dp"/>
+</FrameLayout>

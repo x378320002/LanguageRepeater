@@ -19,7 +19,6 @@ import kotlinx.serialization.json.Json
 
 val Context.subtitleStore: DataStore<Preferences> by preferencesDataStore(name = "video_subtitle_map")
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "app_config")
-val Context.sentenceDetectStore: DataStore<Preferences> by preferencesDataStore(name = "sentence_store")
 
 // 配置 Json 实例 (可选配置)
 val json = Json {

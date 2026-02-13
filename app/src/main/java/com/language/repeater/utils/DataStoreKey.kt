@@ -39,6 +39,8 @@ object DataStoreKey {
   val KEY_AB_REPEATED = booleanPreferencesKey("key_is_repeated")
   //当前的播放模式
   val KEY_PLAYER_PLAY_MODE = intPreferencesKey("key_player_play_mode")
+  //当前是否在编辑模式
+  val KEY_EDIT_SEN_MODE = booleanPreferencesKey("key_edit_sen_mode")
 
   val KEY_SENTENCE_GAP = intPreferencesKey("key_sentence_gap")
 

@@ -28,6 +28,8 @@ class PlayScrollWaveComponent: BaseComponent<PlayVideoFragment>() {
   val waveformView
     get() = fragment.binding.audioProgressWaveView
 
+  var isDragging = false
+
   @UnstableApi
   override fun onCreateView() {
     super.onCreateView()
@@ -60,7 +62,7 @@ class PlayScrollWaveComponent: BaseComponent<PlayVideoFragment>() {
     //波形进度的更新
     viewModel.currentPositionSeconds.onEach {
       //处理波形图的更新
-      if (it >= 0) {
+      if (it >= 0 && !isDragging) {
         waveformView.updatePosition(it)
       }
     }.launchIn(uiScope)
@@ -79,6 +81,7 @@ class PlayScrollWaveComponent: BaseComponent<PlayVideoFragment>() {
         viewModel.getPlayer() ?: return
         isPlayWhenStart = viewModel.isUiPlaying.value
         viewModel.pause()
+        isDragging = true
       }
 
       override fun onSeeking(position: Float) {
@@ -86,6 +89,7 @@ class PlayScrollWaveComponent: BaseComponent<PlayVideoFragment>() {
       }
 
       override fun onSeekEnd(position: Float) {
+        isDragging = false
         val player = viewModel.getPlayer() ?: return
         //viewModel.updateAbSentence(position)
         player.seekTo((position * 1000).toLong())
@@ -101,15 +105,15 @@ class PlayScrollWaveComponent: BaseComponent<PlayVideoFragment>() {
       override fun onABDragStart(dragAbResult: ABHitResult?) {
         viewModel.getPlayer() ?: return
         isPlayWhenStart = viewModel.isUiPlaying.value
-        if (isPlayWhenStart) {
-          viewModel.pause()
-        }
+        viewModel.pause()
+        isDragging = true
       }
 
       override fun onABDragging(dragAbResult: ABHitResult?) {
       }
 
       override fun onABDragEnd(dragAbResult: ABHitResult?) {
+        isDragging = false
         viewModel.getPlayer() ?: return
         if (isPlayWhenStart) {
           viewModel.play()

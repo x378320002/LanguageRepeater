@@ -40,42 +40,26 @@ class SleepTimerSheetFragment : BasePlaySheetFragment() {
     binding.btnOff.setOnClickListener {
       SleepTimerManager.stopTimer()
       dismiss()
-      ToastUtil.toast("定时已关闭")
+      ToastUtil.toast(R.string.timer_set_off)
     }
 
-    binding.btn10Min.setOnClickListener { startTimer(10 * 60) }
-    binding.btn20Min.setOnClickListener { startTimer(20 * 60) }
-    binding.btn30Min.setOnClickListener { startTimer(30 * 60) }
-    binding.btn60Min.setOnClickListener { startTimer(60 * 60) }
+    binding.btn10Min.setOnClickListener { startTimer(10) }
+    binding.btn20Min.setOnClickListener { startTimer(20) }
+    binding.btn30Min.setOnClickListener { startTimer(30) }
+    binding.btn45Min.setOnClickListener { startTimer(45) }
+    binding.btn60Min.setOnClickListener { startTimer(60) }
 
     // 播完当前首
     binding.btnEndOfTrack.setOnClickListener {
-      // 获取 Player 信息依然通过 ViewModel (或 connection) 的状态流，或者 ViewModel 的 getPlayer()
-      // 这里为了计算时长，短暂获取一下 player 是可以的，但不传给 Manager
-      val player = viewModel.getPlayer()
-      if (player == null) {
-        ToastUtil.toast("当前播放器未就绪")
-        return@setOnClickListener
-      }
-
-      val duration = player.duration
-      val current = player.currentPosition
-      if (duration > 0 && current >= 0) {
-        val remainingMillis = duration - current
-        // 向上取整转为秒，加 2 秒缓冲
-        val seconds = (remainingMillis / 1000) + 2
-        startTimer(seconds)
-      } else {
-        ToastUtil.toast("无法获取当前时长")
-      }
+      SleepTimerManager.startByCurrentItem(viewModel.getPlayer())
+      dismiss()
     }
   }
 
-  private fun startTimer(seconds: Long) {
+  private fun startTimer(minutes: Int) {
     // 直接调用 ViewModel，不传 Player
-    SleepTimerManager.startTimer(seconds)
+    SleepTimerManager.startTimerMinutes(minutes)
     dismiss()
-    ToastUtil.toast("将在 ${SleepTimerManager.formatTime(seconds)} 后停止播放")
   }
 
   private fun observeTimerState() {

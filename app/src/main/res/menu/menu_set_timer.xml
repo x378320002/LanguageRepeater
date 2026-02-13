@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+  <item
+    android:id="@+id/action_off"
+    android:title="@string/timer_turn_off" />
+
+  <item
+    android:id="@+id/action_10"
+    android:title="@string/timer_10_minutes" />
+
+  <item
+    android:id="@+id/action_20"
+    android:title="@string/timer_20_minutes" />
+
+  <item
+    android:id="@+id/action_30"
+    android:title="@string/timer_30_minutes" />
+
+  <item
+    android:id="@+id/action_45"
+    android:title="@string/timer_45_minutes" />
+
+  <item
+    android:id="@+id/action_60"
+    android:title="@string/timer_60_minutes" />
+
+  <item
+    android:id="@+id/action_cur_item_left"
+    android:title="@string/timer_complete" />
+</menu>

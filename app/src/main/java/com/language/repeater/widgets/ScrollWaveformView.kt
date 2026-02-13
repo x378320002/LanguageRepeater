@@ -106,7 +106,7 @@ class ScrollWaveformView @JvmOverloads constructor(
 
   // ========== 画笔 ==========
   /** 背景颜色 */
-  val waveBackgroundColor: Int = ResourcesUtil.getColor(R.color.main_bg_color_on)
+  //val waveBackgroundColor: Int = ResourcesUtil.getColor(R.color.main_bg_color_on)
 
   //波形图边缘颜色
   private val waveOutlinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -229,7 +229,8 @@ class ScrollWaveformView @JvmOverloads constructor(
   // ========== 手势相关 ==========
 
   /** 是否正在拖动 */
-  private var isDragging = false
+  var isSeeking = false
+    private set
 
   private var dragABResult: ABHitResult? = null
 
@@ -469,9 +470,9 @@ class ScrollWaveformView @JvmOverloads constructor(
           //拖动AB的逻辑
           handleABDrag(distanceX, dragResult)
         } else {
-          if (!isDragging) {
+          if (!isSeeking) {
             // 开始拖动
-            isDragging = true
+            isSeeking = true
             onSeekListener?.onSeekStart()
           }
 
@@ -502,10 +503,10 @@ class ScrollWaveformView @JvmOverloads constructor(
     // 处理拖动结束
     when (event.action) {
       MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-        if (isDragging) {
+        if (isSeeking) {
           // 拖动结束，通知监听器最终位置
           onSeekListener?.onSeekEnd(currentTime)
-          isDragging = false
+          isSeeking = false
         }
 
         val dragResult = dragABResult
@@ -549,7 +550,7 @@ class ScrollWaveformView @JvmOverloads constructor(
     super.onDraw(canvas)
 
     // 背景
-    canvas.drawColor(waveBackgroundColor)
+    //canvas.drawColor(waveBackgroundColor)
 
     val centerY = height / 2f
     val centerX = width / 2f
@@ -763,7 +764,7 @@ class ScrollWaveformView @JvmOverloads constructor(
   fun updatePosition(positionSeconds: Float) {
     if (pcmLoader == null) return
     // 如果正在拖动，不要更新位置，避免冲突
-    if (isDragging) return
+    if (isSeeking) return
 
     currentTime = positionSeconds.coerceIn(0f, totalDuration)
     refreshWave()

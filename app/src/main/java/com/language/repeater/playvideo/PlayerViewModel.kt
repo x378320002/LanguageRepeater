@@ -1,28 +1,31 @@
 package com.language.repeater.playvideo
 
-import kotlin.collections.map
+import android.R.attr.mode
 import android.app.Application
 import android.net.Uri
-import android.os.Bundle
+import androidx.datastore.dataStore
+import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.application
 import androidx.lifecycle.viewModelScope
-import androidx.media3.common.C
 import androidx.media3.common.Player
-import com.dotlottie.dlplayer.Mode
-import com.google.common.collect.Multimaps.index
+import com.language.repeater.MyApp
+import com.language.repeater.dataStore
 import com.language.repeater.db.historyDao
 import com.language.repeater.playcore.PlaybackCore
 import com.language.repeater.playvideo.model.VideoEntity
-import com.language.repeater.playvideo.model.toMediaItem
-import com.language.repeater.playcore.SleepTimerManager
-import com.language.repeater.playvideo.model.toPlaceHold
-import com.language.repeater.utils.ToastUtil
+import com.language.repeater.utils.DataStoreKey.KEY_AB_REPEATED
+import com.language.repeater.utils.DataStoreKey.KEY_EDIT_SEN_MODE
+import com.language.repeater.utils.DataStoreKey.KEY_PLAYER_PLAY_MODE
+import com.language.repeater.utils.observe
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -31,13 +34,16 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     private const val TAG = "wangzixu_PlayerViewModel"
   }
 
-  private val _editMode = MutableStateFlow<Boolean>(false)
-  val editMode = _editMode.asStateFlow()
+  //private val _editMode = MutableStateFlow<Boolean>(false)
+  //val editMode = _editMode.asStateFlow()
+  val editMode = application.dataStore.data.map {
+    it[KEY_EDIT_SEN_MODE] ?: false
+  }.stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
   private val playbackCore = PlaybackCore.getInstance(application)
 
   // --- 1. 直接透传 Repository 的数据流 ---
-  val playerState = playbackCore.playerState
+  val playerInstance = playbackCore.playerInstance
   val playSpeedState = playbackCore.playSpeed
   val currentPositionSeconds = playbackCore.currentPositionSeconds
   val currentPosition = playbackCore.currentPosition
@@ -50,7 +56,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
   val pcmLoaderStateFlow = playbackCore.pcmLoaderStateFlow
   val allWaveDataFlow = playbackCore.allWaveDataFlow
   val sentencesFlow = playbackCore.sentencesFlow
-  val repeatable = playbackCore.repeatable
+  val repeatable = playbackCore.repeatAb
   val curAbSentenceFlow = playbackCore.curAbSentenceFlow
 
   // --- 2. UI 逻辑封装 (防抖状态) ---
@@ -84,7 +90,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     return true
   }
 
-  fun getPlayer(): Player? = playbackCore.playerState.value
+  fun getPlayer(): Player? = playbackCore.playerInstance.value
 
   fun togglePlayPause() {
     if (!ensureConnected()) return
@@ -135,6 +141,10 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
   fun updatePosition(position: Float) {
     playbackCore.updatePosition(false, (position * 1000).toLong())
+  }
+
+  fun updatePosition(position: Long) {
+    playbackCore.updatePosition(false, position)
   }
 
   fun loadSentenceData(forceUseVad: Boolean = false) {
@@ -223,6 +233,11 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
   }
 
   fun editMode(edit: Boolean) {
-    _editMode.value = edit
+    //_editMode.value = edit
+    viewModelScope.launch {
+      application.dataStore.edit {
+        it[KEY_EDIT_SEN_MODE] = edit
+      }
+    }
   }
 }
