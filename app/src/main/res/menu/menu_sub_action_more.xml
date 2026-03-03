@@ -5,14 +5,16 @@
   <!--  android:title="@string/enter_edit_mode" />-->
 
   <item
-    android:id="@+id/action_split_auto"
-    android:title="@string/re_split_auto" />
+    android:id="@+id/action_history_list"
+    android:title="@string/history_title" />
+
+  <item
+    android:id="@+id/action_subtitle"
+    android:title="@string/select_subtitle"
+    />
 
   <item
     android:id="@+id/action_split_subtitle"
     android:title="@string/re_split_subtitle" />
 
-  <item
-    android:id="@+id/action_history_list"
-    android:title="@string/history_title" />
 </menu>

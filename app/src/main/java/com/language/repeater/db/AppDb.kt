@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.language.repeater.playvideo.model.CurPlayListEntity
 import com.language.repeater.playvideo.model.HistoryEntity
 import com.language.repeater.playvideo.model.VideoEntity
@@ -23,7 +25,7 @@ val Context.videoInfoDao
 // 1. 指定包含哪些表 (entities)，以及版本号 (version)
 @Database(
   entities = [VideoEntity::class, HistoryEntity::class, CurPlayListEntity::class],
-  version = 2,
+  version = 3,
   exportSchema = false
 )
 abstract class AppDb : RoomDatabase() {
@@ -46,8 +48,20 @@ abstract class AppDb : RoomDatabase() {
           AppDb::class.java,
           "repeater_database.db" // 数据库文件名
         )
-          // 暂时允许在主线程查询（仅用于测试，正式版建议删掉 fallbackToDestructiveMigration）
-           .fallbackToDestructiveMigration(true) // 如果改了表结构不想处理迁移，可以用这个暴力清除旧数据
+          // .fallbackToDestructiveMigration(true) // 如果改了表结构不想处理迁移，可以用这个暴力清除旧数据
+          .addMigrations(object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+              // 执行 ALTER TABLE 添加列，并设置默认值 0
+              db.execSQL("ALTER TABLE video_info_table ADD COLUMN position INTEGER NOT NULL DEFAULT 0")
+              // 2. 处理 CurPlayListEntity 的索引变更
+              // 先删除旧的普通索引（如果存在）
+              db.execSQL("DROP INDEX IF EXISTS index_current_list_table_videoId")
+              // 注意：创建唯一索引前，必须确保没有重复的 videoId
+              // 如果有重复数据，需要先清理或合并（参考之前的逻辑）
+              // 这里假设你已经处理了重复，或者表目前没有重复数据
+              db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_current_list_table_videoId ON current_list_table(videoId)")
+            }
+          })
           .build()
         INSTANCE = instance
         instance

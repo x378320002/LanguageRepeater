@@ -43,7 +43,7 @@ class LocalVoiceSentenceDetector(
   /** 最小语音持续时间(毫秒)，低于此值不算一句话 */
   val minSpeechDurationMs: Int = 50
   /** 句子前后的额外补偿扩展 */
-  var paddingBeginMs: Int = 100
+  var paddingBeginMs: Int = 150
   var paddingEndMs: Int = 250
 
   /**
@@ -239,10 +239,14 @@ class LocalVoiceSentenceDetector(
       val coreDuration = end - start
       if (coreDuration >= minSpeechSamples) {
         var finalStart = start - paddingBeginSamples
-        if (finalStart < 0) finalStart = 0
+        if (finalStart < 0) {
+          finalStart = 0
+        }
 
         var finalEnd = end + paddingEndSamples
-        if (finalEnd >= totalDataLength) finalEnd = totalDataLength - 2
+        if (finalEnd >= totalDataLength) {
+          finalEnd = totalDataLength - 2
+        }
         sentences.add(
           Sentence(
             start = finalStart.toFloat() / sampleRate,

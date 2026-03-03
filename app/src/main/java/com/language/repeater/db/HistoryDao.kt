@@ -44,7 +44,7 @@ interface HistoryDao {
     // 1. 确保基础表里有这个视频
     _insertOrIgnoreVideoInfo(videoInfo)
 
-// 2. 关键步骤：先去查一下有没有旧记录！
+    // 2. 关键步骤：先去查一下有没有旧记录！
     val existingHistory = getHistoryByVideoId(videoInfo.id)
     val now = System.currentTimeMillis()
     // 【核心逻辑】：如果有旧记录，必须使用 copy 并保留 existingHistory.historyId

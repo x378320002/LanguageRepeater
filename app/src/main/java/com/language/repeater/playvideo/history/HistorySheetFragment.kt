@@ -5,26 +5,20 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.datastore.preferences.core.emptyPreferences
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import androidx.media3.common.Player
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.SimpleItemAnimator
 import com.dotlottie.dlplayer.Fit
 import com.language.repeater.R
-import com.language.repeater.dataStore
 import com.language.repeater.databinding.PlaylistSheetFragmentBinding
 import com.language.repeater.foundation.BasePlaySheetFragment
 import com.language.repeater.playvideo.PlayerViewModel
-import com.language.repeater.utils.DataStoreKey
 import com.lottiefiles.dotlottie.core.model.Config
 import com.lottiefiles.dotlottie.core.util.DotLottieSource
 import com.lottiefiles.dotlottie.core.util.LayoutUtil
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 class HistorySheetFragment : BasePlaySheetFragment() {

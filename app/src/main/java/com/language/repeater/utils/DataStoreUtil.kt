@@ -5,8 +5,8 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
-import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.google.common.collect.Multimaps.index
 import com.language.repeater.MyApp
 import com.language.repeater.dataStore
 import kotlinx.coroutines.flow.Flow
@@ -30,11 +30,13 @@ fun <T> DataStore<Preferences>.observe(
     .distinctUntilChanged() // 统一在这里加，永远不会忘！
 }
 
-object DataStoreKey {
+object DataStoreUtil {
   //当前的subtitle备用寻找文件夹
   val KEY_SUBTITLE_FOLDER = stringPreferencesKey("subtitle_folder_uri")
   //当前播放到第几个信息
   val KEY_CURRENT_PLAY_INFO = stringPreferencesKey("key_current_play_info")
+  //当前播放到第几个信息
+  val KEY_CURRENT_PLAY_INDEX = intPreferencesKey("key_current_play_index")
   //当前是否开启了AB句子模式
   val KEY_AB_REPEATED = booleanPreferencesKey("key_is_repeated")
   //当前的播放模式
@@ -51,6 +53,16 @@ object DataStoreKey {
   suspend fun saveRepeatMode(mode: Int) {
     MyApp.instance.dataStore.edit { preferences ->
       preferences[KEY_PLAYER_PLAY_MODE] = mode
+    }
+  }
+
+  fun observeCurrentPlayIndex(): Flow<Int> {
+    return MyApp.instance.dataStore.observe(KEY_CURRENT_PLAY_INDEX, 0)
+  }
+
+  suspend fun saveCurrentPlayIndex(index: Int) {
+    MyApp.instance.dataStore.edit { preferences ->
+      preferences[KEY_CURRENT_PLAY_INDEX] = index
     }
   }
 

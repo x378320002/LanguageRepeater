@@ -20,7 +20,7 @@ import com.language.repeater.pcm.FFmpegUtil
 import com.language.repeater.playvideo.PlayVideoFragment
 import com.language.repeater.playvideo.PlayerViewModel
 import com.language.repeater.sentence.SentenceStoreUtil
-import com.language.repeater.utils.DataStoreKey
+import com.language.repeater.utils.DataStoreUtil
 import com.language.repeater.utils.FileUtil
 import com.language.repeater.utils.ToastUtil
 import kotlinx.coroutines.flow.launchIn
@@ -45,7 +45,7 @@ class SettingFragment: BaseFragment() {
     if (uri != null) {
       FileUtil.takePersistablePermission(context, uri)
       lifecycleScope.launch {
-        DataStoreKey.saveSubTitleFolder(uri.toString())
+        DataStoreUtil.saveSubTitleFolder(uri.toString())
       }
     }
   }
@@ -106,7 +106,7 @@ class SettingFragment: BaseFragment() {
           val value = etNumber.text.toString().toIntOrNull()
           if (value != null) {
             lifecycleScope.launch {
-              DataStoreKey.saveSentenceGap(value)
+              DataStoreUtil.saveSentenceGap(value)
             }
           }
         }
@@ -125,7 +125,7 @@ class SettingFragment: BaseFragment() {
       binding.settingClearTempDesc.text = "${String.format("%.2f", totalSizeMB)} MB"
     }
 
-    DataStoreKey.observeSubTitleFolder().onEach {
+    DataStoreUtil.observeSubTitleFolder().onEach {
       if (it.isEmpty()) {
         binding.settingSubFolderDesc.setText(R.string.setting_sub_folder_desc)
       } else {
@@ -134,7 +134,7 @@ class SettingFragment: BaseFragment() {
       }
     }.launchIn(viewLifecycleOwner.lifecycleScope)
 
-    DataStoreKey.observeSentenceGap().onEach {
+    DataStoreUtil.observeSentenceGap().onEach {
       binding.settingSentenceGapDesc.text = "$it"
     }.launchIn(viewLifecycleOwner.lifecycleScope)
   }

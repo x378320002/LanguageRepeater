@@ -11,7 +11,7 @@ import coil3.PlatformContext
 import coil3.SingletonImageLoader
 import coil3.request.crossfade
 import coil3.video.VideoFrameDecoder
-import com.language.repeater.utils.DataStoreKey
+import com.language.repeater.utils.DataStoreUtil
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -38,7 +38,7 @@ class MyApp : Application(), SingletonImageLoader.Factory {
   }
 
   //自动断句用的配置
-  var sentenceGap = 500
+  var sentenceGap = 600
 
   @OptIn(DelicateCoroutinesApi::class)
   override fun onCreate() {
@@ -48,7 +48,7 @@ class MyApp : Application(), SingletonImageLoader.Factory {
     AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
 
     GlobalScope.launch {
-      DataStoreKey.observeSentenceGap().collect {
+      DataStoreUtil.observeSentenceGap().collect {
         sentenceGap = it
       }
     }

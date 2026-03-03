@@ -3,13 +3,10 @@ package com.language.repeater.playvideo.components
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.util.Log
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.ActivityResultCallback
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.view.ContextThemeWrapper
-import androidx.appcompat.widget.PopupMenu
 import androidx.core.net.toUri
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -18,7 +15,7 @@ import com.language.repeater.dataStore
 import com.language.repeater.foundation.BaseComponent
 import com.language.repeater.playvideo.PlayVideoFragment
 import com.language.repeater.subtitleStore
-import com.language.repeater.utils.DataStoreKey.KEY_SUBTITLE_FOLDER
+import com.language.repeater.utils.DataStoreUtil.KEY_SUBTITLE_FOLDER
 import com.language.repeater.pcm.FFmpegUtil
 import com.language.repeater.utils.FileUtil
 import com.language.repeater.utils.FileUtil.takePersistablePermission
@@ -26,7 +23,6 @@ import com.language.repeater.utils.ResourcesUtil
 import com.language.repeater.utils.ToastUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.flow.forEach
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -172,7 +168,8 @@ class SelectFileComponent : BaseComponent<PlayVideoFragment>() {
   override fun onCreateView() {
     super.onCreateView()
     fragment.binding.ivAdd.setOnClickListener {
-      showMenu()
+      //showMenu()
+      openFileLauncher.launch(arrayOf("audio/*", "video/*"))
     }
     //fragment.binding.selectFileBtn.setOnClickListener {
     //  //val intent = Intent(Intent.ACTION_OPEN_DOCUMENT)

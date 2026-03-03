@@ -24,13 +24,13 @@ import androidx.room.Relation
       onDelete = ForeignKey.CASCADE
     )
   ],
-  indices = [Index(value = ["videoId"])] // 一个视频可以在列表出现多次吗？如果不行，加上 unique=true
+  indices = [Index(value = ["videoId"], unique = true)] // 一个视频可以在列表出现多次吗？如果不行，加上 unique=true
 )
 data class CurPlayListEntity(
   @PrimaryKey(autoGenerate = true)
   val playlistId: Long = 0,
 
-  val videoId: String, // 对应 VideoInfoEntity 的 id
+  val videoId: String, // 对应 VideoEntity 的 id
   val sortOrder: Int = 0 // 排序字段，用户拖拽排序时更新这个值
 )
 

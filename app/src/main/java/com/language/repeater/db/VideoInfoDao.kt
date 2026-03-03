@@ -26,4 +26,10 @@ interface VideoInfoDao {
 
   @Delete
   suspend fun deleteAll(videos: List<VideoEntity>)
+
+  @Query("UPDATE video_info_table SET position = :newPosition WHERE id = :videoId")
+  suspend fun updatePosition(videoId: String, newPosition: Long)
+
+  @Query("SELECT position FROM video_info_table WHERE id = :videoId")
+  suspend fun getPositionById(videoId: String): Long?
 }

@@ -4,7 +4,6 @@ import android.content.Context
 import android.util.Log
 import androidx.datastore.preferences.core.edit
 import androidx.media3.common.MediaItem
-import coil3.util.Logger
 import com.language.repeater.dataStore
 import com.language.repeater.db.curPlayListDao
 import com.language.repeater.db.videoInfoDao
@@ -13,7 +12,7 @@ import com.language.repeater.playvideo.model.CurrentPlayVideoEntity
 import com.language.repeater.playvideo.model.VideoEntity
 import com.language.repeater.playvideo.model.isPlaceHold
 import com.language.repeater.playvideo.model.toEntity
-import com.language.repeater.utils.DataStoreKey.KEY_CURRENT_PLAY_INFO
+import com.language.repeater.utils.DataStoreUtil.KEY_CURRENT_PLAY_INFO
 import com.language.repeater.utils.FileUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.firstOrNull
@@ -48,26 +47,6 @@ object PlaylistManager {
    * 读取本地列表并转换为 List<MediaItem>
    */
   suspend fun loadLastPlaylist(context: Context): List<VideoEntity> = withContext(Dispatchers.IO) {
-    //val jsonString = context.dataStore.data.map { prefs ->
-    //  prefs[KEY_CURRENT_PLAYLIST]
-    //}.firstOrNull()
-    //
-    //if (jsonString.isNullOrEmpty()) return@withContext emptyList()
-    //
-    //return@withContext try {
-    //  val entities: List<VideoEntity> = json.decodeFromString(jsonString)
-    //  entities.forEach {
-    //    if (it.subUri == null) {
-    //      val prefKey = stringPreferencesKey(it.id)
-    //      val preferences = context.subtitleStore.data.first()
-    //      it.subUri = preferences[prefKey]
-    //    }
-    //  }
-    //  entities
-    //} catch (e: Exception) {
-    //  e.printStackTrace()
-    //  emptyList()
-    //}
     val toDelete = mutableListOf<VideoEntity>()
     val list = context.curPlayListDao.getCurrentPlaylist().mapNotNull {
       //如果原文件没了, 删除本条记录
@@ -87,27 +66,4 @@ object PlaylistManager {
     }
     return@withContext list
   }
-
-  suspend fun saveCurrentPlayIndex(context: Context, info: CurrentPlayVideoEntity) = withContext(Dispatchers.IO) {
-    context.dataStore.edit { prefs ->
-      prefs[KEY_CURRENT_PLAY_INFO] = json.encodeToString(info)
-    }
-  }
-
-  suspend fun loadCurrentPlayIndex(context: Context): CurrentPlayVideoEntity? =
-    withContext(Dispatchers.IO) {
-      val jsonString = context.dataStore.data.map { prefs ->
-        prefs[KEY_CURRENT_PLAY_INFO]
-      }.firstOrNull()
-
-      if (jsonString.isNullOrEmpty()) return@withContext null
-
-      return@withContext try {
-        val info = json.decodeFromString<CurrentPlayVideoEntity>(jsonString)
-        info
-      } catch (e: Exception) {
-        e.printStackTrace()
-        null
-      }
-    }
 }

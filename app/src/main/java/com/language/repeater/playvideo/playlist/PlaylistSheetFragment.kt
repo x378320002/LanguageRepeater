@@ -19,7 +19,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import com.language.repeater.R
 import com.language.repeater.playvideo.model.isPlaceHold
-import com.language.repeater.utils.DataStoreKey
+import com.language.repeater.utils.DataStoreUtil
 import kotlinx.coroutines.launch
 
 class PlaylistSheetFragment : BasePlaySheetFragment() {
@@ -73,6 +73,7 @@ class PlaylistSheetFragment : BasePlaySheetFragment() {
         if (index == adapter.currentPlayingIndex) {
           viewModel.togglePlayPause()
         } else {
+          viewModel.saveCurrentPos()
           viewModel.playItem(index)
         }
       },
@@ -96,7 +97,7 @@ class PlaylistSheetFragment : BasePlaySheetFragment() {
     viewLifecycleOwner.lifecycleScope.launch {
       repeatOnLifecycle(Lifecycle.State.STARTED) {
         launch {
-          DataStoreKey.observeRepeatMode().collect {
+          DataStoreUtil.observeRepeatMode().collect {
             currentRepeatMode = it
             when (it) {
               Player.REPEAT_MODE_ONE -> {

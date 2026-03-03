@@ -405,4 +405,17 @@
       android:layout_width="match_parent"
       android:layout_height="36dp"/>
   </LinearLayout>
+
+  <ImageView
+    android:id="@+id/show_edit_panel"
+    app:layout_constraintTop_toTopOf="parent"
+    app:layout_constraintBottom_toBottomOf="parent"
+    app:layout_constraintEnd_toStartOf="@id/land_overlay_layout"
+    android:background="@drawable/bg_land_show_hide_panel"
+    android:src="@drawable/ic_arrow_left"
+    app:tint="@color/ic_tint_color_land"
+    android:scaleType="centerInside"
+    android:layout_width="30dp"
+    android:layout_height="40dp"
+    tools:ignore="ContentDescription" />
 </androidx.constraintlayout.widget.ConstraintLayout>

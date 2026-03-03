@@ -22,12 +22,12 @@ import com.google.common.util.concurrent.MoreExecutors
 import com.language.repeater.R
 import com.language.repeater.dataStore
 import com.language.repeater.db.historyDao
+import com.language.repeater.db.videoInfoDao
 import com.language.repeater.sentence.LocalVoiceSentenceDetector
 import com.language.repeater.pcm.PCMSegmentLoader
 import com.language.repeater.sentence.Sentence
 import com.language.repeater.pcm.WaveformPoint
 import com.language.repeater.playvideo.components.SubtitleAutoLoader
-import com.language.repeater.playvideo.model.CurrentPlayVideoEntity
 import com.language.repeater.playvideo.model.toEntity
 import com.language.repeater.playvideo.model.toMediaItem
 import com.language.repeater.playvideo.playlist.PlaylistManager
@@ -36,8 +36,8 @@ import com.language.repeater.playvideo.model.VideoEntity
 import com.language.repeater.playvideo.model.isPlaceHold
 import com.language.repeater.playvideo.model.toPlaceHold
 import com.language.repeater.sentence.SentenceStoreUtil
-import com.language.repeater.utils.DataStoreKey
-import com.language.repeater.utils.DataStoreKey.KEY_AB_REPEATED
+import com.language.repeater.utils.DataStoreUtil
+import com.language.repeater.utils.DataStoreUtil.KEY_AB_REPEATED
 import com.language.repeater.utils.SrtParser
 import com.language.repeater.utils.ToastUtil
 import kotlinx.coroutines.CoroutineScope
@@ -134,7 +134,7 @@ class PlaybackCore(private val context: Context) {
   private var controllerFuture: ListenableFuture<MediaController>? = null
 
   companion object {
-    const val TAG = "wangzixu_PlaybackConnection"
+    const val TAG = "wangzixu_PlaybackCore"
 
     @SuppressLint("StaticFieldLeak")
     @Volatile
@@ -217,7 +217,7 @@ class PlaybackCore(private val context: Context) {
     // 3. 设置新的
     if (newPlayer != null) {
       scope.launch(Dispatchers.IO) {
-        val cycle = DataStoreKey.observeRepeatMode().first()
+        val cycle = DataStoreUtil.observeRepeatMode().first()
         withContext(Dispatchers.Main) {
           newPlayer.repeatMode = cycle
         }
@@ -227,9 +227,6 @@ class PlaybackCore(private val context: Context) {
 
       // 初始化字幕加载器
       subtitleAutoLoader = SubtitleAutoLoader(context, newPlayer, scope)
-
-      // 立即同步一次状态
-      syncState()
 
       // 启动进度轮询
       startProgressTicker()
@@ -267,17 +264,14 @@ class PlaybackCore(private val context: Context) {
       // 1. 读取列表 (返回 List<VideoEntity>)
       val videoEntities = PlaylistManager.loadLastPlaylist(context)
       // 3. 读取上次播放位置 (VideoEntity -> Index/Pos)
-      val playInfo = PlaylistManager.loadCurrentPlayIndex(context)
-      val startIndex = playInfo?.index ?: 0
-      val startPos = playInfo?.positionMs ?: C.TIME_UNSET
-
+      //val playInfo = PlaylistManager.loadCurrentPlayIndex(context)
+      val startIndex = DataStoreUtil.observeCurrentPlayIndex().first().coerceIn(0, videoEntities.lastIndex)
       withContext(Dispatchers.Main) {
         addPlayList(
           list = videoEntities,
           isReplace = true,
           playWhenReady = false,
-          index = startIndex,
-          position = startPos
+          index = startIndex
         )
       }
     }
@@ -481,10 +475,10 @@ class PlaybackCore(private val context: Context) {
     }
 
     override fun onIsPlayingChanged(isPlaying: Boolean) {
-      //Log.i(TAG, "onIsPlayingChanged isPlaying: $isPlaying")
+      Log.i(TAG, "onIsPlayingChanged isPlaying: $isPlaying")
       _isPlaying.value = isPlaying
       if (!isPlaying) {
-        saveCurrentState()
+        saveCurrentPositionDelay()
       }
     }
 
@@ -511,7 +505,7 @@ class PlaybackCore(private val context: Context) {
             }
           }
 
-          saveCurrentState()
+          saveCurrentPositionDelay()
         }
       }
     }
@@ -526,6 +520,7 @@ class PlaybackCore(private val context: Context) {
         STATE_ENDED (4)	结束	播完了。UI 显示重播按钮，或重置进度条。
        */
       _playbackState.value = playbackState
+      Log.i(TAG, "onPlaybackStateChanged playbackState: $playbackState")
     }
 
     override fun onTimelineChanged(timeline: Timeline, reason: Int) {
@@ -540,7 +535,6 @@ class PlaybackCore(private val context: Context) {
         _mediaItemCount.value = count
         scope.launch { _playlistRefreshEvent.emit(Unit) }
         saveCurrentPlaylist()
-        saveCurrentState()
       }
     }
 
@@ -550,24 +544,13 @@ class PlaybackCore(private val context: Context) {
       reason: Int,
     ) {
       updatePosition()
-      saveCurrentState()
+      saveCurrentPositionDelay()
     }
 
     // 监听播放器内部模式变化 (比如用户通过通知栏改了模式)
     override fun onRepeatModeChanged(repeatMode: Int) {
       //_playerRepeatMode.value = repeatMode
     }
-  }
-
-  private fun syncState() {
-    val player = _playerInstance.value ?: return
-    _isPlaying.value = player.isPlaying
-    _playWhenReady.value = player.playWhenReady
-    _currentMediaItem.value = player.currentMediaItem
-    _playbackState.value = player.playbackState
-    _mediaItemCount.value = player.mediaItemCount
-    //_playerRepeatMode.value = player.repeatMode
-    updatePosition()
   }
 
   fun updatePosition(checkRepeat: Boolean = true, seekPosition: Long? = null) {
@@ -595,22 +578,27 @@ class PlaybackCore(private val context: Context) {
    * 保存当前播放位置 (Index + Position)
    * 在 IO 线程执行
    */
-  private fun saveCurrentState() {
+  private fun saveCurrentPositionDelay() {
     // 取消上一次未执行的保存任务
     saveStateJob?.cancel()
     // 启动新的保存任务，带延迟
     saveStateJob = scope.launch {
-      delay(1000) // 防抖时间 0.5秒
+      delay(500) // 防抖时间 0.5秒
+      saveCurrentPositionImmediate()
+    }
+  }
 
-      val p = _playerInstance.value ?: return@launch
-      val index = p.currentMediaItemIndex
-      val pos = p.currentPosition
+  fun saveCurrentPositionImmediate() {
+    val p = _playerInstance.value ?: return
+    val id = p.currentMediaItem?.mediaId ?: return
+    val index = p.currentMediaItemIndex
+    val pos = p.currentPosition.coerceAtLeast(0)
 
-      // 确保索引有效
-      if (index != C.INDEX_UNSET) {
-        val info = CurrentPlayVideoEntity(index, pos)
-        // PlaylistManager 内部会切到 IO 线程
-        PlaylistManager.saveCurrentPlayIndex(context, info)
+    // 确保索引有效
+    if (index != C.INDEX_UNSET && id.isNotEmpty()) {
+      scope.launch {
+        DataStoreUtil.saveCurrentPlayIndex(index)
+        context.videoInfoDao.updatePosition(id, pos)
         Log.d(TAG, "Saved state: index=$index, pos=$pos")
       }
     }
@@ -881,7 +869,7 @@ class PlaybackCore(private val context: Context) {
   fun setPlayerRepeatMode(mode: Int) {
     _playerInstance.value?.repeatMode = mode
     scope.launch {
-      DataStoreKey.saveRepeatMode(mode)
+      DataStoreUtil.saveRepeatMode(mode)
     }
   }
 
@@ -889,7 +877,15 @@ class PlaybackCore(private val context: Context) {
   fun play() = _playerInstance.value?.play()
   fun pause() = _playerInstance.value?.pause()
   fun seekTo(positionMs: Long) = _playerInstance.value?.seekTo(positionMs)
-  fun seekToItem(index: Int) = _playerInstance.value?.seekTo(index, C.TIME_UNSET)
+
+  fun seekToItem(index: Int) {
+    val id = _playerInstance.value?.getMediaItemAt(index)?.mediaId ?: return
+    scope.launch {
+      val position = context.videoInfoDao.getPositionById(id) ?: C.TIME_UNSET
+      _playerInstance.value?.seekTo(index, position)
+    }
+  }
+
   fun removeMediaItem(index: Int) {
     val player = _playerInstance.value ?: return
     val count = player.mediaItemCount
@@ -974,7 +970,7 @@ class PlaybackCore(private val context: Context) {
       }
       for (i in 0 until player.mediaItemCount) {
         val item = player.getMediaItemAt(i)
-        if (set.add(item.mediaId)) {
+        if (set.add(item.mediaId) && !item.isPlaceHold()) {
           items.add(item)
         }
       }
@@ -983,7 +979,8 @@ class PlaybackCore(private val context: Context) {
     val placeHolder = items.last().toPlaceHold()
     items.add(placeHolder)
     player.playWhenReady = playWhenReady
-    player.setMediaItems(items, index, position)
+    val startPosition = list[index].position
+    player.setMediaItems(items, index, startPosition)
     player.prepare()
   }
 }

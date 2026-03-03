@@ -128,8 +128,7 @@ class LocalRecordManager(private val fragment: Fragment) : IAudioRecordManger {
           if (pcmShortArray.isEmpty()) {
             throw RecordingTooShortException()
           }
-          val vadConfig = LocalRecordSentenceProcessor.SentenceDetectorConfig()
-          val segments = vadProcessor.detectSentences(pcmShortArray, vadConfig)
+          val segments = vadProcessor.detectSentences(pcmShortArray)
           if (segments.isEmpty()) {
             Log.w(TAG, "top job VAD detected no speech segments.")
             throw IllegalStateException("VAD detected no speech segments.")

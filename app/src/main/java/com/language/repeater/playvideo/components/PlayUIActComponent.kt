@@ -4,10 +4,12 @@ import android.R.attr.visibility
 import android.annotation.SuppressLint
 import android.content.pm.ActivityInfo
 import android.graphics.Color
+import android.util.Log
 import android.view.Gravity
 import android.view.View
 import android.widget.SeekBar
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.OptIn
 import androidx.core.view.get
 import androidx.interpolator.view.animation.FastOutSlowInInterpolator
@@ -28,6 +30,7 @@ import com.language.repeater.playvideo.PlayVideoFragment
 import com.language.repeater.playvideo.history.HistorySheetFragment
 import com.language.repeater.playvideo.playlist.PlaylistSheetFragment
 import com.language.repeater.playvideo.sleeptimer.SleepTimerSheetFragment
+import com.language.repeater.utils.FileUtil.takePersistablePermission
 import com.language.repeater.utils.ResourcesUtil
 import com.language.repeater.utils.ToastUtil
 import kotlinx.coroutines.Dispatchers
@@ -47,6 +50,20 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
   }
 
   var isDragging = false
+
+  val openSubtitleLauncher by lazy {
+    fragment.registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+      if (uri != null) {
+        takePersistablePermission(context, uri)
+        fragment.viewModel.onSubtitleSelected(uri)
+      }
+    }
+  }
+
+  override fun onCreate() {
+    super.onCreate()
+    openSubtitleLauncher
+  }
 
   @SuppressLint("SetTextI18n")
   @UnstableApi
@@ -76,11 +93,15 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
     fragment.binding.setTimer.setOnClickListener(this)
     fragment.binding.playSpeed.setOnClickListener(this)
     fragment.binding.switchDragAb.setOnClickListener(this)
+    fragment.binding.exoVideoView.setOnClickListener(this)
+    fragment.binding.showEditPanel?.setOnClickListener(this)
 
     fragment.binding.editLayout.visibility = View.VISIBLE
     fragment.binding.exoVideoView.setShowFastForwardButton(false)
     fragment.binding.exoVideoView.setShowRewindButton(false)
     fragment.binding.exoVideoView.setFullscreenButtonState(fragment.isLandScreen)
+
+    setupSeekBarLogic()
 
     if (fragment.isLandScreen) {
       fragment.activity?.onBackPressedDispatcher?.addCallback(fragment, object : OnBackPressedCallback(true) {
@@ -91,14 +112,12 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
         }
       })
 
-      fragment.binding.exoVideoView.setOnClickListener {
-        toggleCardVisibility(
-          fragment.binding.landOverlayLayout,
-          fragment.binding.landOverlayLayout?.visibility == View.GONE
-        )
-      }
-
-      setupSeekBarLogic()
+      //fragment.binding.exoVideoView.setOnClickListener {
+      //  toggleCardVisibility(
+      //    fragment.binding.landOverlayLayout,
+      //    fragment.binding.landOverlayLayout?.visibility == View.GONE
+      //  )
+      //}
     }
 
     fragment.binding.switchFullScreen.setOnClickListener {
@@ -112,14 +131,13 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
 
   private fun setupSeekBarLogic() {
     // 1. 监听用户的拖动操作
-    fragment.binding.videoSeekBar?.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+    fragment.binding.videoSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
       var isPlayWhenStart = false
 
       override fun onStartTrackingTouch(seekBar: SeekBar) {
         isDragging = true
         isPlayWhenStart = fragment.viewModel.isUiPlaying.value
         fragment.viewModel.pause()
-        isDragging = true
       }
 
       override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
@@ -151,6 +169,14 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
     })
   }
 
+  private fun updateSeekBarProgress(position: Long, duration: Long) {
+    if (duration > 0 && !isDragging) {
+      // 我们在 XML 里把 max 设置成了 1000，所以这里算千分比
+      val progressPercentage = (position * 1000 / duration).toInt()
+      fragment.binding.videoSeekBar.progress = progressPercentage
+    }
+  }
+
   //targetCard 是你要做动画的卡片，isShowing 表示你接下来要让它显示还是隐藏
   fun toggleCardVisibility(targetCard: View?, isShowing: Boolean) {
     if (targetCard == null) return
@@ -164,8 +190,14 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
     TransitionManager.beginDelayedTransition(fragment.binding.root, slideTransition)
     //真正改变 View 的可见性触发动画
     targetCard.visibility = if (isShowing) View.VISIBLE else View.GONE
+    if (isShowing) {
+      fragment.binding.showEditPanel?.setImageResource(R.drawable.ic_arrow_right)
+    } else {
+      fragment.binding.showEditPanel?.setImageResource(R.drawable.ic_arrow_left)
+    }
   }
 
+  @SuppressLint("SetTextI18n")
   private fun observeData() {
     fragment.viewModel.playerInstance.onEach {
       fragment.binding.exoVideoView.player = it
@@ -179,15 +211,12 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
       fragment.binding.editLayout.visibility = View.GONE
     }
     fragment.viewModel.editMode.onEach {
-      if (it != fragment.binding.switchDragAb.isSelected) {
-        fragment.binding.switchDragAb.isSelected = it
-        if (it) {
-          TransitionManager.beginDelayedTransition(fragment.binding.root)
-          fragment.binding.editLayout.visibility = View.VISIBLE
-        } else {
-          TransitionManager.beginDelayedTransition(fragment.binding.root)
-          fragment.binding.editLayout.visibility = View.GONE
-        }
+      fragment.binding.switchDragAb.isSelected = it
+      TransitionManager.beginDelayedTransition(fragment.binding.root)
+      if (it) {
+        fragment.binding.editLayout.visibility = View.VISIBLE
+      } else {
+        fragment.binding.editLayout.visibility = View.GONE
       }
     }.launchIn(uiScope)
 
@@ -219,15 +248,19 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
       fragment.binding.tvTitle.text = title
     }.launchIn(uiScope)
 
+    fragment.viewModel.playbackCore.playbackState.onEach {
+      if (it == Player.STATE_READY) {
+        val player = fragment.viewModel.playerInstance.value ?: return@onEach
+        val duration = player.duration
+        val position = fragment.viewModel.currentPosition.value
+        updateSeekBarProgress(position, duration)
+      }
+    }.launchIn(uiScope)
+
     fragment.viewModel.currentPosition.onEach { position ->
       val player = fragment.viewModel.playerInstance.value ?: return@onEach
-      val seekBar = fragment.binding.videoSeekBar ?: return@onEach
       val duration = player.duration
-      if (duration > 0 && !isDragging) {
-        // 我们在 XML 里把 max 设置成了 1000，所以这里算千分比
-        val progressPercentage = (position * 1000 / duration).toInt()
-        seekBar.progress = progressPercentage
-      }
+      updateSeekBarProgress(position, duration)
     }.launchIn(uiScope)
 
     SleepTimerManager.remainingSeconds.onEach { seconds ->
@@ -318,7 +351,7 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
         fragment.viewModel.toggleRepeat()
       }
 
-      fragment.binding.playPauseBtn -> {
+      fragment.binding.playPauseBtn, fragment.binding.exoVideoView -> {
         fragment.viewModel.togglePlayPause()
       }
 
@@ -340,11 +373,14 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
       }
 
       fragment.binding.switchDragAb -> {
-        if (fragment.binding.switchDragAb.isSelected) {
-          fragment.viewModel.editMode(false)
-        } else {
-          fragment.viewModel.editMode(true)
-        }
+        fragment.viewModel.editMode(!fragment.viewModel.editMode.value)
+      }
+
+      fragment.binding.showEditPanel -> {
+          toggleCardVisibility(
+            fragment.binding.landOverlayLayout,
+            fragment.binding.landOverlayLayout?.visibility == View.GONE
+          )
       }
     }
   }
@@ -394,12 +430,9 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
     //popup.menu[0].setTitle(if (isEditMode) {R.string.exit_edit_mode} else {R.string.enter_edit_mode})
     popup.setOnMenuItemClickListener { menuItem ->
       when (menuItem.itemId) {
-        R.id.action_split_auto -> {
-          autoLoadSentences(true)
-        }
-
         R.id.action_split_subtitle -> {
-          autoLoadSentences(false)
+          //autoLoadSentences(false)
+          autoLoadSentences()
         }
 
         R.id.action_history_list -> {
@@ -407,9 +440,13 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
           sheet.show(fragment.childFragmentManager, "HistorySheet")
         }
 
-        //R.id.action_edit_mode -> {
-        //  fragment.viewModel.editMode(!isEditMode)
-        //}
+        R.id.action_subtitle -> {
+          if (fragment.viewModel.currentMediaItem.value != null)  {
+            openSubtitleLauncher.launch(arrayOf("text/*", "application/x-subrip"))
+          } else {
+            ToastUtil.toast("当前没有视频, 无法设置字幕")
+          }
+        }
       }
       true
     }
@@ -487,9 +524,15 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
     val isPlaying = fragment.viewModel.isUiPlaying.value
     MaterialAlertDialogBuilder(context)
       .setTitle("重新生成断句信息")
-      .setMessage("确定要重新生成断句信息吗？这会覆盖当前的句子信息")
-      .setNeutralButton("基于字幕分割(如果有)") { dialog, _ ->
-        fragment.viewModel.loadSentenceData(false)
+      .setMessage("确定要重新分句吗？这会覆盖当前的分句信息")
+      .setNeutralButton("基于字幕文件分割") { dialog, _ ->
+        val item = fragment.viewModel.currentMediaItem.value
+        val subUri = item?.localConfiguration?.subtitleConfigurations?.firstOrNull()?.uri
+        if (subUri == null) {
+          ToastUtil.toast("当前视频没有对应的字幕文件")
+        } else {
+          fragment.viewModel.loadSentenceData(false)
+        }
       }
       .setPositiveButton("自动分割") { _, _ ->
         fragment.viewModel.loadSentenceData(true)

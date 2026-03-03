@@ -200,7 +200,7 @@ object FileUtil {
       id = "$trimName-$size"
     }
 
-    return VideoEntity(id, uri.toString(), name, null)
+    return VideoEntity(id, uri.toString(), name)
   }
 
   fun isSafUriAvailable(context: Context, uri: String): Boolean {

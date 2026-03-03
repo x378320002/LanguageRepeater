@@ -15,7 +15,7 @@ import com.language.repeater.dataStore
 import com.language.repeater.db.videoInfoDao
 import com.language.repeater.playvideo.model.toEntity
 import com.language.repeater.subtitleStore
-import com.language.repeater.utils.DataStoreKey.KEY_SUBTITLE_FOLDER
+import com.language.repeater.utils.DataStoreUtil.KEY_SUBTITLE_FOLDER
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job

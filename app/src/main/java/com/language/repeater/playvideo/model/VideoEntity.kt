@@ -21,6 +21,7 @@ data class VideoEntity(
   val uri: String, //对应的saf地址
   val name: String, //文件名
   var subUri: String? = null, //字幕文件地址
+  var position: Long = 0 //播放位置
 )
 
 //把当前条目转成一个占位的条目

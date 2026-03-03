@@ -4,7 +4,7 @@
   <item android:id="@android:id/background">
     <shape android:shape="rectangle">
       <corners android:radius="4dp" />
-      <solid android:color="#4DFFFFFF" /> </shape>
+      <solid android:color="#2DFFFFFF" /> </shape>
   </item>
 
   <!--<item android:id="@android:id/secondaryProgress">-->
@@ -20,7 +20,7 @@
     <clip>
       <shape android:shape="rectangle">
         <corners android:radius="4dp" />
-        <solid android:color="@color/ic_tint_color_land" /> </shape>
+        <solid android:color="@color/ic_tint_color" /> </shape>
     </clip>
   </item>
 
