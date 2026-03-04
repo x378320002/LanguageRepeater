@@ -1,5 +1,6 @@
 package com.language.repeater.playvideo.components
 
+import android.R.attr.fragment
 import android.R.attr.visibility
 import android.annotation.SuppressLint
 import android.content.pm.ActivityInfo
@@ -71,7 +72,6 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
     super.onCreateView()
     setUIAction()
     observeData()
-    setSubtitleStyle()
   }
 
   @SuppressLint("SourceLockedOrientationActivity")
@@ -99,18 +99,40 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
     fragment.binding.editLayout.visibility = View.VISIBLE
     fragment.binding.exoVideoView.setShowFastForwardButton(false)
     fragment.binding.exoVideoView.setShowRewindButton(false)
+    fragment.binding.exoVideoView.setShowSubtitleButton(true)
     fragment.binding.exoVideoView.setFullscreenButtonState(fragment.isLandScreen)
+    fragment.binding.exoVideoView.setFullscreenButtonClickListener { isFullScreen ->
+      // isFullScreen 参数表示当前按钮希望切换到的状态：
+      // 如果当前是非全屏，点击后 isFullScreen 为 true
+      // 如果当前是全屏，点击后 isFullScreen 为 false
+      if (fragment.isLandScreen) {
+        fragment.activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+      } else {
+        fragment.activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+      }
+    }
+    fragment.binding.switchFullScreen.setOnClickListener {
+      if (fragment.isLandScreen) {
+        fragment.activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+      } else {
+        fragment.activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+      }
+    }
+    fragment.binding.exoVideoView.showController()
 
+    setSubtitleStyle()
     setupSeekBarLogic()
 
     if (fragment.isLandScreen) {
-      fragment.activity?.onBackPressedDispatcher?.addCallback(fragment, object : OnBackPressedCallback(true) {
-        override fun handleOnBackPressed() {
-          if (fragment.isLandScreen) {
-            fragment.activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+      fragment.activity?.onBackPressedDispatcher?.addCallback(
+        fragment,
+        object : OnBackPressedCallback(true) {
+          override fun handleOnBackPressed() {
+            if (fragment.isLandScreen) {
+              fragment.activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            }
           }
-        }
-      })
+        })
 
       //fragment.binding.exoVideoView.setOnClickListener {
       //  toggleCardVisibility(
@@ -119,19 +141,12 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
       //  )
       //}
     }
-
-    fragment.binding.switchFullScreen.setOnClickListener {
-      if (fragment.isLandScreen) {
-        fragment.activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-      } else {
-        fragment.activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-      }
-    }
   }
 
   private fun setupSeekBarLogic() {
     // 1. 监听用户的拖动操作
-    fragment.binding.videoSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+    fragment.binding.videoSeekBar.setOnSeekBarChangeListener(object :
+      SeekBar.OnSeekBarChangeListener {
       var isPlayWhenStart = false
 
       override fun onStartTrackingTouch(seekBar: SeekBar) {
@@ -185,9 +200,8 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
       addTarget(targetCard)
       interpolator = FastOutSlowInInterpolator()
     }
-
     //将自定义的动画交给 TransitionManager
-    TransitionManager.beginDelayedTransition(fragment.binding.root, slideTransition)
+    //TransitionManager.beginDelayedTransition(fragment.binding.root, slideTransition)
     //真正改变 View 的可见性触发动画
     targetCard.visibility = if (isShowing) View.VISIBLE else View.GONE
     if (isShowing) {
@@ -292,7 +306,7 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
       // 3. 设置字体大小 (单位：像素) -> 建议转换成 sp
       // SubtitleView.VIEW_TYPE_WEB (默认) 支持分数大小，VIEW_TYPE_CANVAS 支持固定大小
       // 这里设置占视频高度的 5% (默认是 0.0533)
-      subtitleView.setFractionalTextSize(0.09f)
+      subtitleView.setFractionalTextSize(0.07f)
 //      subtitleView.setFixedTextSize(Dimension.DP,20f)
 
       // 或者强制固定大小 (不推荐，全屏时会显得太小)
@@ -300,7 +314,7 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
 
       // 4. 设置位置 (底部距离)
       // 0.9f 表示在屏幕 90% 的位置 (靠近底部)
-      subtitleView.setBottomPaddingFraction(0.05f)
+      subtitleView.setBottomPaddingFraction(0.025f)
     }
   }
 
@@ -377,10 +391,10 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
       }
 
       fragment.binding.showEditPanel -> {
-          toggleCardVisibility(
-            fragment.binding.landOverlayLayout,
-            fragment.binding.landOverlayLayout?.visibility == View.GONE
-          )
+        toggleCardVisibility(
+          fragment.binding.landOverlayLayout,
+          fragment.binding.landOverlayLayout?.visibility == View.GONE
+        )
       }
     }
   }
@@ -441,7 +455,7 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
         }
 
         R.id.action_subtitle -> {
-          if (fragment.viewModel.currentMediaItem.value != null)  {
+          if (fragment.viewModel.currentMediaItem.value != null) {
             openSubtitleLauncher.launch(arrayOf("text/*", "application/x-subrip"))
           } else {
             ToastUtil.toast("当前没有视频, 无法设置字幕")
