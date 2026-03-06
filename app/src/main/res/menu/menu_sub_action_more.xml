@@ -4,9 +4,9 @@
   <!--  android:id="@+id/action_edit_mode"-->
   <!--  android:title="@string/enter_edit_mode" />-->
 
-  <item
-    android:id="@+id/action_history_list"
-    android:title="@string/history_title" />
+  <!--<item-->
+  <!--  android:id="@+id/action_history_list"-->
+  <!--  android:title="@string/history_title" />-->
 
   <item
     android:id="@+id/action_subtitle"

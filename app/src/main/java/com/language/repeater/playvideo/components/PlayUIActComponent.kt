@@ -95,6 +95,7 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
     fragment.binding.switchDragAb.setOnClickListener(this)
     fragment.binding.exoVideoView.setOnClickListener(this)
     fragment.binding.showEditPanel?.setOnClickListener(this)
+    fragment.binding.ivHistoryList?.setOnClickListener(this)
 
     fragment.binding.editLayout.visibility = View.VISIBLE
     fragment.binding.exoVideoView.setShowFastForwardButton(false)
@@ -396,6 +397,11 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
           fragment.binding.landOverlayLayout?.visibility == View.GONE
         )
       }
+
+      fragment.binding.ivHistoryList -> {
+        val sheet = HistorySheetFragment()
+        sheet.show(fragment.childFragmentManager, "HistorySheet")
+      }
     }
   }
 
@@ -447,11 +453,6 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
         R.id.action_split_subtitle -> {
           //autoLoadSentences(false)
           autoLoadSentences()
-        }
-
-        R.id.action_history_list -> {
-          val sheet = HistorySheetFragment()
-          sheet.show(fragment.childFragmentManager, "HistorySheet")
         }
 
         R.id.action_subtitle -> {
