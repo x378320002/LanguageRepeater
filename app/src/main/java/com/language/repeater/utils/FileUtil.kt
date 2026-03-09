@@ -203,17 +203,6 @@ object FileUtil {
     return VideoEntity(id, uri.toString(), name)
   }
 
-  fun isSafUriAvailable(context: Context, uri: String): Boolean {
-    return try {
-      context.contentResolver.openInputStream(uri.toUri())?.use {
-        true
-      } ?: false
-    } catch (e: Exception) {
-      e.printStackTrace()
-      false
-    }
-  }
-
   /**
    * 获取文件对应的名字
    */

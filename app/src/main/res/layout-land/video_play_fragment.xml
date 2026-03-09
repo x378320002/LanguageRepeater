@@ -8,24 +8,31 @@
   android:layout_height="match_parent"
   tools:context=".MainActivity">
 
-  <androidx.media3.ui.PlayerView
-    android:id="@+id/exo_video_view"
+  <androidx.cardview.widget.CardView
+    android:id="@+id/exo_video_view_wrapper"
+    app:cardBackgroundColor="@color/transparent"
+    app:cardElevation="0dp"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="@color/main_bg_color_on"
-    app:resize_mode="fixed_height"
-    app:show_buffering="always"
-    app:show_previous_button="false"
-    app:show_next_button="false"
-    app:show_shuffle_button="false"
-    app:show_subtitle_button="false"
-    app:show_timeout="0"
-    app:auto_show="true"
-    app:controller_layout_id="@layout/my_player_control_view"
-    app:hide_on_touch="false"
-    app:shutter_background_color="@color/main_bg_color_on"
-    app:surface_type="texture_view"
-    app:use_controller="true" />
+    android:layout_height="match_parent">
+    <androidx.media3.ui.PlayerView
+      android:id="@+id/exo_video_view"
+      android:layout_width="match_parent"
+      android:layout_height="match_parent"
+      android:background="@color/main_bg_color_on"
+      app:resize_mode="fixed_height"
+      app:show_buffering="always"
+      app:show_previous_button="false"
+      app:show_next_button="false"
+      app:show_shuffle_button="false"
+      app:show_subtitle_button="false"
+      app:show_timeout="0"
+      app:auto_show="true"
+      app:controller_layout_id="@layout/my_player_control_view"
+      app:hide_on_touch="false"
+      app:shutter_background_color="@color/main_bg_color_on"
+      app:surface_type="texture_view"
+      app:use_controller="true" />
+  </androidx.cardview.widget.CardView>
 
   <LinearLayout
     android:id="@+id/land_overlay_layout"
@@ -414,10 +421,10 @@
     app:layout_constraintBottom_toBottomOf="parent"
     app:layout_constraintEnd_toStartOf="@id/land_overlay_layout"
     android:background="@drawable/bg_land_show_hide_panel"
-    android:src="@drawable/ic_arrow_left"
+    android:src="@drawable/ic_more_vert"
     app:tint="@color/color_tint_selector_land"
     android:scaleType="centerInside"
     android:layout_width="30dp"
-    android:layout_height="40dp"
+    android:layout_height="100dp"
     tools:ignore="ContentDescription" />
 </androidx.constraintlayout.widget.ConstraintLayout>

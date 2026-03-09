@@ -436,12 +436,13 @@ class PlaybackCore(private val context: Context) {
   // 这是 UI 唯一需要调用的“更换字幕”接口
   fun updateSubtitle(subtitleUri: Uri) {
     // 1. 调用 Loader 替换播放器字幕
-    val item = subtitleAutoLoader?.updateCurrentItemSubtitle(subtitleUri)
-    if (item != null) {
-      scope.launch {
-        loadSentences(item)
-      }
-    }
+    subtitleAutoLoader?.updateCurrentItemSubtitle(subtitleUri)
+
+    //if (item != null) {
+    //  scope.launch {
+    //    loadSentences(item)
+    //  }
+    //}
   }
 
   fun forceLoadCurrentSentences(forceUseVad: Boolean = false) {

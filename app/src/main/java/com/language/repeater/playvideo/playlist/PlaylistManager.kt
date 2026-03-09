@@ -2,7 +2,9 @@ package com.language.repeater.playvideo.playlist
 
 import android.content.Context
 import android.util.Log
+import androidx.core.net.toUri
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.media3.common.MediaItem
 import com.language.repeater.dataStore
 import com.language.repeater.db.curPlayListDao
@@ -12,8 +14,10 @@ import com.language.repeater.playvideo.model.CurrentPlayVideoEntity
 import com.language.repeater.playvideo.model.VideoEntity
 import com.language.repeater.playvideo.model.isPlaceHold
 import com.language.repeater.playvideo.model.toEntity
+import com.language.repeater.subtitleStore
 import com.language.repeater.utils.DataStoreUtil.KEY_CURRENT_PLAY_INFO
 import com.language.repeater.utils.FileUtil
+import com.language.repeater.utils.UriAccessUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
@@ -50,15 +54,30 @@ object PlaylistManager {
     val toDelete = mutableListOf<VideoEntity>()
     val list = context.curPlayListDao.getCurrentPlaylist().mapNotNull {
       //如果原文件没了, 删除本条记录
-      val available = FileUtil.isSafUriAvailable(context, it.videoInfo.uri)
+      val available = UriAccessUtil.canRead(context, it.videoInfo.uri.toUri())
       if (available) {
+        //检查字幕文件是否还有效
+        val subU = it.videoInfo.subUri
+        if (subU != null && !subU.equals("null", true)) {
+          val subAvailable = UriAccessUtil.canRead(context, subU.toUri())
+          if (!subAvailable) {
+            it.videoInfo.subUri = null
+            launch {
+              Log.i(TAG, "loadLastPlaylist 字幕文件找不到了: $subU")
+              val prefKey = stringPreferencesKey(it.videoInfo.id)
+              context.subtitleStore.edit { sp -> sp.remove(prefKey) }
+              context.videoInfoDao.updateSubUri(it.videoInfo.id, null)
+            }
+          }
+        }
         it.videoInfo
       } else {
-        Log.i(TAG, "loadLastPlaylist 原文件找不到了: ${it.videoInfo.uri}")
+        Log.i(TAG, "loadLastPlaylist 视频原文件找不到了: ${it.videoInfo.uri}")
         toDelete.add(it.videoInfo)
         null
       }
     }
+
     if (toDelete.isNotEmpty()) {
       launch(Dispatchers.IO) {
         context.videoInfoDao.deleteAll(toDelete)

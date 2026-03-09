@@ -32,4 +32,7 @@ interface VideoInfoDao {
 
   @Query("SELECT position FROM video_info_table WHERE id = :videoId")
   suspend fun getPositionById(videoId: String): Long?
+
+  @Query("UPDATE video_info_table SET subUri = :subUri WHERE id = :videoId")
+  suspend fun updateSubUri(videoId: String, subUri: String?)
 }

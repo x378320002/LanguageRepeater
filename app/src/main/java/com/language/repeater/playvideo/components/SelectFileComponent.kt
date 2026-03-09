@@ -21,6 +21,7 @@ import com.language.repeater.utils.FileUtil
 import com.language.repeater.utils.FileUtil.takePersistablePermission
 import com.language.repeater.utils.ResourcesUtil
 import com.language.repeater.utils.ToastUtil
+import com.language.repeater.utils.UriAccessUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
@@ -47,7 +48,7 @@ class SelectFileComponent : BaseComponent<PlayVideoFragment>() {
       if (it.isEmpty()) return@registerForActivityResult
 
       fragment.showLoading()
-      fScope.launch {
+      fScope.launch(Dispatchers.IO) {
         val preferences = context.subtitleStore.data.firstOrNull()
 
         //转成info给视频播放器
@@ -59,7 +60,15 @@ class SelectFileComponent : BaseComponent<PlayVideoFragment>() {
           val prefKey = stringPreferencesKey(info.id)
           val sub = preferences?.get(prefKey)
           if (!sub.isNullOrEmpty()) {
-            info.subUri = sub
+            val subUri = sub.toUri()
+            if (UriAccessUtil.canRead(context, subUri)) {
+              info.subUri = sub
+            } else {
+              // 存储的字幕链接已失效：清空并移除映射，避免后续加载无效字幕
+              context.subtitleStore.edit { sp -> sp.remove(prefKey) }
+              info.subUri = null
+              needToCheckSubFolder = true
+            }
           } else {
             needToCheckSubFolder = true
           }
@@ -80,8 +89,8 @@ class SelectFileComponent : BaseComponent<PlayVideoFragment>() {
               if (info.subUri == null) {
                 val key = info.name.substringBeforeLast(".")
                 val tempUri = map[key]
-                info.subUri = tempUri.toString()
                 if (tempUri != null) {
+                  info.subUri = tempUri.toString()
                   val prefKey = stringPreferencesKey(info.id)
                   context.subtitleStore.edit { sp-> sp[prefKey] = tempUri.toString() }
                 }

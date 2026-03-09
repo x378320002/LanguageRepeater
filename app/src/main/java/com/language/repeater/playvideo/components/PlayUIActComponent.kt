@@ -205,11 +205,11 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
     //TransitionManager.beginDelayedTransition(fragment.binding.root, slideTransition)
     //真正改变 View 的可见性触发动画
     targetCard.visibility = if (isShowing) View.VISIBLE else View.GONE
-    if (isShowing) {
-      fragment.binding.showEditPanel?.setImageResource(R.drawable.ic_arrow_right)
-    } else {
-      fragment.binding.showEditPanel?.setImageResource(R.drawable.ic_arrow_left)
-    }
+    //if (isShowing) {
+    //  fragment.binding.showEditPanel?.setImageResource(R.drawable.ic_arrow_right)
+    //} else {
+    //  fragment.binding.showEditPanel?.setImageResource(R.drawable.ic_arrow_left)
+    //}
   }
 
   @SuppressLint("SetTextI18n")
