@@ -4,6 +4,7 @@
   xmlns:app="http://schemas.android.com/apk/res-auto"
   xmlns:tools="http://schemas.android.com/tools"
   android:id="@+id/main"
+  android:keepScreenOn="true"
   android:background="@color/main_bg_color"
   android:layout_width="match_parent"
   android:layout_height="match_parent"
@@ -72,13 +73,14 @@
     android:layout_height="wrap_content"
     tools:ignore="SpUsage" />
 
-  <androidx.cardview.widget.CardView
+  <com.language.repeater.widgets.GestureCardView
     android:id="@+id/exo_video_view_wrapper"
     app:layout_constraintTop_toBottomOf="@id/tv_title"
     app:layout_constraintStart_toStartOf="parent"
     app:layout_constraintEnd_toEndOf="parent"
     app:layout_constraintDimensionRatio="16:9"
     app:cardBackgroundColor="@color/main_bg_color_on"
+    android:hapticFeedbackEnabled="true"
     app:cardElevation="0dp"
     android:layout_marginStart="15dp"
     android:layout_marginEnd="15dp"
@@ -94,18 +96,51 @@
       android:background="@color/main_bg_color_on"
       app:surface_type="texture_view"
       app:resize_mode="fixed_height"
-      app:show_buffering="always"
-      app:show_subtitle_button="true"
-      app:show_timeout="0"
-      app:hide_on_touch="false"
-      app:auto_show="true"
-      app:show_previous_button="true"
-      app:show_next_button="true"
-      app:controller_layout_id="@layout/my_player_control_view"
+      app:use_controller="false"
+      app:controller_layout_id="@null"
       app:show_shuffle_button="false"
       android:layout_width="match_parent"
       android:layout_height="match_parent" />
-  </androidx.cardview.widget.CardView>
+
+    <TextView
+      android:visibility="gone"
+      android:id="@+id/gesture_tips_text"
+      android:textSize="16dp"
+      android:textColor="@color/main_text_color"
+      android:paddingHorizontal="8dp"
+      android:paddingVertical="4dp"
+      android:background="@drawable/bg_gesture_tips"
+      android:layout_gravity="center_horizontal"
+      android:layout_marginTop="10dp"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      tools:ignore="SpUsage" />
+
+    <LinearLayout
+      android:orientation="vertical"
+      android:layout_gravity="bottom|end"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content">
+      <ImageButton
+        android:id="@+id/btn_subtitle"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        app:tint="@color/ic_tint_color"
+        android:scaleType="centerInside"
+        android:src="@drawable/ic_subtitles"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        tools:ignore="ContentDescription" />
+      <ImageButton
+        android:id="@+id/btn_fullscreen"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:src="@drawable/ic_fullscreen_enter"
+        android:scaleType="centerInside"
+        app:tint="@color/ic_tint_color"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        tools:ignore="ContentDescription" />
+    </LinearLayout>
+  </com.language.repeater.widgets.GestureCardView>
 
   <androidx.cardview.widget.CardView
     android:id="@+id/audio_wave_view_wrapper"
@@ -151,6 +186,17 @@
     app:layout_constraintEnd_toEndOf="parent"
     android:layout_width="match_parent"
     android:layout_height="30dp"/>
+
+  <com.language.repeater.widgets.GestureCardView
+    android:id="@+id/bottom_gesture_view"
+    app:layout_constraintStart_toStartOf="parent"
+    app:layout_constraintEnd_toEndOf="parent"
+    app:layout_constraintTop_toBottomOf="@id/audio_wave_view_wrapper"
+    app:layout_constraintBottom_toBottomOf="parent"
+    app:cardBackgroundColor="@color/transparent"
+    app:cardElevation="0dp"
+    android:layout_width="0dp"
+    android:layout_height="0dp"/>
 
   <com.google.android.flexbox.FlexboxLayout
     android:id="@+id/edit_layout"

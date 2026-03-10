@@ -4,13 +4,15 @@
   xmlns:app="http://schemas.android.com/apk/res-auto"
   xmlns:tools="http://schemas.android.com/tools"
   android:id="@+id/main"
+  android:keepScreenOn="true"
   android:layout_width="match_parent"
   android:layout_height="match_parent"
   tools:context=".MainActivity">
 
-  <androidx.cardview.widget.CardView
+  <com.language.repeater.widgets.GestureCardView
     android:id="@+id/exo_video_view_wrapper"
     app:cardBackgroundColor="@color/transparent"
+    android:hapticFeedbackEnabled="true"
     app:cardElevation="0dp"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
@@ -20,19 +22,49 @@
       android:layout_height="match_parent"
       android:background="@color/main_bg_color_on"
       app:resize_mode="fixed_height"
-      app:show_buffering="always"
-      app:show_previous_button="false"
-      app:show_next_button="false"
-      app:show_shuffle_button="false"
-      app:show_subtitle_button="false"
-      app:show_timeout="0"
-      app:auto_show="true"
-      app:controller_layout_id="@layout/my_player_control_view"
-      app:hide_on_touch="false"
       app:shutter_background_color="@color/main_bg_color_on"
       app:surface_type="texture_view"
-      app:use_controller="true" />
-  </androidx.cardview.widget.CardView>
+      app:use_controller="false" />
+
+    <TextView
+      android:visibility="gone"
+      android:id="@+id/gesture_tips_text"
+      android:textSize="16dp"
+      android:textColor="@color/main_text_color"
+      android:paddingHorizontal="8dp"
+      android:paddingVertical="4dp"
+      android:background="@drawable/bg_gesture_tips"
+      android:layout_gravity="center_horizontal"
+      android:layout_marginTop="15dp"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      tools:ignore="SpUsage" />
+
+    <LinearLayout
+      android:orientation="horizontal"
+      android:layout_marginEnd="20dp"
+      android:layout_gravity="bottom|end"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content">
+      <ImageButton
+        android:id="@+id/btn_subtitle"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        app:tint="@color/ic_tint_color"
+        android:src="@drawable/ic_subtitles"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        tools:ignore="ContentDescription" />
+      <ImageButton
+        android:id="@+id/btn_fullscreen"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:src="@drawable/ic_fullscreen_exit"
+        android:scaleType="center"
+        app:tint="@color/ic_tint_color"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        tools:ignore="ContentDescription" />
+    </LinearLayout>
+  </com.language.repeater.widgets.GestureCardView>
 
   <LinearLayout
     android:id="@+id/land_overlay_layout"

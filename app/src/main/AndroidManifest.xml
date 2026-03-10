@@ -14,6 +14,7 @@
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
   <!-- 2. 【Android 14 必加】请求专门的媒体播放服务权限 -->
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+  <uses-permission android:name="android.permission.VIBRATE" />
 
   <application
     android:allowBackup="true"

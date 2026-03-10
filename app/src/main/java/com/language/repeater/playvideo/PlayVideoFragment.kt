@@ -15,6 +15,7 @@ import androidx.media3.common.Player
 import com.language.repeater.databinding.VideoPlayFragmentBinding
 import com.language.repeater.foundation.BaseFragment
 import com.language.repeater.playvideo.components.PlayAllWaveComponent
+import com.language.repeater.playvideo.components.PlayGestureComponent
 import com.language.repeater.playvideo.components.PlayScrollWaveComponent
 import com.language.repeater.playvideo.components.PlayUIActComponent
 import com.language.repeater.playvideo.components.SelectFileComponent
@@ -37,6 +38,7 @@ class PlayVideoFragment: BaseFragment(), Player.Listener  {
     addComponent(PlayScrollWaveComponent())
     addComponent(PlayAllWaveComponent())
     addComponent(PlayUIActComponent())
+    addComponent(PlayGestureComponent())
     if (orientation == Configuration.ORIENTATION_PORTRAIT) {
       isLandScreen = false
       showSystemUI()

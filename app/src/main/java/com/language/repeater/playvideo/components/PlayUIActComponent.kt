@@ -7,6 +7,7 @@ import android.content.pm.ActivityInfo
 import android.graphics.Color
 import android.util.Log
 import android.view.Gravity
+import android.view.Menu
 import android.view.View
 import android.widget.SeekBar
 import androidx.activity.OnBackPressedCallback
@@ -14,10 +15,12 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.OptIn
 import androidx.core.view.get
 import androidx.interpolator.view.animation.FastOutSlowInInterpolator
+import androidx.media3.common.C
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.CaptionStyleCompat
 import androidx.media3.ui.PlayerView
+import androidx.media3.ui.TrackSelectionDialogBuilder
 import androidx.navigation.fragment.findNavController
 import androidx.transition.Slide
 import androidx.transition.TransitionManager
@@ -52,20 +55,6 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
 
   var isDragging = false
 
-  val openSubtitleLauncher by lazy {
-    fragment.registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-      if (uri != null) {
-        takePersistablePermission(context, uri)
-        fragment.viewModel.onSubtitleSelected(uri)
-      }
-    }
-  }
-
-  override fun onCreate() {
-    super.onCreate()
-    openSubtitleLauncher
-  }
-
   @SuppressLint("SetTextI18n")
   @UnstableApi
   override fun onCreateView() {
@@ -93,36 +82,19 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
     fragment.binding.setTimer.setOnClickListener(this)
     fragment.binding.playSpeed.setOnClickListener(this)
     fragment.binding.switchDragAb.setOnClickListener(this)
-    fragment.binding.exoVideoView.setOnClickListener(this)
+    fragment.binding.exoVideoViewWrapper.setOnClickListener(this)
     fragment.binding.showEditPanel?.setOnClickListener(this)
     fragment.binding.ivHistoryList?.setOnClickListener(this)
 
     fragment.binding.editLayout.visibility = View.VISIBLE
-    fragment.binding.exoVideoView.setShowFastForwardButton(false)
-    fragment.binding.exoVideoView.setShowRewindButton(false)
-    fragment.binding.exoVideoView.setShowSubtitleButton(true)
-    fragment.binding.exoVideoView.setFullscreenButtonState(fragment.isLandScreen)
-    fragment.binding.exoVideoView.setFullscreenButtonClickListener { isFullScreen ->
-      // isFullScreen 参数表示当前按钮希望切换到的状态：
-      // 如果当前是非全屏，点击后 isFullScreen 为 true
-      // 如果当前是全屏，点击后 isFullScreen 为 false
-      if (fragment.isLandScreen) {
-        fragment.activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-      } else {
-        fragment.activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-      }
-    }
-    fragment.binding.switchFullScreen.setOnClickListener {
-      if (fragment.isLandScreen) {
-        fragment.activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-      } else {
-        fragment.activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-      }
-    }
-    fragment.binding.exoVideoView.showController()
 
-    setSubtitleStyle()
-    setupSeekBarLogic()
+    fragment.binding.btnFullscreen.setOnClickListener {
+      if (fragment.isLandScreen) {
+        fragment.activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+      } else {
+        fragment.activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+      }
+    }
 
     if (fragment.isLandScreen) {
       fragment.activity?.onBackPressedDispatcher?.addCallback(
@@ -134,14 +106,10 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
             }
           }
         })
-
-      //fragment.binding.exoVideoView.setOnClickListener {
-      //  toggleCardVisibility(
-      //    fragment.binding.landOverlayLayout,
-      //    fragment.binding.landOverlayLayout?.visibility == View.GONE
-      //  )
-      //}
     }
+
+    setSubtitleStyle()
+    setupSeekBarLogic()
   }
 
   private fun setupSeekBarLogic() {
@@ -212,6 +180,7 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
     //}
   }
 
+  @OptIn(UnstableApi::class)
   @SuppressLint("SetTextI18n")
   private fun observeData() {
     fragment.viewModel.playerInstance.onEach {
@@ -236,16 +205,7 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
     }.launchIn(uiScope)
 
     fragment.viewModel.playSpeedState.onEach { speed ->
-      when (speed) {
-        0.25f -> fragment.binding.playSpeedTv.text = "0.25"
-        0.5f -> fragment.binding.playSpeedTv.text = "0.5X"
-        0.75f -> fragment.binding.playSpeedTv.text = "0.75"
-        1.0f -> fragment.binding.playSpeedTv.text = "1.0X"
-        1.25f -> fragment.binding.playSpeedTv.text = "1.25"
-        1.5f -> fragment.binding.playSpeedTv.text = "1.5X"
-        2.0f -> fragment.binding.playSpeedTv.text = "2.0X"
-        else -> fragment.binding.playSpeedTv.text = "UnKnown" // 如果有其他速度值，显示为未知速度
-      }
+      fragment.binding.playSpeedTv.text = "$speed"
     }.launchIn(uiScope)
 
     fragment.viewModel.repeatable.onEach {
@@ -307,7 +267,7 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
       // 3. 设置字体大小 (单位：像素) -> 建议转换成 sp
       // SubtitleView.VIEW_TYPE_WEB (默认) 支持分数大小，VIEW_TYPE_CANVAS 支持固定大小
       // 这里设置占视频高度的 5% (默认是 0.0533)
-      subtitleView.setFractionalTextSize(0.07f)
+      subtitleView.setFractionalTextSize(0.08f)
 //      subtitleView.setFixedTextSize(Dimension.DP,20f)
 
       // 或者强制固定大小 (不推荐，全屏时会显得太小)
@@ -319,6 +279,7 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
     }
   }
 
+  @OptIn(UnstableApi::class)
   override fun onClick(v: View?) {
     when (v) {
       fragment.binding.playSpeed -> {
@@ -366,7 +327,7 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
         fragment.viewModel.toggleRepeat()
       }
 
-      fragment.binding.playPauseBtn, fragment.binding.exoVideoView -> {
+      fragment.binding.playPauseBtn, fragment.binding.exoVideoViewWrapper -> {
         fragment.viewModel.togglePlayPause()
       }
 
@@ -456,11 +417,7 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
         }
 
         R.id.action_subtitle -> {
-          if (fragment.viewModel.currentMediaItem.value != null) {
-            openSubtitleLauncher.launch(arrayOf("text/*", "application/x-subrip"))
-          } else {
-            ToastUtil.toast("当前没有视频, 无法设置字幕")
-          }
+
         }
       }
       true
