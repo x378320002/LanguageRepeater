@@ -1,26 +1,18 @@
 package com.language.repeater.playvideo.components
 
-import android.R.attr.fragment
-import android.R.attr.visibility
 import android.annotation.SuppressLint
 import android.content.pm.ActivityInfo
 import android.graphics.Color
-import android.util.Log
 import android.view.Gravity
-import android.view.Menu
 import android.view.View
+import android.view.ViewGroup
 import android.widget.SeekBar
 import androidx.activity.OnBackPressedCallback
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.OptIn
-import androidx.core.view.get
 import androidx.interpolator.view.animation.FastOutSlowInInterpolator
-import androidx.media3.common.C
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.CaptionStyleCompat
-import androidx.media3.ui.PlayerView
-import androidx.media3.ui.TrackSelectionDialogBuilder
 import androidx.navigation.fragment.findNavController
 import androidx.transition.Slide
 import androidx.transition.TransitionManager
@@ -34,14 +26,10 @@ import com.language.repeater.playvideo.PlayVideoFragment
 import com.language.repeater.playvideo.history.HistorySheetFragment
 import com.language.repeater.playvideo.playlist.PlaylistSheetFragment
 import com.language.repeater.playvideo.sleeptimer.SleepTimerSheetFragment
-import com.language.repeater.utils.FileUtil.takePersistablePermission
 import com.language.repeater.utils.ResourcesUtil
 import com.language.repeater.utils.ToastUtil
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.launch
 
 /**
  * Date: 2025-11-14

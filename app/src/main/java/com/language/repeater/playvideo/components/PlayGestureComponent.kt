@@ -87,10 +87,9 @@ class PlayGestureComponent : BaseComponent<PlayVideoFragment>() {
     initBrightness()
     gestureTipsView = fragment.binding.gestureTipsText
     fragment.binding.exoVideoViewWrapper.isHapticFeedbackEnabled = true
-    fragment.binding.exoVideoViewWrapper.setOnGestureListener(gestureListener)
-    fragment.binding.bottomGestureView?.apply {
-      detectLeftScroll = false
-      detectRightScroll = false
+    fragment.binding.root.apply {
+      //detectLeftScroll = false
+      //detectRightScroll = false
       setOnGestureListener(gestureListener)
     }
   }

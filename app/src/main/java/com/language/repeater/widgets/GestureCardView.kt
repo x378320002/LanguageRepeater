@@ -2,12 +2,19 @@ package com.language.repeater.widgets
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.os.SystemClock
 import android.util.AttributeSet
+import android.util.Log
 import android.view.GestureDetector
 import android.view.MotionEvent
 import androidx.cardview.widget.CardView
 import kotlin.math.abs
 
+/**
+ * 全局响应手势的View, 不影响拦截内部子View的点击,
+ * 内部子View如果要滑动, 可以调用requestDisallowInterceptTouchEvent来禁用本View的手势
+ * 默认本View会响应各种手势
+ */
 class GestureCardView @JvmOverloads constructor(
   context: Context,
   attrs: AttributeSet? = null,
@@ -15,6 +22,7 @@ class GestureCardView @JvmOverloads constructor(
 ) : CardView(context, attrs, defStyleAttr) {
 
   companion object {
+    const val TAG = "GestureCardView"
     const val STATE_INIT = 0
     const val STATE_LEFT_SCROLL = 1
     const val STATE_RIGHT_SCROLL = 2
@@ -28,89 +36,138 @@ class GestureCardView @JvmOverloads constructor(
   // 记录手指按下的坐标，用于计算长按位置和移动判断
   private var downX = 0f
   private var downY = 0f
+  private var downTime = 0L
+  private var downEventTime = 0L
+
   // 标记当前是否已经触发了长按
   private var isLongPressed = false
+
   // 0:未识别, 1:左侧1/3上下滑, 2:右侧1/3上下滑, 3, 其他
   private var scrollState = 0
 
+  private val touchSlop = android.view.ViewConfiguration.get(context).scaledTouchSlop
+
   // 用于检测点击、双击、Fling
-  private val gestureDetector: GestureDetector = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
-    override fun onDown(e: MotionEvent): Boolean {
-      // Down 事件时重置状态
-      scrollState = STATE_INIT
-      isLongPressed = false
-      downX = e.x
-      downY = e.y
-      // 返回 true 表示我们要消费这个 Down 事件，以便接收后续事件
-      return true
-    }
-
-    override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
-      gestureListener?.onClick()
-      return true
-    }
-
-    override fun onDoubleTap(e: MotionEvent): Boolean {
-      gestureListener?.onDoubleClick()
-      return true
-    }
-
-    override fun onScroll(
-      e1: MotionEvent?,
-      e2: MotionEvent,
-      distanceX: Float,
-      distanceY: Float,
-    ): Boolean {
-      if (scrollState == STATE_INIT && e1 != null) {
-        val isVerticalScroll = abs(distanceY) > abs(distanceX)
-        scrollState = if (detectLeftScroll && isVerticalScroll && e1.x < width / 3) {
-          STATE_LEFT_SCROLL
-        } else if (detectRightScroll && isVerticalScroll && e1.x > width * 2 / 3) {
-          STATE_RIGHT_SCROLL
-        } else {
-          STATE_OTHER_SCROLL
-        }
+  private val gestureDetector: GestureDetector =
+    GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
+      override fun onDown(e: MotionEvent): Boolean {
+        Log.i(TAG, "onDown e:$e")
+        // Down 事件时重置状态
+        scrollState = STATE_INIT
+        isLongPressed = false
+        downX = e.x
+        downY = e.y
+        // 返回 true 表示我们要消费这个 Down 事件，以便接收后续事件
+        return true
       }
 
-      when (scrollState) {
-        STATE_LEFT_SCROLL -> {
-          gestureListener?.onLeftVerticalScroll(distanceX, distanceY)
+      override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
+        gestureListener?.onClick()
+        return true
+      }
+
+      override fun onDoubleTap(e: MotionEvent): Boolean {
+        gestureListener?.onDoubleClick()
+        return true
+      }
+
+      override fun onScroll(
+        e1: MotionEvent?,
+        e2: MotionEvent,
+        distanceX: Float,
+        distanceY: Float,
+      ): Boolean {
+        if (scrollState == STATE_INIT && e1 != null) {
+          val isVerticalScroll = abs(distanceY) > abs(distanceX)
+          scrollState = if (detectLeftScroll && isVerticalScroll && e1.x < width / 3) {
+            STATE_LEFT_SCROLL
+          } else if (detectRightScroll && isVerticalScroll && e1.x > width * 2 / 3) {
+            STATE_RIGHT_SCROLL
+          } else {
+            STATE_OTHER_SCROLL
+          }
         }
-        STATE_RIGHT_SCROLL -> {
-          gestureListener?.onRightVerticalScroll(distanceX, distanceY)
+
+        when (scrollState) {
+          STATE_LEFT_SCROLL -> {
+            gestureListener?.onLeftVerticalScroll(distanceX, distanceY)
+          }
+
+          STATE_RIGHT_SCROLL -> {
+            gestureListener?.onRightVerticalScroll(distanceX, distanceY)
+          }
+
+          else -> {
+            gestureListener?.onHorizontalScroll(distanceX, distanceY)
+          }
         }
-        else -> {
-          gestureListener?.onHorizontalScroll(distanceX, distanceY)
+        return true
+      }
+
+      override fun onLongPress(e: MotionEvent) {
+        Log.i(TAG, "onLongPress")
+        isLongPressed = true
+        gestureListener?.onLongPressed(e.x, e.y)
+      }
+
+      override fun onFling(
+        e1: MotionEvent?,
+        e2: MotionEvent,
+        velocityX: Float,
+        velocityY: Float,
+      ): Boolean {
+        // 只有在没有长按的情况下才认为是 Fling
+        // 如果用户长按后抬起，通常不应该触发 Fling
+        if (!isLongPressed) {
+          gestureListener?.onFling(velocityX, velocityY)
+        }
+        return true
+      }
+    })
+
+  override fun dispatchTouchEvent(ev: MotionEvent?): Boolean {
+    return super.dispatchTouchEvent(ev)
+  }
+
+  private var isIntercept = false
+  override fun onInterceptTouchEvent(ev: MotionEvent): Boolean {
+    when (ev.actionMasked) {
+      MotionEvent.ACTION_DOWN -> {
+        downX = ev.x
+        downY = ev.y
+        downTime = ev.downTime
+        downEventTime = ev.eventTime
+        isIntercept = false
+      }
+
+      MotionEvent.ACTION_MOVE -> {
+        val dx = ev.x - downX
+        val dy = ev.y - downY
+        if (abs(dx) > touchSlop || abs(dy) > touchSlop) {
+          val time = SystemClock.uptimeMillis()
+          val fake = MotionEvent.obtain(
+            time - 1,
+            time - 1,
+            MotionEvent.ACTION_DOWN,
+            downX,
+            downY,
+            0
+          )
+          gestureDetector.onTouchEvent(fake)
+          fake.recycle()
+          isIntercept = true
+          return true
         }
       }
-      return true
     }
-
-    override fun onLongPress(e: MotionEvent) {
-      isLongPressed = true
-      gestureListener?.onLongPressed(e.x, e.y)
-    }
-
-    override fun onFling(
-      e1: MotionEvent?,
-      e2: MotionEvent,
-      velocityX: Float,
-      velocityY: Float,
-    ): Boolean {
-      // 只有在没有长按的情况下才认为是 Fling
-      // 如果用户长按后抬起，通常不应该触发 Fling
-      if (!isLongPressed) {
-        gestureListener?.onFling(velocityX, velocityY)
-      }
-      return true
-    }
-  })
+    return isIntercept
+  }
 
   @SuppressLint("ClickableViewAccessibility")
   override fun onTouchEvent(ev: MotionEvent): Boolean {
+    val action = ev.actionMasked
     // 将事件传递给 GestureDetector
     val handled = gestureDetector.onTouchEvent(ev)
-    val action = ev.actionMasked
     if (isLongPressed && action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
       isLongPressed = false
       gestureListener?.onLongPressedEnd()

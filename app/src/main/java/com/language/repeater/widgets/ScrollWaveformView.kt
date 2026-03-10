@@ -437,6 +437,7 @@ class ScrollWaveformView @JvmOverloads constructor(
         dragABResult = checkABHit(e.x.toInt(), e.y.toInt())?.apply {
           onABChangeListener?.onABDragStart(this)
         }
+        parent?.requestDisallowInterceptTouchEvent(true)
         return true
       }
 
