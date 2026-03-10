@@ -1,19 +1,34 @@
 package com.language.repeater.utils
 
+import android.R
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
+import android.util.Log
+import androidx.media3.common.C
+import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
+import com.language.repeater.MyApp
 
 object SubtitleUtils {
+  fun createSubtitleConfig(context: Context, subUri: Uri): MediaItem.SubtitleConfiguration {
+    val fileName = FileUtil.getFileUriName(context, subUri)
+    val mimeType = getSubtitleMimeType(fileName)
+    val info = guessLanguageFromFile(fileName)
+    Log.i("wangzixu_SubtitleUtils", "createSubtitleConfig mimeType:$mimeType")
+    return MediaItem.SubtitleConfiguration.Builder(subUri)
+      .setMimeType(mimeType)
+      .setLanguage(info.first) // 建议根据实际情况设置
+      .setLabel(info.second)
+      .setSelectionFlags(C.SELECTION_FLAG_DEFAULT)
+      .build()
+  }
 
   /**
    * 根据 Uri 智能获取字幕的 MimeType
    * 解决 SAF Uri 无法直接通过后缀名判断的问题
    */
-  fun getSubtitleMimeType(context: Context, uri: Uri): String {
-    val fileName = getFileName(context, uri) ?: ""
-
+  fun getSubtitleMimeType(fileName: String): String {
     return when {
       fileName.endsWith(".vtt", ignoreCase = true) -> MimeTypes.TEXT_VTT
       fileName.endsWith(".ssa", ignoreCase = true) ||
@@ -26,40 +41,13 @@ object SubtitleUtils {
     }
   }
 
-  /**
-   * 从 ContentResolver 查询真实文件名
-   */
-  private fun getFileName(context: Context, uri: Uri): String? {
-    var result: String? = null
-
-    // 1. 尝试从 ContentProvider 查询
-    if (uri.scheme == "content") {
-      try {
-        // 优化：只查询 DISPLAY_NAME 列，提高效率
-        val projection = arrayOf(OpenableColumns.DISPLAY_NAME)
-        context.contentResolver.query(uri, projection, null, null, null)?.use { cursor ->
-          if (cursor.moveToFirst()) {
-            // 尝试获取 DISPLAY_NAME
-            val index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-            if (index != -1) {
-              result = cursor.getString(index)
-            }
-          }
-        }
-      } catch (e: Exception) {
-        e.printStackTrace()
-      }
+  fun guessLanguageFromFile(fileName: String): Pair<String, String> {
+    val lower = fileName.lowercase()
+    return when {
+      lower.contains(".zh") || lower.contains("chinese") -> "zh" to "Chinese"
+      lower.contains(".en") || lower.contains("english") -> "en" to "English"
+      lower.contains(".fr") || lower.contains("french")  -> "fr" to "French"
+      else -> "en" to "English"
     }
-
-    // 2. 如果查不到，或者是 file:// 协议，尝试从路径截取
-    if (result == null) {
-      result = uri.path
-      val cut = result?.lastIndexOf('/')
-      if (cut != null && cut != -1) {
-        result = result?.substring(cut + 1)
-      }
-    }
-
-    return result
   }
 }

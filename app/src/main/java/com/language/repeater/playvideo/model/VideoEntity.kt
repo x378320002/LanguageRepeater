@@ -1,5 +1,6 @@
 package com.language.repeater.playvideo.model
 
+import android.R.attr.mimeType
 import android.os.Bundle
 import android.util.Log
 import androidx.core.net.toUri
@@ -76,13 +77,7 @@ fun VideoEntity.toMediaItem(): MediaItem {
   val subU = it.subUri
   if (subU != null && !subU.equals("null", true)) {
     val subtitleUri = subU.toUri()
-    val mimeType = SubtitleUtils.getSubtitleMimeType(MyApp.instance, subtitleUri)
-    Log.i("wangzixu_VideoEntity", "hasSubTitle mimeType:$mimeType")
-    val subtitleConfig = MediaItem.SubtitleConfiguration.Builder(subtitleUri)
-      .setMimeType(mimeType) //.srt
-      .setLanguage("en")
-      .setSelectionFlags(C.SELECTION_FLAG_DEFAULT)
-      .build()
+    val subtitleConfig = SubtitleUtils.createSubtitleConfig(MyApp.instance, subtitleUri)
     builder.setSubtitleConfigurations(listOf(subtitleConfig))
   }
   return builder.build()

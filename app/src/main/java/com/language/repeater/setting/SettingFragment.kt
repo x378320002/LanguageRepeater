@@ -129,7 +129,7 @@ class SettingFragment: BaseFragment() {
       if (it.isEmpty()) {
         binding.settingSubFolderDesc.setText(R.string.setting_sub_folder_desc)
       } else {
-        val name = FileUtil.getUriFileName(requireContext(), it)
+        val name = FileUtil.getDirUriName(requireContext(), it)
         binding.settingSubFolderDesc.text = name
       }
     }.launchIn(viewLifecycleOwner.lifecycleScope)

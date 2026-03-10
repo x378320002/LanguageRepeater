@@ -206,23 +206,25 @@ object FileUtil {
   /**
    * 获取文件对应的名字
    */
-  fun getUriFileName(context: Context, uri: String): String {
+  fun getDirUriName(context: Context, uri: String): String {
     var name = ""
     try {
-      //val contentUri = uri.toUri()
-      //val projection = arrayOf(OpenableColumns.DISPLAY_NAME)
-      //context.contentResolver.query(contentUri, projection, null, null, null)?.use { cursor ->
-      //  if (cursor.moveToFirst()) {
-      //    val displayNameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-      //    if (displayNameIndex != -1) {
-      //      name = cursor.getString(displayNameIndex)
-      //    }
-      //  }
-      //}
       name = DocumentFile.fromTreeUri(context, uri.toUri())?.name ?: ""
-      Log.i(TAG, "getUriFileName : $name")
+      Log.i(TAG, "getDirUriName : $name")
     } catch (e: Exception) {
-      Log.i(TAG, "getUriFileName error : ${e.message}")
+      Log.i(TAG, "getDirUriName error : ${e.message}")
+      e.printStackTrace()
+    }
+    return name
+  }
+
+  fun getFileUriName(context: Context, uri: Uri): String {
+    var name = ""
+    try {
+      name = DocumentFile.fromSingleUri(context, uri)?.name ?: ""
+      Log.i(TAG, "getFileUriName : $name")
+    } catch (e: Exception) {
+      Log.i(TAG, "getFileUriName error : ${e.message}")
       e.printStackTrace()
     }
     return name

@@ -16,6 +16,8 @@ import com.language.repeater.db.videoInfoDao
 import com.language.repeater.playvideo.model.toEntity
 import com.language.repeater.subtitleStore
 import com.language.repeater.utils.DataStoreUtil.KEY_SUBTITLE_FOLDER
+import com.language.repeater.utils.ResourcesUtil
+import com.language.repeater.utils.SubtitleUtils
 import com.language.repeater.utils.UriAccessUtil
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -239,12 +241,7 @@ class SubtitleAutoLoader(
   }
 
   private fun buildItemWithSubtitle(item: MediaItem, subUri: Uri): MediaItem {
-    val config = MediaItem.SubtitleConfiguration.Builder(subUri)
-      .setMimeType(MimeTypes.APPLICATION_SUBRIP)
-      .setLanguage("en") // 建议根据实际情况设置
-      .setSelectionFlags(C.SELECTION_FLAG_DEFAULT)
-      .build()
-
+    val config = SubtitleUtils.createSubtitleConfig(context, subUri)
     return item.buildUpon()
       .setSubtitleConfigurations(listOf(config))
       .build()

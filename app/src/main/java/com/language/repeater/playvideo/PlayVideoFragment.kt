@@ -19,6 +19,7 @@ import com.language.repeater.playvideo.components.PlayGestureComponent
 import com.language.repeater.playvideo.components.PlayScrollWaveComponent
 import com.language.repeater.playvideo.components.PlayUIActComponent
 import com.language.repeater.playvideo.components.SelectFileComponent
+import com.language.repeater.playvideo.components.SetSubtitleComponent
 
 
 class PlayVideoFragment: BaseFragment(), Player.Listener  {
@@ -38,6 +39,7 @@ class PlayVideoFragment: BaseFragment(), Player.Listener  {
     addComponent(PlayScrollWaveComponent())
     addComponent(PlayAllWaveComponent())
     addComponent(PlayUIActComponent())
+    addComponent(SetSubtitleComponent())
     addComponent(PlayGestureComponent())
     if (orientation == Configuration.ORIENTATION_PORTRAIT) {
       isLandScreen = false

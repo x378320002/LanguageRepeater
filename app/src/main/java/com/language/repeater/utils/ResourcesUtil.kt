@@ -32,6 +32,6 @@ object ResourcesUtil {
 
   fun createLightPopMenu(context: Context, view: View): PopupMenu {
     val c = ContextThemeWrapper(context, R.style.PopupMenu_Light)
-    return PopupMenu(c, view)
+    return PopupMenu(context, view)
   }
 }

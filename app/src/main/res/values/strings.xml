@@ -13,6 +13,10 @@
 
   <string name="select_file">选择音视频</string>
   <string name="select_subtitle">设置字幕文件</string>
+  <string name="disable_subtitle">禁用字幕</string>
+  <string name="subtitle_track">字幕轨道 %d</string>
+  <string name="subtitle_disabled">已禁用字幕</string>
+  <string name="subtitle_switched">已切换字幕</string>
 
   <string name="history_item_play">播放</string>
   <string name="history_item_play_next">下一个播放</string>

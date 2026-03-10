@@ -39,19 +39,20 @@ class PlayGestureComponent : BaseComponent<PlayVideoFragment>() {
       fragment.viewModel.backToSentenceHead()
     }
 
-    override fun onLongPressed(x: Float, y: Float) {
+    override fun onLongPressed() {
       val player = fragment.viewModel.getPlayer() ?: return
       originalSpeed = player.playbackParameters.speed
       val speed = originalSpeed * 0.5f
       player.setPlaybackSpeed(speed)
       showFeedback("⏩ ${speed}X", false)
-      fragment.binding.exoVideoViewWrapper.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+      fragment.binding.root.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
     }
 
     override fun onLongPressedEnd() {
       val player = fragment.viewModel.getPlayer() ?: return
       player.setPlaybackSpeed(originalSpeed)
-      showFeedback("⏩ ${originalSpeed}X")
+      //showFeedback("⏩ ${originalSpeed}X")
+      gestureTipsView?.visibility = View.GONE
     }
 
     override fun onHorizontalScroll(deltaX: Float, deltaY: Float) {
@@ -86,7 +87,7 @@ class PlayGestureComponent : BaseComponent<PlayVideoFragment>() {
     initAudioManager()
     initBrightness()
     gestureTipsView = fragment.binding.gestureTipsText
-    fragment.binding.exoVideoViewWrapper.isHapticFeedbackEnabled = true
+    fragment.binding.root.isHapticFeedbackEnabled = true
     fragment.binding.root.apply {
       //detectLeftScroll = false
       //detectRightScroll = false

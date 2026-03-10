@@ -11,7 +11,6 @@
   <style name="PopupMenu.Light" parent="Theme.Material3.DynamicColors.Light.NoActionBar">
     <!-- 设置菜单文字的字体、大小和颜色（通过主题间接影响） -->
     <item name="android:textSize">14sp</item>
-    <item name="android:popupBackground">@drawable/bg_popup_menu</item>
   </style>
 
   <style name="Base.Theme.LanguageRepeater" parent="Theme.Material3.DynamicColors.DayNight.NoActionBar">

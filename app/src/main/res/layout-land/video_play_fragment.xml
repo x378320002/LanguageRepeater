@@ -17,9 +17,10 @@
 
     <androidx.cardview.widget.CardView
       android:id="@+id/exo_video_view_wrapper"
+      android:clickable="false"
+      android:focusable="false"
       android:layout_width="match_parent"
       android:layout_height="match_parent"
-      android:hapticFeedbackEnabled="true"
       app:cardBackgroundColor="@color/transparent"
       app:cardElevation="0dp">
 
