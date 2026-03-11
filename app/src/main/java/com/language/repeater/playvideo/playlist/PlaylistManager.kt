@@ -6,21 +6,14 @@ import androidx.core.net.toUri
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.media3.common.MediaItem
-import com.language.repeater.dataStore
 import com.language.repeater.db.curPlayListDao
 import com.language.repeater.db.videoInfoDao
-import com.language.repeater.json
-import com.language.repeater.playvideo.model.CurrentPlayVideoEntity
 import com.language.repeater.playvideo.model.VideoEntity
 import com.language.repeater.playvideo.model.isPlaceHold
 import com.language.repeater.playvideo.model.toEntity
 import com.language.repeater.subtitleStore
-import com.language.repeater.utils.DataStoreUtil.KEY_CURRENT_PLAY_INFO
-import com.language.repeater.utils.FileUtil
 import com.language.repeater.utils.UriAccessUtil
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 

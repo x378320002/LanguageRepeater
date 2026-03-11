@@ -5,9 +5,12 @@
   <string name="setting_sub_folder">默认字幕文件夹</string>
   <string name="setting_sub_folder_desc">选择音视频后自动搜索字幕文件的位置</string>
   <string name="setting_clear_temp">清理缓存</string>
-
   <string name="setting_sentence_title">自动分句设置</string>
   <string name="setting_sentence_gap">最小句子间隔(毫秒)</string>
+  <string name="setting_full_gesture">全屏快捷手势</string>
+  <string name="setting_full_gesture_title">快捷手势</string>
+  <string name="setting_full_gesture_desc">快速右滑: 切换上一句\n快速左滑: 切换下一句\n单击: 暂停/播放\n双击: 回到句首\n长按: 倍速播放\n左侧上下滑: 调整亮度\n右侧上下滑: 调整音量\n\n竖屏时, 默认仅在视频播放区域生效,此选项可以将手势扩展至全屏生效
+  </string>
 
   <string name="re_split_subtitle">重新自动分句</string>
 

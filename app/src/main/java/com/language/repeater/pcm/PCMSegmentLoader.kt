@@ -3,6 +3,7 @@ package com.language.repeater.pcm
 import android.util.Log
 import java.io.File
 import java.io.RandomAccessFile
+import java.util.concurrent.ConcurrentHashMap
 
 
 class PCMSegmentLoader(
@@ -16,7 +17,7 @@ class PCMSegmentLoader(
   val totalDuration = totalSamples.toFloat() / sampleRate
 
   /** 波形数据缓存：时间窗口 -> 波形数据 */
-  val waveformCache = mutableMapOf<Int, List<WaveformPoint>>()
+  val waveformCache = ConcurrentHashMap<Int, List<WaveformPoint>>()
 
   fun loadWaveformData(
     startTimeSeconds: Float,

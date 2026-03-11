@@ -12,6 +12,8 @@
   <dimen name="setting_item_info_size">12dp</dimen>
   <dimen name="setting_item_padding_horizontal">15dp</dimen>
   <dimen name="setting_out_margin">18dp</dimen>
+  <dimen name="setting_bg_radius">15dp</dimen>
+  <dimen name="setting_card_gap">20dp</dimen>
 
   <dimen name="land_time_bar_h">36dp</dimen>
 </resources>

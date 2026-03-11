@@ -214,7 +214,7 @@ class ScrollWaveformView @JvmOverloads constructor(
   private val cacheWindowSize = 5f
 
   /** 预加载的窗口数量 */
-  private val preloadWindowCount = 2
+  private val preloadWindowCount = 3
 
   /** 协程作用域 */
   private val scope = CoroutineScope(Dispatchers.Main + Job())
@@ -352,7 +352,16 @@ class ScrollWaveformView @JvmOverloads constructor(
     }
 
     // 清理过远的缓存
-    cleanupOldCache(startWindow - preloadWindowCount)
+    cleanupOldCache(startWindow - preloadWindowCount, preloadEnd)
+  }
+
+  /**
+   * 清理旧缓存
+   */
+  private fun cleanupOldCache(beforeWindow: Int, endWindow: Int) {
+    val loader = pcmLoader ?: return
+    val toRemove = loader.waveformCache.keys.filter { it < beforeWindow}
+    toRemove.forEach { loader.waveformCache.remove(it) }
   }
 
   //需要绘制的数据
@@ -418,15 +427,6 @@ class ScrollWaveformView @JvmOverloads constructor(
         }
       }
     }
-  }
-
-  /**
-   * 清理旧缓存
-   */
-  private fun cleanupOldCache(beforeWindow: Int) {
-    val loader = pcmLoader ?: return
-    val toRemove = loader.waveformCache.keys.filter { it < beforeWindow }
-    toRemove.forEach { loader.waveformCache.remove(it) }
   }
 
   // ========== 触摸事件处理 ==========

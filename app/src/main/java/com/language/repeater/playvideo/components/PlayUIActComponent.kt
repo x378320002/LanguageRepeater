@@ -70,7 +70,6 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
     fragment.binding.setTimer.setOnClickListener(this)
     fragment.binding.playSpeed.setOnClickListener(this)
     fragment.binding.switchDragAb.setOnClickListener(this)
-    fragment.binding.exoVideoViewWrapper.setOnClickListener(this)
     fragment.binding.showEditPanel?.setOnClickListener(this)
     fragment.binding.ivHistoryList?.setOnClickListener(this)
 
@@ -315,7 +314,7 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
         fragment.viewModel.toggleRepeat()
       }
 
-      fragment.binding.playPauseBtn, fragment.binding.exoVideoViewWrapper -> {
+      fragment.binding.playPauseBtn -> {
         fragment.viewModel.togglePlayPause()
       }
 

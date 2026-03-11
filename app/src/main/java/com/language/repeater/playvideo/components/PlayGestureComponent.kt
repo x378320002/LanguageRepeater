@@ -6,11 +6,14 @@ import android.util.Log
 import android.view.HapticFeedbackConstants
 import android.view.View
 import android.widget.TextView
+import com.language.repeater.dataStore
 import com.language.repeater.foundation.BaseComponent
 import com.language.repeater.playvideo.PlayVideoFragment
+import com.language.repeater.utils.DataStoreUtil
 import com.language.repeater.widgets.GestureCardView
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
@@ -29,6 +32,32 @@ class PlayGestureComponent : BaseComponent<PlayVideoFragment>() {
   private var gestureTipsView: TextView? = null
   private var hideGestureTipJob: Job? = null
 
+  override fun onCreateView() {
+    super.onCreateView()
+    Log.d(TAG, "onCreateView: Initializing gesture component")
+    initAudioManager()
+    initBrightness()
+    gestureTipsView = fragment.binding.gestureTipsText
+    fragment.binding.root.isHapticFeedbackEnabled = true
+    if (fragment.isLandScreen) {
+      fragment.binding.root.setOnGestureListener(gestureListener)
+    } else {
+      uiScope.launch {
+        context.dataStore.data.map {
+          it[DataStoreUtil.KEY_FULL_GESTURE] ?: false
+        }.collect {
+          if (it) {
+            fragment.binding.root.setOnGestureListener(gestureListener)
+            (fragment.binding.exoVideoViewWrapper as GestureCardView).setOnGestureListener(null)
+          } else {
+            (fragment.binding.exoVideoViewWrapper as GestureCardView).setOnGestureListener(gestureListener)
+            fragment.binding.root.setOnGestureListener(null)
+          }
+        }
+      }
+    }
+  }
+
   private var gestureListener = object : GestureCardView.OnGestureListener {
     var originalSpeed = 1.0f
     override fun onClick() {
@@ -39,7 +68,7 @@ class PlayGestureComponent : BaseComponent<PlayVideoFragment>() {
       fragment.viewModel.backToSentenceHead()
     }
 
-    override fun onLongPressed() {
+    override fun onLongPressed(x: Float, y: Float) {
       val player = fragment.viewModel.getPlayer() ?: return
       originalSpeed = player.playbackParameters.speed
       val speed = originalSpeed * 0.5f
@@ -78,20 +107,6 @@ class PlayGestureComponent : BaseComponent<PlayVideoFragment>() {
 
     override fun onRightVerticalScroll(deltaX: Float, deltaY: Float) {
       adjustVolume(deltaY)
-    }
-  }
-
-  override fun onCreateView() {
-    super.onCreateView()
-    Log.d(TAG, "onCreateView: Initializing gesture component")
-    initAudioManager()
-    initBrightness()
-    gestureTipsView = fragment.binding.gestureTipsText
-    fragment.binding.root.isHapticFeedbackEnabled = true
-    fragment.binding.root.apply {
-      //detectLeftScroll = false
-      //detectRightScroll = false
-      setOnGestureListener(gestureListener)
     }
   }
 

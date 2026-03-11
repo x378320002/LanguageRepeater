@@ -34,8 +34,6 @@ object DataStoreUtil {
   //当前的subtitle备用寻找文件夹
   val KEY_SUBTITLE_FOLDER = stringPreferencesKey("subtitle_folder_uri")
   //当前播放到第几个信息
-  val KEY_CURRENT_PLAY_INFO = stringPreferencesKey("key_current_play_info")
-  //当前播放到第几个信息
   val KEY_CURRENT_PLAY_INDEX = intPreferencesKey("key_current_play_index")
   //当前是否开启了AB句子模式
   val KEY_AB_REPEATED = booleanPreferencesKey("key_is_repeated")
@@ -44,7 +42,12 @@ object DataStoreUtil {
   //当前是否在编辑模式
   val KEY_EDIT_SEN_MODE = booleanPreferencesKey("key_edit_sen_mode")
 
+  //settings
+  //句子最小间隔
   val KEY_SENTENCE_GAP = intPreferencesKey("key_sentence_gap")
+  //竖屏当前是否全屏响应手势
+  val KEY_FULL_GESTURE = booleanPreferencesKey("key_full_gesture")
+
 
   fun observeRepeatMode(): Flow<Int> {
     return MyApp.instance.dataStore.observe(KEY_PLAYER_PLAY_MODE, 1)

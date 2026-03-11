@@ -78,7 +78,7 @@
       tools:ignore="SpUsage"
       tools:text="Title" />
 
-    <androidx.cardview.widget.CardView
+    <com.language.repeater.widgets.GestureCardView
       android:id="@+id/exo_video_view_wrapper"
       android:layout_width="0dp"
       android:layout_height="0dp"
@@ -149,7 +149,7 @@
           app:tint="@color/ic_tint_color"
           tools:ignore="ContentDescription" />
       </LinearLayout>
-    </androidx.cardview.widget.CardView>
+    </com.language.repeater.widgets.GestureCardView>
 
     <androidx.cardview.widget.CardView
       android:id="@+id/audio_wave_view_wrapper"
