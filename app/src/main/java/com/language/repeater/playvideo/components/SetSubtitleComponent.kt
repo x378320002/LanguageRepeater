@@ -71,7 +71,6 @@ class SetSubtitleComponent : BaseComponent<PlayVideoFragment>() {
     val menu = popup.menu
 
     menu.add(Menu.NONE, MENU_ID_SELECT_FILE, 0, R.string.select_subtitle)
-    menu.add(Menu.NONE, MENU_ID_DISABLE_SUBTITLE, 1, R.string.disable_subtitle)
 
     val tracks = player.currentTracks
     val textTracks = tracks.groups.filter {
@@ -83,6 +82,10 @@ class SetSubtitleComponent : BaseComponent<PlayVideoFragment>() {
       for (i in 0 until group.length) {
         subtitleItems.add(SubtitleItem(group, i))
       }
+    }
+
+    if (subtitleItems.isNotEmpty()) {
+      menu.add(Menu.NONE, MENU_ID_DISABLE_SUBTITLE, 1, R.string.disable_subtitle)
     }
 
     subtitleItems.forEachIndexed { index, item ->

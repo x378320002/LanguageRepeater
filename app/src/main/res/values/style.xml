@@ -14,4 +14,9 @@
     <item name="android:textColor">@color/main_text_color</item>
     <item name="android:textSize">@dimen/setting_item_title_size</item>
   </style>
+
+  <style name="setting_item_info_text">
+    <item name="android:textColor">@color/second_text_color</item>
+    <item name="android:textSize">@dimen/setting_item_info_size</item>
+  </style>
 </resources>

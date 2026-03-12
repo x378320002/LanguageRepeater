@@ -153,27 +153,6 @@ class SelectFileComponent : BaseComponent<PlayVideoFragment>() {
     openSubtitleLauncher
   }
 
-  private fun showMenu() {
-    val popup = ResourcesUtil.createLightPopMenu(context, fragment.binding.ivAdd)
-    popup.menuInflater.inflate(R.menu.menu_add_media, popup.menu)
-    popup.setOnMenuItemClickListener { menuItem ->
-      when (menuItem.itemId) {
-        R.id.action_media -> {
-          openFileLauncher.launch(arrayOf("audio/*", "video/*"))
-        }
-        R.id.action_subtitle -> {
-          if (fragment.viewModel.currentMediaItem.value != null)  {
-            openSubtitleLauncher.launch(arrayOf("text/*", "application/x-subrip"))
-          } else {
-            ToastUtil.toast("当前没有视频, 无法设置字幕")
-          }
-        }
-      }
-      true
-    }
-    popup.show()
-  }
-
   override fun onCreateView() {
     super.onCreateView()
     fragment.binding.ivAdd.setOnClickListener {

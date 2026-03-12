@@ -1,5 +1,6 @@
 package com.language.repeater.playvideo.components
 
+import android.R.attr.visibility
 import android.annotation.SuppressLint
 import android.content.pm.ActivityInfo
 import android.graphics.Color
@@ -401,10 +402,6 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
         R.id.action_split_subtitle -> {
           //autoLoadSentences(false)
           autoLoadSentences()
-        }
-
-        R.id.action_subtitle -> {
-
         }
       }
       true

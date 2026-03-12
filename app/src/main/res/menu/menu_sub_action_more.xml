@@ -1,20 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
   <!--<item-->
-  <!--  android:id="@+id/action_edit_mode"-->
-  <!--  android:title="@string/enter_edit_mode" />-->
+  <!--  android:id="@+id/action_waveform"-->
+  <!--  android:title="@string/sub_more_waveform"-->
+  <!--  />-->
 
   <!--<item-->
-  <!--  android:id="@+id/action_history_list"-->
-  <!--  android:title="@string/history_title" />-->
-
-  <item
-    android:id="@+id/action_subtitle"
-    android:title="@string/select_subtitle"
-    />
+  <!--  android:id="@+id/action_main_control"-->
+  <!--  android:title="@string/sub_more_main_control"-->
+  <!--  />-->
 
   <item
     android:id="@+id/action_split_subtitle"
-    android:title="@string/re_split_subtitle" />
-
+    android:title="@string/sub_more_split_subtitle" />
 </menu>
