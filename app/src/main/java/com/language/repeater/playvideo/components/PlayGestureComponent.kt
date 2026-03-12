@@ -39,6 +39,25 @@ class PlayGestureComponent : BaseComponent<PlayVideoFragment>() {
     initBrightness()
     gestureTipsView = fragment.binding.gestureTipsText
     fragment.binding.root.isHapticFeedbackEnabled = true
+
+    uiScope.launch {
+      context.dataStore.data.map {
+        it[DataStoreUtil.KEY_LEFT_BRIGHTNESS_GESTURE] ?: true
+      }.collect {
+        fragment.binding.root.detectLeftScroll = it
+        (fragment.binding.exoVideoViewWrapper as GestureCardView).detectLeftScroll = it
+      }
+    }
+
+    uiScope.launch {
+      context.dataStore.data.map {
+        it[DataStoreUtil.KEY_RIGHT_VOLUME_GESTURE] ?: true
+      }.collect {
+        fragment.binding.root.detectRightScroll = it
+        (fragment.binding.exoVideoViewWrapper as GestureCardView).detectRightScroll = it
+      }
+    }
+
     if (fragment.isLandScreen) {
       fragment.binding.root.setOnGestureListener(gestureListener)
     } else {

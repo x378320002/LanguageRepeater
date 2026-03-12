@@ -242,6 +242,76 @@
               android:layout_width="wrap_content"
               android:layout_height="wrap_content"/>
           </androidx.constraintlayout.widget.ConstraintLayout>
+
+          <View
+            android:layout_width="match_parent"
+            android:layout_height="1px"
+            android:layout_marginHorizontal="@dimen/setting_item_padding_horizontal"
+            android:background="@color/divider_color" />
+
+          <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/setting_left_brightness"
+            android:background="?android:attr/selectableItemBackground"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/setting_item_big"
+            android:orientation="vertical"
+            android:paddingHorizontal="@dimen/setting_item_padding_horizontal">
+
+            <com.google.android.material.textview.MaterialTextView
+              android:id="@+id/left_brightness_title"
+              android:layout_width="wrap_content"
+              android:layout_height="wrap_content"
+              android:textAppearance="@style/setting_item_text"
+              android:text="@string/setting_left_brightness"
+              app:layout_constrainedWidth="true"
+              app:layout_constraintStart_toStartOf="parent"
+              app:layout_constraintTop_toTopOf="parent"
+              app:layout_constraintBottom_toBottomOf="parent"
+              tools:ignore="SpUsage" />
+
+            <com.google.android.material.switchmaterial.SwitchMaterial
+              android:id="@+id/left_brightness_switch"
+              app:layout_constraintTop_toTopOf="parent"
+              app:layout_constraintBottom_toBottomOf="parent"
+              app:layout_constraintEnd_toEndOf="parent"
+              android:layout_width="wrap_content"
+              android:layout_height="wrap_content"/>
+          </androidx.constraintlayout.widget.ConstraintLayout>
+
+          <View
+            android:layout_width="match_parent"
+            android:layout_height="1px"
+            android:layout_marginHorizontal="@dimen/setting_item_padding_horizontal"
+            android:background="@color/divider_color" />
+
+          <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/setting_right_volume"
+            android:background="?android:attr/selectableItemBackground"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/setting_item_big"
+            android:orientation="vertical"
+            android:paddingHorizontal="@dimen/setting_item_padding_horizontal">
+
+            <com.google.android.material.textview.MaterialTextView
+              android:id="@+id/right_volume_title"
+              android:layout_width="wrap_content"
+              android:layout_height="wrap_content"
+              android:textAppearance="@style/setting_item_text"
+              android:text="@string/setting_right_volume"
+              app:layout_constrainedWidth="true"
+              app:layout_constraintStart_toStartOf="parent"
+              app:layout_constraintTop_toTopOf="parent"
+              app:layout_constraintBottom_toBottomOf="parent"
+              tools:ignore="SpUsage" />
+
+            <com.google.android.material.switchmaterial.SwitchMaterial
+              android:id="@+id/right_volume_switch"
+              app:layout_constraintTop_toTopOf="parent"
+              app:layout_constraintBottom_toBottomOf="parent"
+              app:layout_constraintEnd_toEndOf="parent"
+              android:layout_width="wrap_content"
+              android:layout_height="wrap_content"/>
+          </androidx.constraintlayout.widget.ConstraintLayout>
         </LinearLayout>
       </androidx.cardview.widget.CardView>
 

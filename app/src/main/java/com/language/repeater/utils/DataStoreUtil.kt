@@ -47,6 +47,10 @@ object DataStoreUtil {
   val KEY_SENTENCE_GAP = intPreferencesKey("key_sentence_gap")
   //竖屏当前是否全屏响应手势
   val KEY_FULL_GESTURE = booleanPreferencesKey("key_full_gesture")
+  //全屏手势区域左侧上下滑动是否响应亮度调整
+  val KEY_LEFT_BRIGHTNESS_GESTURE = booleanPreferencesKey("key_left_brightness_gesture")
+  //全屏手势区域右侧上下滑动是否响应音量调整
+  val KEY_RIGHT_VOLUME_GESTURE = booleanPreferencesKey("key_right_volume_gesture")
 
 
   fun observeRepeatMode(): Flow<Int> {

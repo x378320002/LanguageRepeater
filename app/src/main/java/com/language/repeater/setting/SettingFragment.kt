@@ -88,6 +88,28 @@ class SettingFragment: BaseFragment() {
       showFullGestureInfo()
     }
 
+    binding.settingLeftBrightness.setOnClickListener {
+      binding.leftBrightnessSwitch.isChecked = !binding.leftBrightnessSwitch.isChecked
+    }
+    binding.leftBrightnessSwitch.setOnCheckedChangeListener { _, isChecked ->
+      viewLifecycleOwner.lifecycleScope.launch {
+        requireContext().dataStore.edit {
+          it[DataStoreUtil.KEY_LEFT_BRIGHTNESS_GESTURE] = isChecked
+        }
+      }
+    }
+
+    binding.settingRightVolume.setOnClickListener {
+      binding.rightVolumeSwitch.isChecked = !binding.rightVolumeSwitch.isChecked
+    }
+    binding.rightVolumeSwitch.setOnCheckedChangeListener { _, isChecked ->
+      viewLifecycleOwner.lifecycleScope.launch {
+        requireContext().dataStore.edit {
+          it[DataStoreUtil.KEY_RIGHT_VOLUME_GESTURE] = isChecked
+        }
+      }
+    }
+
     binding.settingClearTemp.setOnClickListener {
       val player = viewModel.getPlayer()
       if (player != null) {
@@ -166,6 +188,18 @@ class SettingFragment: BaseFragment() {
       it[DataStoreUtil.KEY_FULL_GESTURE] ?: false
     }.onEach {
       binding.fullGestureSwitch.isChecked = it
+    }.launchIn(viewLifecycleOwner.lifecycleScope)
+
+    requireContext().dataStore.data.map {
+      it[DataStoreUtil.KEY_LEFT_BRIGHTNESS_GESTURE] ?: true
+    }.onEach {
+      binding.leftBrightnessSwitch.isChecked = it
+    }.launchIn(viewLifecycleOwner.lifecycleScope)
+
+    requireContext().dataStore.data.map {
+      it[DataStoreUtil.KEY_RIGHT_VOLUME_GESTURE] ?: true
+    }.onEach {
+      binding.rightVolumeSwitch.isChecked = it
     }.launchIn(viewLifecycleOwner.lifecycleScope)
   }
 }
