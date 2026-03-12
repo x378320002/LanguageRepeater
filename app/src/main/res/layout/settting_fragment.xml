@@ -312,6 +312,46 @@
               android:layout_width="wrap_content"
               android:layout_height="wrap_content"/>
           </androidx.constraintlayout.widget.ConstraintLayout>
+
+
+          <View
+            android:layout_width="match_parent"
+            android:layout_height="1px"
+            android:layout_marginHorizontal="@dimen/setting_item_padding_horizontal"
+            android:background="@color/divider_color" />
+
+          <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/setting_long_press_speed"
+            android:background="?android:attr/selectableItemBackground"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/setting_item_big"
+            android:orientation="vertical"
+            android:paddingHorizontal="@dimen/setting_item_padding_horizontal">
+
+            <com.google.android.material.textview.MaterialTextView
+              android:layout_width="wrap_content"
+              android:layout_height="wrap_content"
+              android:text="@string/setting_long_press_speed"
+              android:textAppearance="@style/setting_item_text"
+              app:layout_constrainedWidth="true"
+              app:layout_constraintStart_toStartOf="parent"
+              app:layout_constraintTop_toTopOf="parent"
+              app:layout_constraintBottom_toBottomOf="parent"
+              tools:ignore="SpUsage" />
+
+            <com.google.android.material.textview.MaterialTextView
+              android:id="@+id/setting_long_press_speed_desc"
+              android:layout_width="wrap_content"
+              android:layout_height="wrap_content"
+              android:textColor="@color/second_text_color"
+              android:textSize="@dimen/setting_item_info_size"
+              app:layout_constraintEnd_toEndOf="parent"
+              app:layout_constraintTop_toTopOf="parent"
+              app:layout_constraintBottom_toBottomOf="parent"
+              android:layout_marginEnd="5dp"
+              tools:ignore="SpUsage"
+              tools:text="0.5X" />
+          </androidx.constraintlayout.widget.ConstraintLayout>
         </LinearLayout>
       </androidx.cardview.widget.CardView>
 

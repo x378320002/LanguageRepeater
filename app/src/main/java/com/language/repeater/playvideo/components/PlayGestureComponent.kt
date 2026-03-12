@@ -31,6 +31,7 @@ class PlayGestureComponent : BaseComponent<PlayVideoFragment>() {
   private var currentBrightness: Float = -1f
   private var gestureTipsView: TextView? = null
   private var hideGestureTipJob: Job? = null
+  private var longPressSpeed: Float = 0.5f
 
   override fun onCreateView() {
     super.onCreateView()
@@ -55,6 +56,14 @@ class PlayGestureComponent : BaseComponent<PlayVideoFragment>() {
       }.collect {
         fragment.binding.root.detectRightScroll = it
         (fragment.binding.exoVideoViewWrapper as GestureCardView).detectRightScroll = it
+      }
+    }
+
+    uiScope.launch {
+      context.dataStore.data.map {
+        it[DataStoreUtil.KEY_LONG_PRESS_SPEED] ?: 0.5f
+      }.collect {
+        longPressSpeed = it
       }
     }
 
@@ -90,7 +99,7 @@ class PlayGestureComponent : BaseComponent<PlayVideoFragment>() {
     override fun onLongPressed(x: Float, y: Float) {
       val player = fragment.viewModel.getPlayer() ?: return
       originalSpeed = player.playbackParameters.speed
-      val speed = originalSpeed * 0.5f
+      val speed = longPressSpeed
       player.setPlaybackSpeed(speed)
       showFeedback("⏩ ${speed}X", false)
       fragment.binding.root.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)

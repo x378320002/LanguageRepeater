@@ -4,6 +4,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.google.common.collect.Multimaps.index
@@ -51,6 +52,8 @@ object DataStoreUtil {
   val KEY_LEFT_BRIGHTNESS_GESTURE = booleanPreferencesKey("key_left_brightness_gesture")
   //全屏手势区域右侧上下滑动是否响应音量调整
   val KEY_RIGHT_VOLUME_GESTURE = booleanPreferencesKey("key_right_volume_gesture")
+  //长按手势触发的播放倍速
+  val KEY_LONG_PRESS_SPEED = floatPreferencesKey("key_long_press_speed")
 
 
   fun observeRepeatMode(): Flow<Int> {

@@ -25,6 +25,7 @@ import com.language.repeater.sentence.SentenceStoreUtil
 import com.language.repeater.utils.DataStoreUtil
 import com.language.repeater.utils.FileUtil
 import com.language.repeater.utils.ToastUtil
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
@@ -142,7 +143,7 @@ class SettingFragment: BaseFragment() {
         .setView(dialogView)
         .setMessage("自动分割句子时, 小于此间隔的连续句子被视作成同一句")
         .setPositiveButton("确认") { _, _ ->
-          val value = etNumber.text.toString().toIntOrNull()
+          val value = etNumber.text?.toString()?.toIntOrNull()
           if (value != null) {
             lifecycleScope.launch {
               DataStoreUtil.saveSentenceGap(value)
@@ -151,6 +152,40 @@ class SettingFragment: BaseFragment() {
         }
         .setNegativeButton("取消", null)
         .show()
+    }
+
+    binding.settingLongPressSpeed.setOnClickListener {
+      lifecycleScope.launch {
+        val currentSpeed = requireContext().dataStore.data.map {
+          it[DataStoreUtil.KEY_LONG_PRESS_SPEED] ?: 0.5f
+        }.first()
+        
+        val dialogView = LayoutInflater.from(context)
+          .inflate(R.layout.dialog_edit_num, null)
+        val etNumber = dialogView.findViewById<TextInputEditText>(R.id.et_number)
+        etNumber.inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
+        etNumber.setText("$currentSpeed")
+        etNumber.setSelection(etNumber.text?.length ?: 0)
+        
+        MaterialAlertDialogBuilder(requireContext())
+          .setTitle("设置长按播放倍速")
+          .setView(dialogView)
+          .setMessage("长按屏幕时视频播放的倍速 (范围: 0.1-2.0)")
+          .setPositiveButton("确认") { _, _ ->
+            val value = etNumber.text.toString().toFloatOrNull()
+            if (value != null && value in 0.1f..2.0f) {
+              lifecycleScope.launch {
+                requireContext().dataStore.edit {
+                  it[DataStoreUtil.KEY_LONG_PRESS_SPEED] = value
+                }
+              }
+            } else {
+              ToastUtil.toast("倍速必须在 0.1 到 2.0 之间")
+            }
+          }
+          .setNegativeButton("取消", null)
+          .show()
+      }
     }
   }
 
@@ -182,6 +217,12 @@ class SettingFragment: BaseFragment() {
 
     DataStoreUtil.observeSentenceGap().onEach {
       binding.settingSentenceGapDesc.text = "$it"
+    }.launchIn(viewLifecycleOwner.lifecycleScope)
+
+    requireContext().dataStore.data.map {
+      it[DataStoreUtil.KEY_LONG_PRESS_SPEED] ?: 0.5f
+    }.onEach {
+      binding.settingLongPressSpeedDesc.text = "${it}X"
     }.launchIn(viewLifecycleOwner.lifecycleScope)
 
     requireContext().dataStore.data.map {

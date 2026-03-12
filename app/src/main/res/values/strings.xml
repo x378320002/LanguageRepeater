@@ -13,6 +13,7 @@
   </string>
   <string name="setting_left_brightness">左侧亮度调整</string>
   <string name="setting_right_volume">右侧音量调整</string>
+  <string name="setting_long_press_speed">长按播放倍速</string>
 
   <string name="re_split_subtitle">重新自动分句</string>
 
