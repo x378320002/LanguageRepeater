@@ -115,13 +115,15 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     playbackCore.saveCurrentPositionImmediate()
   }
 
-  fun playItem(index: Int) {
-    playbackCore.seekToItem(index)
-    playbackCore.play()
-  }
-
   fun deleteItem(index: Int) {
     playbackCore.removeMediaItem(index)
+  }
+
+  fun moveItemToFirst(index: Int) {
+    val player = getPlayer() ?: return
+    if (index > 0 && index < player.mediaItemCount) {
+      playbackCore.changeItemPosition(index, 0)
+    }
   }
 
   // 复读控制直接调 Repository
@@ -182,7 +184,11 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
   // 播放历史记录中的某一项
   fun playHistoryItem(item: VideoEntity) {
-    playbackCore.addAndPlay(item)
+    playbackCore.playItem(item)
+  }
+
+  fun playItem(index: Int) {
+    playbackCore.seekToItem(index)
   }
 
   // 下一首播放

@@ -165,11 +165,11 @@ class PlaybackCore(private val context: Context) {
     //}.launchIn(scope)
 
     scope.launch {
-      val repeat = context.dataStore.data.map {
-        it[KEY_AB_REPEATED]
-      }.firstOrNull() ?: false
-      Log.i(TAG, "init _repeatable:$repeat")
-      _repeatAb.value = repeat
+      launch {
+        val repeat = context.dataStore.data.map { it[KEY_AB_REPEATED] ?: false }.first()
+        Log.i(TAG, "init _repeatable:$repeat")
+        _repeatAb.value = repeat
+      }
     }
   }
 
@@ -876,14 +876,6 @@ class PlaybackCore(private val context: Context) {
     onPlaylistChanged()
   }
 
-  fun seekToItem(index: Int) {
-    val id = _playerInstance.value?.getMediaItemAt(index)?.mediaId ?: return
-    scope.launch {
-      val position = context.videoInfoDao.getPositionById(id) ?: C.TIME_UNSET
-      _playerInstance.value?.seekTo(index, position)
-    }
-  }
-
   fun removeMediaItem(index: Int) {
     val player = _playerInstance.value ?: return
     val count = player.mediaItemCount
@@ -903,8 +895,18 @@ class PlaybackCore(private val context: Context) {
     onPlaylistChanged()
   }
 
-  // 播放历史记录中的某一项
-  fun addAndPlay(item: VideoEntity) {
+  // 播放指定的index的条目, 没有则返回
+  fun seekToItem(index: Int) {
+    val id = _playerInstance.value?.getMediaItemAt(index)?.mediaId ?: return
+    scope.launch {
+      val position = context.videoInfoDao.getPositionById(id) ?: C.TIME_UNSET
+      _playerInstance.value?.seekTo(index, position)
+      play()
+    }
+  }
+
+  // 播放指定的条目, 没有则添加到顶部
+  fun playItem(item: VideoEntity) {
     val player = _playerInstance.value?: return
     // 1. 如果就是当前播放的，直接返回
     if (item.id == currentId) {
@@ -931,9 +933,9 @@ class PlaybackCore(private val context: Context) {
       player.seekTo(0, C.TIME_UNSET)
       player.prepare()
       player.play()
-    }
 
-    onPlaylistChanged()
+      onPlaylistChanged()
+    }
   }
 
   fun addPlayList(

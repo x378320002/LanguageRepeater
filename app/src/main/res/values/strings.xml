@@ -24,6 +24,8 @@
   <string name="subtitle_disabled">已禁用字幕</string>
   <string name="subtitle_switched">已切换字幕</string>
 
+  <string name="playlist_item_move_to_first">移动到第一个</string>
+
   <string name="history_item_play">播放</string>
   <string name="history_item_play_next">下一个播放</string>
   <string name="history_item_add_more">追加到播放列表</string>

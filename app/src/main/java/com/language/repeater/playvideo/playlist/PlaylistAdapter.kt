@@ -1,11 +1,12 @@
 package com.language.repeater.playvideo.playlist
 
-import android.annotation.SuppressLint
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import coil3.load
 import coil3.request.crossfade
@@ -13,33 +14,20 @@ import coil3.request.error
 import com.language.repeater.R
 import com.language.repeater.databinding.PlaylistSheetItemBinding
 import com.language.repeater.utils.ResourcesUtil
-import com.language.repeater.utils.ResourcesUtil.toDp
 import com.language.repeater.utils.TimeFormatUtil
 
 class PlaylistAdapter(
   private val onItemClick: (Int) -> Unit,
-  private val onDeleteClick: (Int) -> Unit
-) : RecyclerView.Adapter<PlaylistAdapter.ViewHolder>() {
+  private val onMenuAction: (Int, Int) -> Unit
+) : ListAdapter<MediaItem, PlaylistAdapter.ViewHolder>(MediaItemDiffCallback()) {
 
   companion object {
     const val PAYLOAD_PLAY_STATE = "PAYLOAD_PLAY_STATE"
   }
 
-  // 数据源
-  private var items: List<MediaItem> = emptyList()
-
-  // 状态
   var currentPlayingIndex: Int = -1
   var isPlayerPlaying: Boolean = false
-
-  // 当前播放时的总时长 (用于显示当前条目的时间)
   var currentDuration: Long = C.TIME_UNSET
-
-  @SuppressLint("NotifyDataSetChanged")
-  fun submitList(newItems: List<MediaItem>) {
-    this.items = newItems
-    notifyDataSetChanged()
-  }
 
   inner class ViewHolder(val binding: PlaylistSheetItemBinding) :
     RecyclerView.ViewHolder(binding.root) {
@@ -51,12 +39,25 @@ class PlaylistAdapter(
           onItemClick(pos)
         }
       }
-      binding.btnDelete.setOnClickListener {
+      binding.btnMore.setOnClickListener {
         val pos = bindingAdapterPosition
         if (pos != RecyclerView.NO_POSITION) {
-          onDeleteClick(pos)
+          showPopupMenu(it, pos)
         }
       }
+    }
+
+    private fun showPopupMenu(anchor: View, position: Int) {
+      val popup = ResourcesUtil.createLightPopMenu(anchor.context, anchor)
+      popup.menuInflater.inflate(R.menu.menu_playlist_item, popup.menu)
+      if (position == 0) {
+        popup.menu.findItem(R.id.action_move_to_first)?.isEnabled = false
+      }
+      popup.setOnMenuItemClickListener { menuItem ->
+        onMenuAction(position, menuItem.itemId)
+        true
+      }
+      popup.show()
     }
   }
 
@@ -78,19 +79,16 @@ class PlaylistAdapter(
   }
 
   override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-    val mediaItem = items[position]
+    val mediaItem = getItem(position)
     val binding = holder.binding
 
-    // 1. 设置标题
     val displayName = mediaItem.mediaMetadata.title?.toString()
       ?: mediaItem.localConfiguration?.uri?.lastPathSegment
       ?: "未知视频"
     binding.tvTitle.text = displayName
 
-    // 2. 设置封面 (Coil)
     val uri = (mediaItem.mediaMetadata.artworkUri ?: mediaItem.localConfiguration?.uri)?.toString()
 
-    // 加载封面
     if (uri != null && uri.isNotEmpty()) {
       if (binding.ivCover.tag != uri) {
         binding.ivCover.tag = uri
@@ -111,8 +109,6 @@ class PlaylistAdapter(
     val binding = holder.binding
     val isCurrentItem = (position == currentPlayingIndex)
 
-    // 1. 设置时长
-    // 逻辑：如果是当前播放的，显示实时获取的时长；如果不是，显示隐藏 (除非你在 MediaItem metadata 里存了时长)
     if (isCurrentItem && currentDuration != C.TIME_UNSET) {
       binding.tvDuration.text = TimeFormatUtil.formatTimeMillis(currentDuration)
       binding.tvDuration.visibility = View.VISIBLE
@@ -120,22 +116,27 @@ class PlaylistAdapter(
       binding.tvDuration.visibility = View.GONE
     }
 
-    // 2. 激活状态背景
     binding.root.isActivated = isCurrentItem
 
-    // 3. 样式与图标
     if (isCurrentItem) {
       binding.ivPlayState.visibility = View.VISIBLE
-
       if (isPlayerPlaying) {
-        binding.ivPlayState.setImageResource(androidx.media3.session.R.drawable.media3_icon_play)
+        binding.ivPlayState.setImageResource(R.drawable.ic_play)
       } else {
-        binding.ivPlayState.setImageResource(androidx.media3.session.R.drawable.media3_icon_pause)
+        binding.ivPlayState.setImageResource(R.drawable.ic_pause)
       }
     } else {
       binding.ivPlayState.visibility = View.INVISIBLE
     }
   }
+}
 
-  override fun getItemCount(): Int = items.size
+class MediaItemDiffCallback : DiffUtil.ItemCallback<MediaItem>() {
+  override fun areItemsTheSame(oldItem: MediaItem, newItem: MediaItem): Boolean {
+    return oldItem.mediaId == newItem.mediaId
+  }
+
+  override fun areContentsTheSame(oldItem: MediaItem, newItem: MediaItem): Boolean {
+    return oldItem.mediaId == newItem.mediaId
+  }
 }

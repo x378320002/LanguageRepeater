@@ -69,7 +69,6 @@ class PlaylistSheetFragment : BasePlaySheetFragment() {
     // 初始化 Adapter，传入点击回调
     adapter = PlaylistAdapter(
       onItemClick = { index ->
-        // 点击播放/暂停或切歌
         if (index == adapter.currentPlayingIndex) {
           viewModel.togglePlayPause()
         } else {
@@ -77,9 +76,11 @@ class PlaylistSheetFragment : BasePlaySheetFragment() {
           viewModel.playItem(index)
         }
       },
-      onDeleteClick = { index ->
-        // 删除条目
-        viewModel.deleteItem(index)
+      onMenuAction = { index, actionId ->
+        when (actionId) {
+          R.id.action_move_to_first -> viewModel.moveItemToFirst(index)
+          R.id.action_delete -> viewModel.deleteItem(index)
+        }
       }
     )
 
@@ -152,10 +153,6 @@ class PlaylistSheetFragment : BasePlaySheetFragment() {
     }
   }
 
-  /**
-   * 从 Player 获取完整列表并提交给 Adapter
-   * 注意：viewModel.getPlayer() 可能为空，需判空
-   */
   private fun refreshFullList() {
     val player = player ?: return
     val currentItems = ArrayList<MediaItem>()
@@ -165,7 +162,9 @@ class PlaylistSheetFragment : BasePlaySheetFragment() {
         currentItems.add(item)
       }
     }
-    adapter.submitList(currentItems)
+    adapter.submitList(currentItems) {
+      updateListState()
+    }
   }
 
   /**
