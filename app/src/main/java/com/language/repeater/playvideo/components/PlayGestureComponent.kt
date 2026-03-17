@@ -46,7 +46,7 @@ class PlayGestureComponent : BaseComponent<PlayVideoFragment>() {
         it[DataStoreUtil.KEY_LEFT_BRIGHTNESS_GESTURE] ?: true
       }.collect {
         fragment.binding.root.detectLeftScroll = it
-        (fragment.binding.exoVideoViewWrapper as GestureCardView).detectLeftScroll = it
+        (fragment.binding.exoVideoViewWrapper as? GestureCardView)?.detectLeftScroll = it
       }
     }
 
@@ -55,7 +55,7 @@ class PlayGestureComponent : BaseComponent<PlayVideoFragment>() {
         it[DataStoreUtil.KEY_RIGHT_VOLUME_GESTURE] ?: true
       }.collect {
         fragment.binding.root.detectRightScroll = it
-        (fragment.binding.exoVideoViewWrapper as GestureCardView).detectRightScroll = it
+        (fragment.binding.exoVideoViewWrapper as? GestureCardView)?.detectRightScroll = it
       }
     }
 

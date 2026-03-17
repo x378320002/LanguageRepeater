@@ -944,16 +944,14 @@ class PlaybackCore(private val context: Context) {
     list: List<VideoEntity>,
     isReplace: Boolean = true,
     playWhenReady: Boolean = true,
-    index: Int = 0,
-    position: Long = C.TIME_UNSET,
+    index: Int = 0
   ) {
     val player = _playerInstance.value ?: return
     if (list.isEmpty()) return
 
     Log.i(TAG, "addPlayList : ${list.size} items, index: $index")
     var items: MutableList<MediaItem>
-    val count = player.mediaItemCount
-    if (isReplace || count <= 0 || (count == 1 && player.getMediaItemAt(0).isPlaceHold())) {
+    if (isReplace) {
       //保证一定有下一个视频,激活seekToNext功能
       items = list
         .distinctBy { it.id }
@@ -971,14 +969,17 @@ class PlaybackCore(private val context: Context) {
       }
       for (i in 0 until player.mediaItemCount) {
         val item = player.getMediaItemAt(i)
-        if (set.add(item.mediaId) && !item.isPlaceHold()) {
+        if (set.add(item.mediaId)) {
           items.add(item)
         }
       }
     }
 
-    val placeHolder = items.last().toPlaceHold()
-    items.add(placeHolder)
+    if (!items.last().isPlaceHold()) {
+      val placeHolder = items.last().toPlaceHold()
+      items.add(placeHolder)
+    }
+
     player.playWhenReady = playWhenReady
     val startPosition = list[index].position
     player.setMediaItems(items, index, startPosition)

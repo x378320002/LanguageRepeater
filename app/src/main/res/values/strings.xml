@@ -47,7 +47,7 @@
   <string name="history_title">历史记录</string>
   <string name="enter_edit_mode">编辑句子</string>
   <string name="exit_edit_mode">退出编辑</string>
-  <string name="current_list_title">播放列表</string>
+  <string name="current_list_title">当前播放</string>
 
   <string name="timer_turn_off">关闭定时</string>
   <string name="timer_10_minutes">10 分钟</string>

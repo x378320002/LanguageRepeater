@@ -27,20 +27,11 @@ data class VideoEntity(
 
 //把当前条目转成一个占位的条目
 fun MediaItem.toPlaceHold(): MediaItem {
-  return this.buildUpon().setMediaMetadata(
-    MediaMetadata
-      .Builder()
-      .setTitle(this.mediaMetadata.title)
-      .setArtworkUri(this.mediaMetadata.artworkUri)
-      .setExtras(Bundle().apply {
-        putBoolean("MediaPlaceHold", true)
-      })
-      .build()
-  ).build()
+  return this.buildUpon().setMediaId("PlaceHoldItem").build()
 }
 
 fun MediaItem.isPlaceHold(): Boolean {
-  return this.mediaMetadata.extras?.getBoolean("MediaPlaceHold") == true
+  return this.mediaId == "PlaceHoldItem"
 }
 
 fun MediaItem.toEntity(): VideoEntity {
