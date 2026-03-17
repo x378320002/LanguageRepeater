@@ -526,16 +526,9 @@ class PlaybackCore(private val context: Context) {
     override fun onTimelineChanged(timeline: Timeline, reason: Int) {
       Log.i(TAG, "onTimelineChanged reason: $reason")
       //如果是列表增删改，保存列表
-      if (reason == Player.TIMELINE_CHANGE_REASON_PLAYLIST_CHANGED) {
-        val player = _playerInstance.value ?: return
-        var count = player.mediaItemCount
-        if (count > 0 && player.getMediaItemAt(count - 1).isPlaceHold()) {
-          count--
-        }
-        _mediaItemCount.value = count
-        scope.launch { _playlistRefreshEvent.emit(Unit) }
-        saveCurrentPlaylist()
-      }
+      //if (reason == Player.TIMELINE_CHANGE_REASON_PLAYLIST_CHANGED) {
+      //  onPlaylistChanged()
+      //}
     }
 
     override fun onPositionDiscontinuity(
@@ -598,25 +591,6 @@ class PlaybackCore(private val context: Context) {
         context.videoInfoDao.updatePosition(id, pos)
         Log.d(TAG, "Saved state: id=$id, pos=$pos")
       }
-    }
-  }
-
-  /**
-   * 保存当前播放列表
-   * 在 IO 线程执行
-   */
-  private fun saveCurrentPlaylist() {
-    val player = _playerInstance.value ?: return
-    // 必须在主线程提取数据
-    val items = ArrayList<MediaItem>()
-    for (i in 0 until player.mediaItemCount) {
-      items.add(player.getMediaItemAt(i))
-    }
-
-    scope.launch(Dispatchers.IO) {
-      // 使用你现有的 PlaylistManager
-      PlaylistManager.saveCurrentPlaylist(context, items)
-      Log.d(TAG, "Saved playlist: size=${items.size}")
     }
   }
 
@@ -875,6 +849,33 @@ class PlaybackCore(private val context: Context) {
   fun pause() = _playerInstance.value?.pause()
   fun seekTo(positionMs: Long) = _playerInstance.value?.seekTo(positionMs)
 
+  /**
+   * 保存当前播放列表
+   * 在 IO 线程执行
+   */
+  private fun onPlaylistChanged() {
+    val player = _playerInstance.value ?: return
+    var count = player.mediaItemCount
+    if (count > 0 && player.getMediaItemAt(count - 1).isPlaceHold()) {
+      count--
+    }
+    _mediaItemCount.value = count
+    scope.launch { _playlistRefreshEvent.emit(Unit) }
+
+    // 必须在主线程提取数据
+    val items = (0 until count).map { player.getMediaItemAt(it) }
+    scope.launch(Dispatchers.IO) {
+      // 使用你现有的 PlaylistManager
+      PlaylistManager.saveCurrentPlaylist(context, items)
+      Log.d(TAG, "Saved playlist: size=${items.size}")
+    }
+  }
+
+  fun changeItemPosition(from: Int, to: Int) {
+    _playerInstance.value?.moveMediaItem(from, to)
+    onPlaylistChanged()
+  }
+
   fun seekToItem(index: Int) {
     val id = _playerInstance.value?.getMediaItemAt(index)?.mediaId ?: return
     scope.launch {
@@ -898,6 +899,8 @@ class PlaybackCore(private val context: Context) {
     } else {
       player.removeMediaItem(index)
     }
+
+    onPlaylistChanged()
   }
 
   // 播放历史记录中的某一项
@@ -929,6 +932,8 @@ class PlaybackCore(private val context: Context) {
       player.prepare()
       player.play()
     }
+
+    onPlaylistChanged()
   }
 
   fun addPlayList(
@@ -981,5 +986,7 @@ class PlaybackCore(private val context: Context) {
     val startPosition = list[index].position
     player.setMediaItems(items, index, startPosition)
     player.prepare()
+
+    onPlaylistChanged()
   }
 }
