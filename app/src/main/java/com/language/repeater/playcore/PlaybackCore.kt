@@ -261,11 +261,9 @@ class PlaybackCore(private val context: Context) {
     }
 
     scope.launch(Dispatchers.IO) {
-      // 1. 读取列表 (返回 List<VideoEntity>)
       val videoEntities = PlaylistManager.loadLastPlaylist(context)
-      // 3. 读取上次播放位置 (VideoEntity -> Index/Pos)
-      //val playInfo = PlaylistManager.loadCurrentPlayIndex(context)
-      val startIndex = DataStoreUtil.observeCurrentPlayIndex().first().coerceIn(0, videoEntities.lastIndex)
+      val savedId = DataStoreUtil.observeCurrentPlayId().first()
+      val startIndex = videoEntities.indexOfFirst { it.id == savedId }.coerceAtLeast(0)
       withContext(Dispatchers.Main) {
         addPlayList(
           list = videoEntities,
@@ -501,6 +499,7 @@ class PlaybackCore(private val context: Context) {
           // 保存历史记录
           mediaItem?.toEntity()?.also {
             scope.launch(Dispatchers.IO) {
+              DataStoreUtil.saveCurrentPlayId(it.id)
               //HistoryManager.addHistory(context, entity)
               context.historyDao.saveHistory(it)
             }
@@ -592,15 +591,12 @@ class PlaybackCore(private val context: Context) {
   fun saveCurrentPositionImmediate() {
     val p = _playerInstance.value ?: return
     val id = p.currentMediaItem?.mediaId ?: return
-    val index = p.currentMediaItemIndex
     val pos = p.currentPosition.coerceAtLeast(0)
 
-    // 确保索引有效
-    if (index != C.INDEX_UNSET && id.isNotEmpty()) {
+    if (id.isNotEmpty()) {
       scope.launch {
-        DataStoreUtil.saveCurrentPlayIndex(index)
         context.videoInfoDao.updatePosition(id, pos)
-        Log.d(TAG, "Saved state: index=$index, pos=$pos")
+        Log.d(TAG, "Saved state: id=$id, pos=$pos")
       }
     }
   }
@@ -928,13 +924,8 @@ class PlaybackCore(private val context: Context) {
     } else {
       // 4. 如果不存在，添加到当前播放位置，并播放
       val mediaItem = item.toMediaItem()
-      val index = if (player.currentMediaItemIndex == C.INDEX_UNSET) {
-        0
-      } else {
-        player.currentMediaItemIndex
-      }
-      player.addMediaItem(index, mediaItem)
-      player.seekTo(index, C.TIME_UNSET)
+      player.addMediaItem(0, mediaItem)
+      player.seekTo(0, C.TIME_UNSET)
       player.prepare()
       player.play()
     }
@@ -978,6 +969,12 @@ class PlaybackCore(private val context: Context) {
     if (!items.last().isPlaceHold()) {
       val placeHolder = items.last().toPlaceHold()
       items.add(placeHolder)
+    }
+
+    while (items.size > 300) {
+      //当前列表是一次性加载的, 且播放列表数据源是当前Player,暂时不能搞太大了,
+      //后续有必要进行优化时, 需要把数据库作为播放列表的数据源, 播放器只用来播放当前的条目
+      items.removeAt(items.lastIndex - 1)
     }
 
     player.playWhenReady = playWhenReady

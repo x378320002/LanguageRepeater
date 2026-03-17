@@ -121,6 +121,10 @@ interface CurPlayListDao {
   @Query("SELECT * FROM current_list_table ORDER BY sortOrder ASC")
   suspend fun getCurrentPlaylist(): List<CurPlayListItemWithInfo>
 
+  @Transaction
+  @Query("SELECT * FROM current_list_table ORDER BY sortOrder ASC")
+  fun observePlaylist(): Flow<List<CurPlayListItemWithInfo>>
+
   // 辅助查询数量
   @Query("SELECT COUNT(*) FROM current_list_table")
   suspend fun getCount(): Int
