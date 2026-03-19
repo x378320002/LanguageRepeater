@@ -20,9 +20,4 @@
       <solid android:color="@color/ic_bg" />
     </shape>
   </item>
-  <item android:id="@android:id/mask">
-    <shape android:shape="oval">
-      <solid android:color="@color/ic_tint_color_selected"/>
-    </shape>
-  </item>
 </ripple>

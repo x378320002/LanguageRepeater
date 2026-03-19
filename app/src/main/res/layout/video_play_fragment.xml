@@ -380,7 +380,7 @@
         android:layout_width="@dimen/play_video_sub_action_w"
         android:layout_height="match_parent"
         android:scaleType="centerInside"
-        android:src="@drawable/ic_sub_action_edit"
+        android:src="@drawable/ic_ab_edit"
         app:tint="@color/color_tint_selected_selector"
         tools:ignore="ContentDescription,HardcodedText" />
 
@@ -407,6 +407,7 @@
           android:gravity="center"
           android:textColor="@color/color_tint_selected_selector"
           android:textSize="10dp"
+          android:fontFamily="sans-serif-medium"
           android:textStyle="bold"
           tools:ignore="SpUsage" />
       </FrameLayout>
@@ -502,7 +503,7 @@
       android:layout_height="0dp"
       android:paddingEnd="10dp"
       android:scaleType="center"
-      android:src="@drawable/ic_go_sentence_head"
+      android:src="@drawable/ic_go_sentence_head_1"
       app:layout_constraintBottom_toBottomOf="@id/play_pause_btn"
       app:layout_constraintEnd_toStartOf="@id/play_pause_btn"
       app:layout_constraintStart_toEndOf="@id/seek_pre_sentence"

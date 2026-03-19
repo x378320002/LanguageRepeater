@@ -300,19 +300,20 @@
 
         <ImageView
           android:id="@+id/back_sentence_head"
-          android:layout_width="60dp"
+          android:layout_width="50dp"
           android:layout_height="60dp"
           android:scaleType="center"
-          android:src="@drawable/ic_go_sentence_head"
+          android:src="@drawable/ic_go_sentence_head_1"
           app:tint="@color/color_tint_selector_land"
           tools:ignore="ContentDescription,RtlSymmetry" />
 
         <!--android:background="@drawable/bg_play_pause_land"-->
         <ImageView
           android:id="@+id/play_pause_btn"
-          android:layout_width="60dp"
-          android:layout_height="60dp"
+          android:layout_width="50dp"
+          android:layout_height="50dp"
           android:scaleType="center"
+          android:background="@drawable/bg_play_pause_land"
           android:src="@drawable/ic_play_pause_selector"
           app:tint="@color/color_tint_selector_land"
           tools:ignore="ContentDescription" />
