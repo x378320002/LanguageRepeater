@@ -24,7 +24,7 @@
       android:paddingStart="@dimen/setting_out_margin"
       android:scaleType="centerInside"
       android:src="@drawable/ic_arrow_left"
-      app:tint="@color/color_tint_selector"
+      app:tint="@color/color_selector_default"
       tools:ignore="ContentDescription" />
 
     <com.google.android.material.textview.MaterialTextView

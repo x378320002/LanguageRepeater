@@ -1,14 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-  <color name="black">#FF000000</color>
-  <color name="white">#FFFFFFFF</color>
-  <color name="white_20">#33FFFFFF</color>
-  <color name="transparent">#00000000</color>
-  <color name="PastelGreen">#86A9A2</color>
-
   <color name="main_text_color">#E0E0E0</color>
   <color name="second_text_color">#A0A0A0</color>
-  <color name="main_bg_color">#202020</color>
+  <color name="main_bg_color">#121212</color>
   <color name="main_bg_color_on">#343434</color>
   <color name="bottom_dialog_bg_color">#343434</color>
   <color name="outline">#8f9285</color>

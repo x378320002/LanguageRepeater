@@ -1,6 +1,5 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
   <!-- Base application theme. -->
-  <!--  <style name="Base.Theme.LanguageRepeater" parent="Theme.AppCompat.Light.NoActionBar">-->
   <style name="ActivityAnimation" parent="@android:style/Animation.Activity">
     <item name="android:activityOpenEnterAnimation">@anim/slide_in_right</item>
     <item name="android:activityOpenExitAnimation">@anim/slide_out_hold</item>
@@ -13,14 +12,11 @@
     <item name="android:textSize">14sp</item>
   </style>
 
-  <style name="Base.Theme.LanguageRepeater" parent="Theme.Material3.DynamicColors.DayNight.NoActionBar">
+  <style name="MyTheme" parent="Theme.Material3.DynamicColors.DayNight.NoActionBar">
     <!-- Customize your light theme here. -->
-    <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
     <item name="android:windowBackground">@color/main_bg_color</item>
     <item name="android:windowAnimationStyle">@style/ActivityAnimation</item>
   </style>
-
-  <style name="Theme.LanguageRepeater" parent="Base.Theme.LanguageRepeater" />
 
   <!-- loading弹窗的主题 -->
   <style name="LoadingDialogTheme" parent="Theme.Material3.DayNight.Dialog">
@@ -48,7 +44,6 @@
 
   <!-- 定义 Dialog 主题 -->
   <style name="CustomBottomSheetDialogTheme" parent="Theme.Material3.DayNight.BottomSheetDialog">
-  <!--<style name="CustomBottomSheetDialogTheme" parent="Base.Theme.LanguageRepeater">-->
     <!-- 应用动画 -->
     <item name="android:windowAnimationStyle">@style/BottomSheetAnimation</item>
     <item name="android:backgroundDimAmount">0.5</item>

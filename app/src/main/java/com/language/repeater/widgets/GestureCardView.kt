@@ -1,5 +1,6 @@
 package com.language.repeater.widgets
 
+import android.R.attr.width
 import android.annotation.SuppressLint
 import android.content.Context
 import android.os.SystemClock
@@ -7,7 +8,7 @@ import android.util.AttributeSet
 import android.util.Log
 import android.view.GestureDetector
 import android.view.MotionEvent
-import androidx.cardview.widget.CardView
+import com.google.android.material.card.MaterialCardView
 import kotlin.math.abs
 
 /**
@@ -19,7 +20,7 @@ class GestureCardView @JvmOverloads constructor(
   context: Context,
   attrs: AttributeSet? = null,
   defStyleAttr: Int = 0,
-) : CardView(context, attrs, defStyleAttr) {
+) : MaterialCardView(context, attrs, defStyleAttr) {
 
   companion object {
     const val TAG = "GestureCardView"

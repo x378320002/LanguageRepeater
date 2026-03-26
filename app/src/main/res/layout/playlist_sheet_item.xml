@@ -81,7 +81,7 @@
       android:layout_width="match_parent"
       android:layout_height="wrap_content"
       android:textSize="15sp"
-      android:textColor="@color/color_tint_selector"
+      android:textColor="@color/color_selector_default"
       android:maxLines="2"
       android:ellipsize="end"
       android:lineSpacingExtra="2dp"

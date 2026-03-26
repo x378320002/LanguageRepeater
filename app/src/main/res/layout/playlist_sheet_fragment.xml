@@ -75,7 +75,7 @@
     android:paddingBottom="15dp"
     android:scaleType="centerInside"
     android:src="@drawable/place_hold"
-    app:tint="@color/color_tint_selector"
+    app:tint="@color/color_selector_default"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
     tools:ignore="ContentDescription" />
