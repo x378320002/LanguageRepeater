@@ -32,16 +32,16 @@ abstract class BaseActivity<VB : ViewBinding> : AppCompatActivity() {
 
     setContentView(binding.root)
 
-    ViewCompat.setOnApplyWindowInsetsListener(binding.root) { view, insets ->
-      val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-      view.setPadding(
-        systemBars.left,
-        systemBars.top,
-        systemBars.right,
-        systemBars.bottom
-      )
-      insets
-      //WindowInsetsCompat.CONSUMED
-    }
+    //ViewCompat.setOnApplyWindowInsetsListener(binding.root) { view, insets ->
+    //  val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+    //  view.setPadding(
+    //    systemBars.left,
+    //    systemBars.top,
+    //    systemBars.right,
+    //    systemBars.bottom
+    //  )
+    //  insets
+    //  //WindowInsetsCompat.CONSUMED
+    //}
   }
 }

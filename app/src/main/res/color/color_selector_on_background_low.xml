@@ -3,8 +3,8 @@
   <!-- 选中状态 -->
   <item
     android:state_pressed="true"
-    android:color="@color/ic_tint_color_pressed"/>
+    android:color="@color/color_on_background_low1"/>
 
   <!-- 未选中（默认） -->
-  <item android:color="@color/ic_tint_color"/>
+  <item android:color="@color/color_on_background_low"/>
 </selector>

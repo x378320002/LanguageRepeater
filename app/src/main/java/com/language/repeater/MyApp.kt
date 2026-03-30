@@ -13,6 +13,9 @@ import coil3.request.crossfade
 import coil3.video.VideoFrameDecoder
 import com.language.repeater.utils.DataStoreUtil
 import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
@@ -48,6 +51,12 @@ class MyApp : Application(), SingletonImageLoader.Factory {
     AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
 
     GlobalScope.launch {
+      val nightMode = DataStoreUtil.observeNightMode().first()
+      withContext(Dispatchers.Main) {
+        AppCompatDelegate.setDefaultNightMode(
+          if (nightMode) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO
+        )
+      }
       DataStoreUtil.observeSentenceGap().collect {
         sentenceGap = it
       }

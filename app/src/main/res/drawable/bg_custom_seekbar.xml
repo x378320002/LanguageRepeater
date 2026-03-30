@@ -1,10 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-
   <item android:id="@android:id/background">
     <shape android:shape="rectangle">
       <corners android:radius="4dp" />
-      <solid android:color="#2DFFFFFF" /> </shape>
+      <solid android:color="@color/color_on_background_low2" /> </shape>
   </item>
 
   <!--<item android:id="@android:id/secondaryProgress">-->
@@ -20,7 +19,7 @@
     <clip>
       <shape android:shape="rectangle">
         <corners android:radius="4dp" />
-        <solid android:color="@color/ic_tint_color" /> </shape>
+        <solid android:color="@color/color_on_background_low" /> </shape>
     </clip>
   </item>
 

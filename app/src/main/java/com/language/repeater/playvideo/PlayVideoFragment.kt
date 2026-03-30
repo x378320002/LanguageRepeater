@@ -7,6 +7,7 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -14,7 +15,7 @@ import androidx.fragment.app.activityViewModels
 import androidx.media3.common.Player
 import com.language.repeater.databinding.VideoPlayFragmentBinding
 import com.language.repeater.foundation.BaseFragment
-import com.language.repeater.playvideo.components.PlayAllWaveComponent
+import com.language.repeater.playvideo.components.PlayBackGroundComponent
 import com.language.repeater.playvideo.components.PlayGestureComponent
 import com.language.repeater.playvideo.components.PlayScrollWaveComponent
 import com.language.repeater.playvideo.components.PlayUIActComponent
@@ -37,13 +38,13 @@ class PlayVideoFragment: BaseFragment(), Player.Listener  {
     Log.i(TAG, "onCreate, pid:${Process.myPid()}, orientation:$orientation")
     addComponent(SelectFileComponent())
     addComponent(PlayScrollWaveComponent())
-    addComponent(PlayAllWaveComponent())
     addComponent(PlayUIActComponent())
     addComponent(SetSubtitleComponent())
     addComponent(PlayGestureComponent())
     if (orientation == Configuration.ORIENTATION_PORTRAIT) {
       isLandScreen = false
       showSystemUI()
+      //addComponent(PlayBackGroundComponent())
     } else {
       isLandScreen = true
       hideSystemUI()
@@ -55,8 +56,20 @@ class PlayVideoFragment: BaseFragment(), Player.Listener  {
     container: ViewGroup?,
     savedInstanceState: Bundle?,
   ): View {
-    Log.i(TAG, "$TAG onCreateView")
     binding = VideoPlayFragmentBinding.inflate(inflater, container, false)
+    if (!isLandScreen) {
+      ViewCompat.setOnApplyWindowInsetsListener(binding.root) { view, insets ->
+        val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+        Log.i(TAG, "$TAG onCreateView systemBars.top:${systemBars.top}, bottom:${systemBars.bottom}")
+        binding.mainLayout?.setPadding(
+          systemBars.left,
+          systemBars.top,
+          systemBars.right,
+          systemBars.bottom
+        )
+        insets
+      }
+    }
     return binding.root
   }
 

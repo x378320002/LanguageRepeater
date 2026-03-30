@@ -28,9 +28,9 @@
         android:id="@+id/exo_video_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@color/main_bg_color_on"
+        android:background="@color/color_background_container"
         app:resize_mode="fixed_height"
-        app:shutter_background_color="@color/main_bg_color_on"
+        app:shutter_background_color="@color/color_background_container"
         app:surface_type="texture_view"
         app:use_controller="false" />
 
@@ -43,7 +43,7 @@
         android:background="@drawable/bg_gesture_tips"
         android:paddingHorizontal="8dp"
         android:paddingVertical="4dp"
-        android:textColor="@color/main_text_color"
+        android:textColor="@color/color_on_background"
         android:textSize="16dp"
         android:visibility="gone"
         tools:ignore="SpUsage" />
@@ -61,7 +61,7 @@
           android:layout_height="48dp"
           android:background="?attr/selectableItemBackgroundBorderless"
           android:src="@drawable/ic_subtitles"
-          app:tint="@color/ic_tint_color"
+          app:tint="@color/color_selector_on_background_low"
           tools:ignore="ContentDescription" />
 
         <ImageButton
@@ -71,7 +71,7 @@
           android:background="?attr/selectableItemBackgroundBorderless"
           android:scaleType="center"
           android:src="@drawable/ic_fullscreen_exit"
-          app:tint="@color/ic_tint_color"
+          app:tint="@color/color_selector_on_background_low"
           tools:ignore="ContentDescription" />
       </LinearLayout>
     </androidx.cardview.widget.CardView>
@@ -81,7 +81,7 @@
       android:layout_width="280dp"
       android:layout_height="wrap_content"
       android:layout_marginEnd="5dp"
-      android:background="@drawable/bg_edit_layout_land"
+      android:background="@drawable/bg_overlay_card"
       android:gravity="center_horizontal"
       android:orientation="vertical"
       android:visibility="gone"
@@ -108,7 +108,7 @@
           app:layout_constraintBottom_toBottomOf="parent"
           app:layout_constraintStart_toStartOf="parent"
           app:layout_constraintTop_toTopOf="parent"
-          app:tint="@color/color_selector_default"
+          app:tint="@color/color_selector_on_background"
           tools:ignore="ContentDescription,RtlSymmetry" />
 
         <TextView
@@ -117,7 +117,7 @@
           android:layout_height="wrap_content"
           android:ellipsize="end"
           android:maxLines="1"
-          android:textColor="@color/main_text_color"
+          android:textColor="@color/color_on_background"
           android:textSize="14dp"
           app:layout_constrainedWidth="true"
           app:layout_constraintBottom_toBottomOf="parent"
@@ -136,7 +136,7 @@
           app:layout_constraintBottom_toBottomOf="parent"
           app:layout_constraintEnd_toEndOf="parent"
           app:layout_constraintTop_toTopOf="parent"
-          app:tint="@color/color_selector_default"
+          app:tint="@color/color_selector_on_background"
           tools:ignore="ContentDescription,RtlSymmetry" />
       </androidx.constraintlayout.widget.ConstraintLayout>
 
@@ -170,7 +170,7 @@
       <!--  android:layout_width="match_parent"-->
       <!--  android:layout_marginTop="10dp"-->
       <!--  android:layout_marginHorizontal="20dp"-->
-      <!--  android:background="@color/divider_color_land"-->
+      <!--  android:background="@color/divider_color"-->
       <!--  android:layout_height="1px"/>-->
 
       <LinearLayout
@@ -200,7 +200,7 @@
             android:layout_height="wrap_content"
             android:scaleType="centerInside"
             android:src="@drawable/ic_edit_merge_left"
-            app:tint="@color/ic_tint_color_edit"
+            app:tint="@color/color_on_edit_layout"
             tools:ignore="ContentDescription" />
         </LinearLayout>
 
@@ -217,7 +217,7 @@
             android:layout_height="wrap_content"
             android:scaleType="centerInside"
             android:src="@drawable/ic_edit_merge_right"
-            app:tint="@color/ic_tint_color_edit"
+            app:tint="@color/color_on_edit_layout"
             tools:ignore="ContentDescription" />
         </LinearLayout>
 
@@ -233,7 +233,7 @@
             android:layout_height="wrap_content"
             android:scaleType="centerInside"
             android:src="@drawable/ic_edit_split"
-            app:tint="@color/ic_tint_color_edit"
+            app:tint="@color/color_on_edit_layout"
             tools:ignore="ContentDescription" />
         </LinearLayout>
 
@@ -249,7 +249,7 @@
             android:layout_height="wrap_content"
             android:scaleType="centerInside"
             android:src="@drawable/ic_edit_delete"
-            app:tint="@color/ic_tint_color_edit"
+            app:tint="@color/color_on_edit_layout"
             tools:ignore="ContentDescription" />
         </LinearLayout>
 
@@ -265,7 +265,7 @@
             android:layout_height="wrap_content"
             android:scaleType="centerInside"
             android:src="@drawable/ic_edit_insert"
-            app:tint="@color/ic_tint_color_edit"
+            app:tint="@color/color_on_edit_layout"
             tools:ignore="ContentDescription" />
         </LinearLayout>
       </LinearLayout>
@@ -274,7 +274,7 @@
         android:layout_width="match_parent"
         android:layout_height="1px"
         android:layout_marginHorizontal="20dp"
-        android:background="@color/divider_color_land" />
+        android:background="?attr/colorOutlineVariant" />
 
       <LinearLayout
         android:id="@+id/main_control_layout"
@@ -295,7 +295,7 @@
           android:layout_height="60dp"
           android:scaleType="center"
           android:src="@drawable/ic_pre_sentence"
-          app:tint="@color/color_selector_default"
+          app:tint="@color/color_selector_on_background"
           tools:ignore="ContentDescription,RtlSymmetry" />
 
         <ImageView
@@ -304,7 +304,7 @@
           android:layout_height="60dp"
           android:scaleType="center"
           android:src="@drawable/ic_go_sentence_head_1"
-          app:tint="@color/color_selector_default"
+          app:tint="@color/color_selector_on_background"
           tools:ignore="ContentDescription,RtlSymmetry" />
 
         <!--android:background="@drawable/bg_play_pause_land"-->
@@ -315,7 +315,7 @@
           android:scaleType="center"
           android:background="@drawable/bg_play_pause_land"
           android:src="@drawable/ic_play_pause_selector"
-          app:tint="@color/color_selector_default"
+          app:tint="@color/color_selector_on_background"
           tools:ignore="ContentDescription" />
 
         <ImageView
@@ -328,7 +328,7 @@
           app:layout_constraintEnd_toStartOf="@+id/play_list"
           app:layout_constraintStart_toEndOf="@id/play_pause_btn"
           app:layout_constraintTop_toTopOf="@id/play_pause_btn"
-          app:tint="@color/color_selector_default"
+          app:tint="@color/color_selector_on_background"
           tools:ignore="ContentDescription,RtlSymmetry" />
 
         <ImageView
@@ -337,7 +337,7 @@
           android:layout_height="60dp"
           android:scaleType="centerInside"
           android:src="@drawable/ic_list"
-          app:tint="@color/color_selector_default"
+          app:tint="@color/color_selector_on_background"
           tools:ignore="ContentDescription,RtlSymmetry" />
       </LinearLayout>
 
@@ -345,7 +345,7 @@
         android:layout_width="match_parent"
         android:layout_height="1px"
         android:layout_marginHorizontal="20dp"
-        android:background="@color/divider_color_land" />
+        android:background="?attr/colorOutlineVariant" />
 
       <LinearLayout
         android:id="@+id/sub_actions_layout"
@@ -362,7 +362,7 @@
           android:layout_height="match_parent"
           android:scaleType="centerInside"
           android:src="@drawable/ic_sub_action_edit"
-          app:tint="@color/color_selector_sub_action"
+          app:tint="@color/color_selector_on_background_low"
           tools:ignore="ContentDescription,HardcodedText" />
 
         <FrameLayout
@@ -375,7 +375,7 @@
             android:layout_height="match_parent"
             android:scaleType="centerInside"
             android:src="@drawable/ic_sub_action_speed"
-            app:tint="@color/color_selector_sub_action"
+            app:tint="@color/color_selector_on_background_low"
             tools:ignore="ContentDescription,HardcodedText" />
 
           <TextView
@@ -386,7 +386,7 @@
             android:layout_marginTop="30dp"
             android:background="@color/transparent"
             android:gravity="center"
-            android:textColor="@color/color_selector_sub_action"
+            android:textColor="@color/color_selector_on_background_low"
             android:textSize="10dp"
             android:textStyle="bold"
             tools:ignore="SpUsage" />
@@ -398,7 +398,7 @@
           android:layout_height="match_parent"
           android:scaleType="centerInside"
           android:src="@drawable/ic_ab_selector"
-          app:tint="@color/color_selector_sub_action"
+          app:tint="@color/color_selector_on_background_low"
           tools:ignore="ContentDescription,HardcodedText" />
 
         <FrameLayout
@@ -411,7 +411,7 @@
             android:layout_height="match_parent"
             android:scaleType="centerInside"
             android:src="@drawable/ic_sub_action_time"
-            app:tint="@color/color_selector_sub_action"
+            app:tint="@color/color_selector_on_background_low"
             tools:ignore="ContentDescription,HardcodedText" />
 
           <TextView
@@ -421,7 +421,7 @@
             android:layout_gravity="top"
             android:layout_marginTop="30dp"
             android:gravity="center"
-            android:textColor="@color/color_selector_sub_action"
+            android:textColor="@color/color_selector_on_background_low"
             android:textSize="10dp"
             android:textStyle="bold"
             android:visibility="gone"
@@ -435,7 +435,7 @@
           android:scaleType="centerInside"
           android:src="@drawable/ic_fullscreen_exit"
           android:visibility="gone"
-          app:tint="@color/color_selector_sub_action"
+          app:tint="@color/color_selector_on_background_low"
           tools:ignore="ContentDescription,HardcodedText" />
 
         <ImageView
@@ -444,7 +444,7 @@
           android:layout_height="match_parent"
           android:scaleType="centerInside"
           android:src="@drawable/ic_more_vert"
-          app:tint="@color/color_selector_sub_action"
+          app:tint="@color/color_selector_on_background_low"
           tools:ignore="ContentDescription,HardcodedText" />
       </LinearLayout>
 
@@ -469,7 +469,7 @@
       app:layout_constraintBottom_toBottomOf="parent"
       app:layout_constraintEnd_toStartOf="@id/land_overlay_layout"
       app:layout_constraintTop_toTopOf="parent"
-      app:tint="@color/color_selector_default"
+      app:tint="@color/color_selector_on_background"
       tools:ignore="ContentDescription" />
   </androidx.constraintlayout.widget.ConstraintLayout>
 </com.language.repeater.widgets.GestureCardView>

@@ -14,6 +14,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.navigation.NavOptions
 import androidx.navigation.createGraph
 import androidx.navigation.fragment.NavHostFragment
@@ -60,5 +61,9 @@ class MainActivity : BaseActivity<ActivityNavHostBinding>() {
       }
       //Add other fragment destinations similarly.
     }
+
+    val controller = WindowInsetsControllerCompat(window, window.decorView)
+    controller.isAppearanceLightStatusBars = false
+    controller.isAppearanceLightNavigationBars = false
   }
 }

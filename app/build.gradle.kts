@@ -80,4 +80,6 @@ dependencies {
   implementation(libs.androidx.room.runtime)
   // 3. Room KTX (支持协程和 Flow)
   implementation(libs.androidx.room.ktx)
+
+  implementation(libs.androidx.palette)
 }

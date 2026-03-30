@@ -1,12 +1,16 @@
 package com.language.repeater.setting
 
 import android.annotation.SuppressLint
+import android.content.res.Configuration
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.datastore.preferences.core.edit
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
@@ -60,8 +64,18 @@ class SettingFragment: BaseFragment() {
     savedInstanceState: Bundle?,
   ): View {
     _binding = SetttingFragmentBinding.inflate(inflater, container, false)
-    val view = binding.root
-    return view
+    ViewCompat.setOnApplyWindowInsetsListener(binding.root) { view, insets ->
+      val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+      Log.i(PlayVideoFragment.Companion.TAG, "${PlayVideoFragment.Companion.TAG} onCreateView systemBars.top:${systemBars.top}, bottom:${systemBars.bottom}")
+      binding.root.setPadding(
+        systemBars.left,
+        systemBars.top,
+        systemBars.right,
+        systemBars.bottom
+      )
+      insets
+    }
+    return binding.root
   }
 
   override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -71,6 +85,23 @@ class SettingFragment: BaseFragment() {
   }
 
   private fun setUIAction() {
+    binding.settingNightMode.setOnClickListener {
+      binding.settingNightModeSwitch.isChecked = !binding.settingNightModeSwitch.isChecked
+    }
+    binding.settingNightModeSwitch.setOnCheckedChangeListener { _, isChecked ->
+      viewLifecycleOwner.lifecycleScope.launch {
+        val nightModeFlags = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
+        val isNightMode = nightModeFlags == Configuration.UI_MODE_NIGHT_YES
+        if (isChecked != isNightMode) {
+          Log.i(TAG, "setUIAction saveNightMode :$isChecked")
+          DataStoreUtil.saveNightMode(isChecked)
+          AppCompatDelegate.setDefaultNightMode(
+            if (isChecked) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO
+          )
+        }
+      }
+    }
+
     binding.ibBack.setOnClickListener {
       findNavController().navigateUp()
     }
@@ -241,6 +272,12 @@ class SettingFragment: BaseFragment() {
       it[DataStoreUtil.KEY_RIGHT_VOLUME_GESTURE] ?: true
     }.onEach {
       binding.rightVolumeSwitch.isChecked = it
+    }.launchIn(viewLifecycleOwner.lifecycleScope)
+
+    DataStoreUtil.observeNightMode().onEach {
+      if (binding.settingNightModeSwitch.isChecked != it) {
+        binding.settingNightModeSwitch.isChecked = it
+      }
     }.launchIn(viewLifecycleOwner.lifecycleScope)
   }
 }

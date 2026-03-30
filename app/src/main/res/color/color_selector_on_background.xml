@@ -1,16 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
-
   <!-- 选中状态 -->
   <item
     android:state_pressed="true"
-    android:color="@color/ic_tint_color"/>
-
-  <!-- 选中状态 -->
-  <item
-    android:state_selected="true"
-    android:color="@color/ic_tint_color"/>
+    android:color="@color/color_on_background_low"/>
 
   <!-- 未选中（默认） -->
-  <item android:color="@color/ic_tint_color_sub_action"/>
+  <item android:color="@color/color_on_background"/>
 </selector>

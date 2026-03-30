@@ -53,6 +53,8 @@ object DataStoreUtil {
   val KEY_RIGHT_VOLUME_GESTURE = booleanPreferencesKey("key_right_volume_gesture")
   //长按手势触发的播放倍速
   val KEY_LONG_PRESS_SPEED = floatPreferencesKey("key_long_press_speed")
+  //是否开启暗色模式
+  val KEY_NIGHT_MODE = booleanPreferencesKey("key_night_mode")
 
 
   fun observeRepeatMode(): Flow<Int> {
@@ -92,6 +94,16 @@ object DataStoreUtil {
   suspend fun saveSentenceGap(gap: Int) {
     MyApp.instance.dataStore.edit { preferences ->
       preferences[KEY_SENTENCE_GAP] = gap
+    }
+  }
+
+  fun observeNightMode(): Flow<Boolean> {
+    return MyApp.instance.dataStore.observe(KEY_NIGHT_MODE, true)
+  }
+
+  suspend fun saveNightMode(enabled: Boolean) {
+    MyApp.instance.dataStore.edit { preferences ->
+      preferences[KEY_NIGHT_MODE] = enabled
     }
   }
 }

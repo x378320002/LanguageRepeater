@@ -69,8 +69,9 @@ class ScrollWaveformView @JvmOverloads constructor(
   private val editRectA = Rect()
   private val editRectB = Rect()
   private val editDrawable =
-    AppCompatResources.getDrawable(context, R.drawable.ic_hand_point_move)?.also {
-      it.setTint(ResourcesUtil.getColor(R.color.ic_tint_color))
+    AppCompatResources.getDrawable(context, R.drawable.ic_drag_ab_lr)?.also {
+      it.setTint(ResourcesUtil.getColor(R.color.color_on_background))
+      it.alpha = 200
     }
 
   /**
@@ -139,28 +140,28 @@ class ScrollWaveformView @JvmOverloads constructor(
 
   //voice开始指示器
   private val senStartPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-    color = ResourcesUtil.getColor(R.color.wave_sentence_begin_sign)
+    color = ResourcesUtil.getColor(R.color.wave_sentence_sign)
     strokeWidth = 1f.toDp()
     strokeCap = Paint.Cap.ROUND
   }
 
   //voice结束指示器
   private val senEndPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-    color = ResourcesUtil.getColor(R.color.wave_sentence_end_sign)
+    color = ResourcesUtil.getColor(R.color.wave_sentence_sign)
     strokeWidth = 1f.toDp()
     strokeCap = Paint.Cap.ROUND
   }
 
   //voice开始指示器
   private val curSenStartPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-    color = ResourcesUtil.getColor(R.color.wave_sentence_begin_sign_cur)
+    color = ResourcesUtil.getColor(R.color.wave_sentence_sign_cur)
     strokeWidth = 2f.toDp()
     strokeCap = Paint.Cap.ROUND
   }
 
   //voice结束指示器
   private val curSenEndPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-    color = ResourcesUtil.getColor(R.color.wave_sentence_end_sign_cur)
+    color = ResourcesUtil.getColor(R.color.wave_sentence_sign_cur)
     strokeWidth = 2f.toDp()
     strokeCap = Paint.Cap.ROUND
   }
