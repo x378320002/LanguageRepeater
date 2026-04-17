@@ -70,7 +70,7 @@ class ScrollWaveformView @JvmOverloads constructor(
   private val editRectB = Rect()
   private val editDrawable =
     AppCompatResources.getDrawable(context, R.drawable.ic_drag_ab_lr)?.also {
-      it.setTint(ResourcesUtil.getColor(R.color.color_on_background))
+      it.setTint(ResourcesUtil.getColor(R.color.color_onBackground))
       it.alpha = 200
     }
 

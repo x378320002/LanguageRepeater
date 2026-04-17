@@ -15,8 +15,8 @@ import androidx.fragment.app.activityViewModels
 import androidx.media3.common.Player
 import com.language.repeater.databinding.VideoPlayFragmentBinding
 import com.language.repeater.foundation.BaseFragment
-import com.language.repeater.playvideo.components.PlayBackGroundComponent
 import com.language.repeater.playvideo.components.PlayGestureComponent
+import com.language.repeater.playvideo.components.PlayItemChangeComponent
 import com.language.repeater.playvideo.components.PlayScrollWaveComponent
 import com.language.repeater.playvideo.components.PlayUIActComponent
 import com.language.repeater.playvideo.components.SelectFileComponent
@@ -44,7 +44,7 @@ class PlayVideoFragment: BaseFragment(), Player.Listener  {
     if (orientation == Configuration.ORIENTATION_PORTRAIT) {
       isLandScreen = false
       showSystemUI()
-      //addComponent(PlayBackGroundComponent())
+      addComponent(PlayItemChangeComponent())
     } else {
       isLandScreen = true
       hideSystemUI()

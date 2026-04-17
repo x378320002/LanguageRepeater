@@ -70,7 +70,7 @@
       android:ellipsize="middle"
       android:gravity="center_vertical|start"
       android:maxLines="1"
-      android:textColor="@color/color_on_background"
+      android:textColor="@color/color_onBackground"
       android:textSize="14dp"
       app:layout_constrainedWidth="true"
       app:layout_constraintEnd_toEndOf="parent"
@@ -96,6 +96,14 @@
       app:layout_constraintStart_toStartOf="parent"
       app:layout_constraintTop_toBottomOf="@id/tv_title">
 
+      <!--<ImageView-->
+      <!--  android:visibility="gone"-->
+      <!--  android:id="@+id/play_bg_view"-->
+      <!--  android:scaleType="centerCrop"-->
+      <!--  android:background="@color/color_background_container"-->
+      <!--  android:layout_width="match_parent"-->
+      <!--  android:layout_height="match_parent"/>-->
+
       <androidx.media3.ui.PlayerView
         android:id="@+id/exo_video_view"
         android:layout_width="match_parent"
@@ -119,7 +127,7 @@
         android:background="@drawable/bg_gesture_tips"
         android:paddingHorizontal="8dp"
         android:paddingVertical="4dp"
-        android:textColor="@color/color_on_background"
+        android:textColor="@color/color_onBackground"
         android:textSize="16dp"
         android:visibility="gone"
         tools:ignore="SpUsage" />

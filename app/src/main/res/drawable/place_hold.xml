@@ -28,25 +28,25 @@ SOFTWARE.
   android:viewportWidth="24"
   android:viewportHeight="24">
   <path
-    android:strokeColor="@color/color_on_background"
+    android:strokeColor="@color/color_onBackground"
     android:strokeLineCap="round"
     android:strokeLineJoin="round"
     android:strokeWidth="2"
     android:pathData="M12,12m-9,0a9,9 0 1,0 18,0a9,9 0 1,0 -18,0" />
   <path
-    android:strokeColor="@color/color_on_background"
+    android:strokeColor="@color/color_onBackground"
     android:strokeLineCap="round"
     android:strokeLineJoin="round"
     android:strokeWidth="2"
     android:pathData="M12,12m-3,0a3,3 0 1,0 6,0a3,3 0 1,0 -6,0" />
   <path
-    android:strokeColor="@color/color_on_background"
+    android:strokeColor="@color/color_onBackground"
     android:strokeLineCap="round"
     android:strokeLineJoin="round"
     android:strokeWidth="2"
     android:pathData="M3,12h6" />
   <path
-    android:strokeColor="@color/color_on_background"
+    android:strokeColor="@color/color_onBackground"
     android:strokeLineCap="round"
     android:strokeLineJoin="round"
     android:strokeWidth="2"

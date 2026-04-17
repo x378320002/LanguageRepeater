@@ -3,8 +3,8 @@
   <!-- 选中状态 -->
   <item
     android:state_pressed="true"
-    android:color="@color/color_on_background_low"/>
+    android:color="@color/color_onBackground_low"/>
 
   <!-- 未选中（默认） -->
-  <item android:color="@color/color_on_background"/>
+  <item android:color="@color/color_onBackground"/>
 </selector>

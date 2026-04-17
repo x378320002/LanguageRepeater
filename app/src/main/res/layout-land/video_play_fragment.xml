@@ -43,7 +43,7 @@
         android:background="@drawable/bg_gesture_tips"
         android:paddingHorizontal="8dp"
         android:paddingVertical="4dp"
-        android:textColor="@color/color_on_background"
+        android:textColor="@color/color_onBackground"
         android:textSize="16dp"
         android:visibility="gone"
         tools:ignore="SpUsage" />
@@ -117,7 +117,7 @@
           android:layout_height="wrap_content"
           android:ellipsize="end"
           android:maxLines="1"
-          android:textColor="@color/color_on_background"
+          android:textColor="@color/color_onBackground"
           android:textSize="14dp"
           app:layout_constrainedWidth="true"
           app:layout_constraintBottom_toBottomOf="parent"

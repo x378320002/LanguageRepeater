@@ -206,11 +206,6 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
       fragment.binding.playPauseBtn.isSelected = it
     }.launchIn(uiScope)
 
-    fragment.viewModel.currentMediaItem.onEach {
-      val title = it?.mediaMetadata?.title ?: "UnKnown"
-      fragment.binding.tvTitle.text = title
-    }.launchIn(uiScope)
-
     fragment.viewModel.playbackCore.playbackState.onEach {
       if (it == Player.STATE_READY) {
         val player = fragment.viewModel.playerInstance.value ?: return@onEach

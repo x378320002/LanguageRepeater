@@ -6,15 +6,20 @@
   <color name="white_20">#33FFFFFF</color>
   <color name="transparent">#00000000</color>
 
-  <color name="color_background">#111111</color>
-  <color name="color_background_container">#303030</color>
-  <color name="color_background_container_overlay">#88000000</color>
-  <color name="color_on_background">#DADADA</color>
-  <color name="color_on_background_low">#969696</color>
-  <color name="color_on_background_low1">#747474</color>
-  <color name="color_on_background_low2">#404040</color>
+  <color name="color_primary">#82d3e0</color>
+  <color name="color_onPrimary">#ffffff</color>
+  <color name="color_primaryContainer">#009688</color>
+  <color name="color_onPrimaryContainer">#ffffff</color>
 
-  <color name="color_on_edit_layout">@color/color_on_background_low</color>
+  <color name="color_background">#111111</color>
+  <color name="color_background_container">#292929</color>
+  <color name="color_background_translucent_black">#88000000</color>
+  <color name="color_onBackground">#D9D9D9</color>
+  <color name="color_onBackground_low">#969696</color>
+  <color name="color_onBackground_low1">#747474</color>
+  <color name="color_onBackground_low2">#404040</color>
+
+  <color name="color_on_edit_layout">@color/color_onBackground_low</color>
   <!--<color name="color_on_edit_layout">#46847F</color>-->
 
   <!--波形图相关-->
@@ -23,12 +28,12 @@
   <color name="wave_unplay">#2F5957</color>
   <color name="wave_indicator">#12B0FF</color>
   <!--<color name="wave_indicator">#bcebf2</color>-->
-  <color name="wave_time">@color/color_on_background_low</color>
-  <color name="wave_sentence_sign">@color/color_on_background_low1</color>
+  <color name="wave_time">@color/color_onBackground_low</color>
+  <color name="wave_sentence_sign">@color/color_onBackground_low1</color>
   <color name="wave_sentence_sign_cur">#E1C601</color>
-  <color name="wave_center_line">@color/color_on_background_low2</color>
+  <color name="wave_center_line">@color/color_onBackground_low2</color>
   <color name="wave_ab_sign_bg">#009688</color>
-  <color name="wave_ab_sign_text">@color/color_on_background</color>
+  <color name="wave_ab_sign_text">@color/color_onBackground</color>
 
   <color name="md_theme_primary">#82d3e0</color>
   <color name="md_theme_onPrimary">#ffffff</color>

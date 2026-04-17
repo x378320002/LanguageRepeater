@@ -38,7 +38,7 @@
       android:background="@drawable/bg_duration_badge"
       android:paddingHorizontal="4dp"
       android:textSize="10sp"
-      android:textColor="@color/color_on_background"
+      android:textColor="@color/color_onBackground"
       android:textStyle="bold"
       android:visibility="gone"
       android:layout_marginBottom="2dp"
@@ -61,7 +61,7 @@
       android:layout_marginTop="2dp"
       android:layout_marginStart="2dp"
       android:visibility="gone"
-      app:tint="@color/color_on_background"
+      app:tint="@color/color_onBackground"
       tools:visibility="visible"
       tools:ignore="ContentDescription" />
   </androidx.cardview.widget.CardView>
@@ -81,7 +81,7 @@
       android:layout_width="match_parent"
       android:layout_height="wrap_content"
       android:textSize="15sp"
-      android:textColor="@color/color_on_background"
+      android:textColor="@color/color_onBackground"
       android:maxLines="2"
       android:ellipsize="end"
       android:lineSpacingExtra="2dp"
@@ -101,7 +101,7 @@
       android:layout_height="24dp"
       android:layout_gravity="center"
       android:src="@drawable/ic_more_vert"
-      app:tint="@color/color_on_background"
+      app:tint="@color/color_onBackground"
       tools:ignore="ContentDescription" />
   </FrameLayout>
 </LinearLayout>

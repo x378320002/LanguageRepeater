@@ -38,7 +38,7 @@
       android:layout_height="wrap_content"
       android:layout_gravity="center"
       android:text="@string/setting_title"
-      android:textColor="@color/color_on_background"
+      android:textColor="@color/color_onBackground"
       android:includeFontPadding="false"
       android:textSize="20dp"
       app:layout_constrainedWidth="true"
@@ -109,7 +109,7 @@
             android:layout_width="match_parent"
             android:layout_height="1px"
             android:layout_marginHorizontal="@dimen/setting_item_padding_horizontal"
-            android:background="@color/color_on_background_low2" />
+            android:background="@color/color_onBackground_low2" />
 
           <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/setting_clear_temp"
@@ -150,7 +150,7 @@
             android:layout_width="match_parent"
             android:layout_height="1px"
             android:layout_marginHorizontal="@dimen/setting_item_padding_horizontal"
-            android:background="@color/color_on_background_low2" />
+            android:background="@color/color_onBackground_low2" />
 
           <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/setting_sentence_gap"
@@ -274,7 +274,7 @@
               app:layout_constraintBottom_toBottomOf="@id/full_gesture_title"
               app:layout_constraintStart_toEndOf="@id/full_gesture_title"
               android:src="@drawable/ic_item_info"
-              app:tint="@color/color_on_background"
+              app:tint="@color/color_onBackground"
               android:scaleType="centerInside"
               android:layout_marginStart="-16dp"
               android:layout_marginBottom="18dp"
@@ -295,7 +295,7 @@
             android:layout_width="match_parent"
             android:layout_height="1px"
             android:layout_marginHorizontal="@dimen/setting_item_padding_horizontal"
-            android:background="@color/color_on_background_low2" />
+            android:background="@color/color_onBackground_low2" />
 
           <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/setting_left_brightness"
@@ -330,7 +330,7 @@
             android:layout_width="match_parent"
             android:layout_height="1px"
             android:layout_marginHorizontal="@dimen/setting_item_padding_horizontal"
-            android:background="@color/color_on_background_low2" />
+            android:background="@color/color_onBackground_low2" />
 
           <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/setting_right_volume"
@@ -365,7 +365,7 @@
             android:layout_width="match_parent"
             android:layout_height="1px"
             android:layout_marginHorizontal="@dimen/setting_item_padding_horizontal"
-            android:background="@color/color_on_background_low2" />
+            android:background="@color/color_onBackground_low2" />
 
           <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/setting_long_press_speed"
