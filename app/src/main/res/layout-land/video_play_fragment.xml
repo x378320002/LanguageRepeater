@@ -61,7 +61,7 @@
           android:layout_height="48dp"
           android:background="?attr/selectableItemBackgroundBorderless"
           android:src="@drawable/ic_subtitles"
-          app:tint="@color/color_selector_on_background_low"
+          app:tint="@color/color_selector_on_background"
           tools:ignore="ContentDescription" />
 
         <ImageButton
@@ -71,7 +71,7 @@
           android:background="?attr/selectableItemBackgroundBorderless"
           android:scaleType="center"
           android:src="@drawable/ic_fullscreen_exit"
-          app:tint="@color/color_selector_on_background_low"
+          app:tint="@color/color_selector_on_background"
           tools:ignore="ContentDescription" />
       </LinearLayout>
     </androidx.cardview.widget.CardView>
@@ -461,6 +461,7 @@
 
     <ImageView
       android:id="@+id/show_edit_panel"
+      android:visibility="gone"
       android:layout_width="30dp"
       android:layout_height="100dp"
       android:background="@drawable/bg_land_show_hide_panel"

@@ -32,13 +32,15 @@ class PlayVideoFragment: BaseFragment(), Player.Listener  {
   val viewModel: PlayerViewModel by activityViewModels()
   var isLandScreen = false
 
+  var uiActComponent: PlayUIActComponent? = null
+
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     val orientation = resources.configuration.orientation
     Log.i(TAG, "onCreate, pid:${Process.myPid()}, orientation:$orientation")
     addComponent(SelectFileComponent())
     addComponent(PlayScrollWaveComponent())
-    addComponent(PlayUIActComponent())
+    addComponent(PlayUIActComponent().apply { uiActComponent = this })
     addComponent(SetSubtitleComponent())
     addComponent(PlayGestureComponent())
     if (orientation == Configuration.ORIENTATION_PORTRAIT) {

@@ -89,7 +89,11 @@ class PlayGestureComponent : BaseComponent<PlayVideoFragment>() {
   private var gestureListener = object : GestureCardView.OnGestureListener {
     var originalSpeed = 1.0f
     override fun onClick() {
-      fragment.viewModel.togglePlayPause()
+      if (fragment.isLandScreen) {
+        fragment.uiActComponent?.toggleLandCardVisibility()
+      } else {
+        fragment.viewModel.togglePlayPause()
+      }
     }
 
     override fun onDoubleClick() {

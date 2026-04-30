@@ -1,12 +1,10 @@
 package com.language.repeater.playvideo.components
 
-import android.R.attr.visibility
 import android.annotation.SuppressLint
 import android.content.pm.ActivityInfo
 import android.graphics.Color
 import android.view.Gravity
 import android.view.View
-import android.view.ViewGroup
 import android.widget.SeekBar
 import androidx.activity.OnBackPressedCallback
 import androidx.annotation.OptIn
@@ -150,15 +148,17 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
   }
 
   //targetCard 是你要做动画的卡片，isShowing 表示你接下来要让它显示还是隐藏
-  fun toggleCardVisibility(targetCard: View?, isShowing: Boolean) {
+  fun toggleLandCardVisibility() {
+    val targetCard = fragment.binding.landOverlayLayout
+    val isShowing = fragment.binding.landOverlayLayout?.visibility == View.GONE
     if (targetCard == null) return
     val slideTransition = Slide(Gravity.END).apply {
-      duration = 300 // 动画时长（毫秒）
+      duration = 250 // 动画时长（毫秒）
       addTarget(targetCard)
-      interpolator = FastOutSlowInInterpolator()
+      //interpolator = FastOutSlowInInterpolator()
     }
     //将自定义的动画交给 TransitionManager
-    //TransitionManager.beginDelayedTransition(fragment.binding.root, slideTransition)
+    TransitionManager.beginDelayedTransition(fragment.binding.root, slideTransition)
     //真正改变 View 的可见性触发动画
     targetCard.visibility = if (isShowing) View.VISIBLE else View.GONE
     //if (isShowing) {
@@ -336,10 +336,7 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
       }
 
       fragment.binding.showEditPanel -> {
-        toggleCardVisibility(
-          fragment.binding.landOverlayLayout,
-          fragment.binding.landOverlayLayout?.visibility == View.GONE
-        )
+        toggleLandCardVisibility()
       }
 
       fragment.binding.ivHistoryList -> {

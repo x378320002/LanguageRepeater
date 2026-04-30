@@ -145,7 +145,7 @@
           android:background="?attr/selectableItemBackgroundBorderless"
           android:scaleType="centerInside"
           android:src="@drawable/ic_subtitles"
-          app:tint="@color/color_selector_on_background_low"
+          app:tint="@color/color_selector_on_background"
           tools:ignore="ContentDescription" />
 
         <ImageButton
@@ -155,7 +155,7 @@
           android:background="?attr/selectableItemBackgroundBorderless"
           android:scaleType="centerInside"
           android:src="@drawable/ic_fullscreen_enter"
-          app:tint="@color/color_selector_on_background_low"
+          app:tint="@color/color_selector_on_background"
           tools:ignore="ContentDescription" />
       </LinearLayout>
     </com.language.repeater.widgets.GestureCardView>
