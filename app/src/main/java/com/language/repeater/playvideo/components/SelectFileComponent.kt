@@ -72,8 +72,8 @@ class SelectFileComponent : BaseComponent<PlayVideoFragment>() {
           } else {
             needToCheckSubFolder = true
           }
-          val wav = FFmpegUtil.extractWavFileByFFmpeg(context, info.uri.toUri(), info.id)
-          Log.d(PlayVideoFragment.TAG, "Selected video name:${info.name}, 字幕: ${info.subUri}, wav:$wav")
+          //val wav = FFmpegUtil.extractWavFileByFFmpeg(context, info.uri.toUri(), info.id)
+          Log.d(PlayVideoFragment.TAG, "Selected video name:${info.name}, 字幕: ${info.subUri}")
           info
         }
 

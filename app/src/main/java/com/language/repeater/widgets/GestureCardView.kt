@@ -1,6 +1,5 @@
 package com.language.repeater.widgets
 
-import android.R.attr.width
 import android.annotation.SuppressLint
 import android.content.Context
 import android.os.SystemClock

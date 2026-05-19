@@ -269,7 +269,8 @@ class PlaybackCore(private val context: Context) {
           list = videoEntities,
           isReplace = true,
           playWhenReady = false,
-          index = startIndex
+          index = startIndex,
+          false
         )
       }
     }
@@ -942,7 +943,8 @@ class PlaybackCore(private val context: Context) {
     list: List<VideoEntity>,
     isReplace: Boolean = true,
     playWhenReady: Boolean = true,
-    index: Int = 0
+    index: Int = 0,
+    saveToDb: Boolean = true
   ) {
     val player = _playerInstance.value ?: return
     if (list.isEmpty()) return
@@ -989,6 +991,8 @@ class PlaybackCore(private val context: Context) {
     player.setMediaItems(items, index, startPosition)
     player.prepare()
 
-    onPlaylistChanged()
+    if (saveToDb) {
+      onPlaylistChanged()
+    }
   }
 }

@@ -51,6 +51,9 @@ class PlayVideoFragment: BaseFragment(), Player.Listener  {
       isLandScreen = true
       hideSystemUI()
     }
+
+    val list = context?.contentResolver?.persistedUriPermissions
+    Log.i(TAG, "persistedUriPermissions size:${list?.size}")
   }
 
   override fun onCreateView(

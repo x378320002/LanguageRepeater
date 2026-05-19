@@ -234,12 +234,13 @@ object FileUtil {
   fun takePersistablePermission(context: Context, uri: Uri) {
     try {
       val contentResolver = context.contentResolver
-      // 关键代码：告诉系统我要永久接管这个 Uri 的读权限
-      val takeFlags: Int =
-        Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+      // 只申请读权限：ACTION_OPEN_DOCUMENT 系统只授予读权限，如果同时申请写权限会抛出 SecurityException，
+      // 导致读权限也无法被持久化，App 重启后所有文件都访问不到
+      val takeFlags: Int = Intent.FLAG_GRANT_READ_URI_PERMISSION
       contentResolver.takePersistableUriPermission(uri, takeFlags)
       // 成功后，你就可以把 uri.toString() 存入 Room 或 SharedPreferences 了
       // 下次直接用 Uri.parse(string) 就能播放
+      Log.d(PlayVideoFragment.TAG, "takePersistablePermission success, uri: $uri")
     } catch (e: SecurityException) {
       e.printStackTrace()
       // 某些特殊云端文件可能不支持持久权限，这里要做异常处理
