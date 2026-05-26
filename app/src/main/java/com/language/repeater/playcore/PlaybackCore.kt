@@ -390,16 +390,30 @@ class PlaybackCore(private val context: Context) {
     val list = _sentencesFlow.value
     if (list.isEmpty()) return
 
-    //val nextSen = list.firstOrNull {
-    //    it.start > _currentPositionSeconds.value + 0.05f
-    //  } ?: list.firstOrNull()
-
-    val curSen = _curAbSentenceFlow.value ?: return
-    val index = list.indexOf(curSen)
-    val nextSen = if (index >= list.lastIndex) {
-      list.firstOrNull()
+    val curSen = _curAbSentenceFlow.value
+    var nextSen: Sentence? = null
+    val curTime = _currentPositionSeconds.value
+    if (curSen == null) {
+      val firstSen = list.firstOrNull()
+      val lastSen = list.lastOrNull()
+      nextSen = if (firstSen != null && curTime < firstSen.start) {
+        firstSen
+      } else if (lastSen != null && curTime >= lastSen.end) {
+        lastSen
+      } else {
+        findSentenceByTime(curTime)
+      }
     } else {
-      list[index + 1]
+      if (curTime < curSen.start) {
+        nextSen = curSen
+      } else {
+        val index = list.indexOf(curSen)
+        nextSen = if (index < list.lastIndex) {
+          list[index + 1]
+        } else {
+          list.lastOrNull()
+        }
+      }
     }
     if (nextSen != null) {
       seekToSentence(nextSen)
@@ -410,17 +424,28 @@ class PlaybackCore(private val context: Context) {
     val list = _sentencesFlow.value
     if (list.isEmpty()) return
 
-    //val nextSen = list.lastOrNull {
-    //  it.end < _currentPositionSeconds.value
-    //} ?: list.lastOrNull()
-
-    val curSen = _curAbSentenceFlow.value ?: return
-    val index = list.indexOf(curSen)
-    val nextSen = if (index <= 0) {
-      list.lastOrNull()
+    val curSen = _curAbSentenceFlow.value
+    var nextSen: Sentence? = null
+    val curTime = _currentPositionSeconds.value
+    if (curSen == null) {
+      val firstSen = list.firstOrNull()
+      val lastSen = list.lastOrNull()
+      nextSen = if (firstSen != null && curTime < firstSen.start) {
+        firstSen
+      } else if (lastSen != null && curTime >= lastSen.end) {
+        lastSen
+      } else {
+        findSentenceByTime(curTime)
+      }
     } else {
-      list[index - 1]
+      val index = list.indexOf(curSen)
+      nextSen = if (index <= 0) {
+        list.lastOrNull()
+      } else {
+        list[index - 1]
+      }
     }
+
     if (nextSen != null) {
       seekToSentence(nextSen)
     }
@@ -875,6 +900,23 @@ class PlaybackCore(private val context: Context) {
   fun changeItemPosition(from: Int, to: Int) {
     _playerInstance.value?.moveMediaItem(from, to)
     onPlaylistChanged()
+  }
+
+  /**
+   * 拖拽排序专用：只移动 Player 队列顺序和持久化，不发 playlistRefreshEvent
+   * 避免 Adapter 收到事件后用旧 currentList 做 DiffUtil 导致位置错乱
+   */
+  fun changeItemPositionSilent(from: Int, to: Int) {
+    val player = _playerInstance.value ?: return
+    player.moveMediaItem(from, to)
+    var count = player.mediaItemCount
+    if (count > 0 && player.getMediaItemAt(count - 1).isPlaceHold()) {
+      count--
+    }
+    val items = (0 until count).map { player.getMediaItemAt(it) }
+    scope.launch(Dispatchers.IO) {
+      PlaylistManager.saveCurrentPlaylist(context, items)
+    }
   }
 
   fun removeMediaItem(index: Int) {

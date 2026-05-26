@@ -126,6 +126,10 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     }
   }
 
+  fun moveItem(from: Int, to: Int) {
+    playbackCore.changeItemPositionSilent(from, to)
+  }
+
   // 复读控制直接调 Repository
   fun toggleRepeat() = playbackCore.toggleRepeat()
   fun seekToNextSentence() = playbackCore.seekToNextSentence()
