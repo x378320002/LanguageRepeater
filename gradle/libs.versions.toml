@@ -1,21 +1,20 @@
 [versions]
-agp = "8.11.0"
-kotlin = "2.2.10"
-ksp="2.2.10-2.0.2"
-coreKtx = "1.16.0"
+agp = "9.2.1"
+kotlin = "2.4.0"
+ksp= "2.3.6"
+coreKtx = "1.19.0"
 junit = "4.13.2"
 junitVersion = "1.2.1"
 espressoCore = "3.6.1"
-appcompat = "1.6.1"
-material = "1.14.0-alpha10"
-activity = "1.10.1"
+appcompat = "1.7.1"
+material = "1.14.0"
+activity = "1.13.0"
 constraintlayout = "2.1.4"
-kotlinSerialization = "2.2.21"
-kotlinJson = "1.9.0"
+kotlinJson = "1.11.0"
 navVersion = "2.9.1"
 
 ffmpegKitX6kb = "6.1.1"
-exoplayer = "1.8.0"
+exoplayer = "1.10.1"
 palette = "1.0.0"
 vad = "2.0.10"
 
@@ -23,7 +22,7 @@ lottie = "0.12.5"
 flexbox = "3.0.0"
 documentfile = "1.1.0"
 coil = "3.3.0"
-datastore = "1.2.0"
+datastore = "1.2.1"
 room = "2.8.4"
 
 [libraries]
@@ -70,7 +69,6 @@ androidx-room-compiler = { group = "androidx.room", name = "room-compiler", vers
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
-jetbrains-kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlinSerialization" }
+jetbrains-kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 
