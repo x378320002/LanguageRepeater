@@ -1,19 +1,7 @@
 package com.language.repeater
 
-import android.Manifest
-import android.content.Intent
-import android.content.pm.PackageManager
-import android.graphics.Color
-import android.os.Build
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
-import androidx.activity.SystemBarStyle
-import androidx.activity.enableEdgeToEdge
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
-import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.navigation.NavOptions
 import androidx.navigation.createGraph
@@ -22,8 +10,8 @@ import androidx.navigation.fragment.fragment
 import com.language.repeater.databinding.ActivityNavHostBinding
 import com.language.repeater.foundation.BaseActivity
 import com.language.repeater.playvideo.PlayVideoFragment
-import com.language.repeater.playcore.PlaybackCore.Companion.TAG
 import com.language.repeater.setting.SettingFragment
+import com.language.repeater.setting.SettingFragmentView
 import kotlinx.serialization.Serializable
 
 @Serializable

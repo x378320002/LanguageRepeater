@@ -4,6 +4,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 plugins {
   alias(libs.plugins.android.application)
   alias(libs.plugins.jetbrains.kotlin.serialization)
+  alias(libs.plugins.jetbrains.kotlin.compose)
   alias(libs.plugins.ksp)
 }
 
@@ -39,6 +40,7 @@ android {
 
   buildFeatures {
     viewBinding = true
+    compose = true
   }
 
   packaging {
@@ -85,4 +87,15 @@ dependencies {
 
   implementation(libs.androidx.palette)
 
+  //compose
+  implementation(platform(libs.androidx.compose.bom))
+  implementation(libs.androidx.compose.ui)
+  implementation(libs.androidx.compose.foundation)
+  implementation(libs.androidx.compose.material3)
+  implementation(libs.androidx.activity.compose)
+  implementation(libs.compose.viewmodel)
+  debugImplementation(libs.androidx.compose.ui.tooling)
+  implementation(libs.androidx.compose.ui.tooling.preview)
+
+  implementation(libs.icons.tabler.outline.android)
 }
