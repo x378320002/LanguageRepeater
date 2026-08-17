@@ -8,7 +8,6 @@ import android.content.ComponentName
 import android.content.Context
 import android.net.Uri
 import android.util.Log
-import androidx.datastore.preferences.core.edit
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
@@ -20,43 +19,38 @@ import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import com.language.repeater.R
-import com.language.repeater.dataStore
+import com.language.repeater.datastore.DsManager
 import com.language.repeater.db.historyDao
 import com.language.repeater.db.videoInfoDao
-import com.language.repeater.sentence.LocalVoiceSentenceDetector
+import com.language.repeater.pcm.FFmpegUtil
 import com.language.repeater.pcm.PCMSegmentLoader
-import com.language.repeater.sentence.Sentence
 import com.language.repeater.pcm.WaveformPoint
 import com.language.repeater.playvideo.components.SubtitleAutoLoader
-import com.language.repeater.playvideo.model.toEntity
-import com.language.repeater.playvideo.model.toMediaItem
-import com.language.repeater.playvideo.playlist.PlaylistManager
-import com.language.repeater.pcm.FFmpegUtil
 import com.language.repeater.playvideo.model.VideoEntity
 import com.language.repeater.playvideo.model.isPlaceHold
+import com.language.repeater.playvideo.model.toEntity
+import com.language.repeater.playvideo.model.toMediaItem
 import com.language.repeater.playvideo.model.toPlaceHold
+import com.language.repeater.playvideo.playlist.PlaylistManager
+import com.language.repeater.sentence.LocalVoiceSentenceDetector
+import com.language.repeater.sentence.Sentence
 import com.language.repeater.sentence.SentenceStoreUtil
-import com.language.repeater.utils.DataStoreUtil
-import com.language.repeater.utils.DataStoreUtil.KEY_AB_REPEATED
 import com.language.repeater.utils.SrtParser
 import com.language.repeater.utils.ToastUtil
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable.isActive
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
-import kotlin.collections.HashSet
+import kotlin.collections.distinctBy
 
 /**
  * Repository层, 比ViewModel更低一个层级
@@ -166,7 +160,7 @@ class PlaybackCore(private val context: Context) {
 
     scope.launch {
       launch {
-        val repeat = context.dataStore.data.map { it[KEY_AB_REPEATED] ?: false }.first()
+        val repeat = DsManager.get(DsManager.KEY_AB_REPEATED, false)
         Log.i(TAG, "init _repeatable:$repeat")
         _repeatAb.value = repeat
       }
@@ -217,7 +211,7 @@ class PlaybackCore(private val context: Context) {
     // 3. 设置新的
     if (newPlayer != null) {
       scope.launch(Dispatchers.IO) {
-        val cycle = DataStoreUtil.observeRepeatMode().first()
+        val cycle = DsManager.get(DsManager.KEY_PLAYER_PLAY_MODE, 1)
         withContext(Dispatchers.Main) {
           newPlayer.repeatMode = cycle
         }
@@ -262,7 +256,7 @@ class PlaybackCore(private val context: Context) {
 
     scope.launch(Dispatchers.IO) {
       val videoEntities = PlaylistManager.loadLastPlaylist(context)
-      val savedId = DataStoreUtil.observeCurrentPlayId().first()
+      val savedId = DsManager.get(DsManager.KEY_CURRENT_PLAY_ID, "")
       val startIndex = videoEntities.indexOfFirst { it.id == savedId }.coerceAtLeast(0)
       withContext(Dispatchers.Main) {
         addPlayList(
@@ -380,9 +374,7 @@ class PlaybackCore(private val context: Context) {
     val repeat = !_repeatAb.value
     _repeatAb.value = repeat
     scope.launch {
-      context.dataStore.edit { prefs ->
-        prefs[KEY_AB_REPEATED] = repeat
-      }
+      DsManager.set(DsManager.KEY_AB_REPEATED, repeat)
     }
   }
 
@@ -525,7 +517,7 @@ class PlaybackCore(private val context: Context) {
           // 保存历史记录
           mediaItem?.toEntity()?.also {
             scope.launch(Dispatchers.IO) {
-              DataStoreUtil.saveCurrentPlayId(it.id)
+              DsManager.set(DsManager.KEY_CURRENT_PLAY_ID, it.id)
               //HistoryManager.addHistory(context, entity)
               context.historyDao.saveHistory(it)
             }
@@ -866,7 +858,7 @@ class PlaybackCore(private val context: Context) {
   fun setPlayerRepeatMode(mode: Int) {
     _playerInstance.value?.repeatMode = mode
     scope.launch {
-      DataStoreUtil.saveRepeatMode(mode)
+      DsManager.set(DsManager.KEY_PLAYER_PLAY_MODE, mode)
     }
   }
 

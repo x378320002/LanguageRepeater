@@ -9,7 +9,7 @@
   android:keepScreenOn="true"
   app:cardBackgroundColor="@color/transparent"
   app:cardElevation="0dp"
-  tools:context=".MainActivity">
+  tools:context=".app.MainActivity">
 
   <androidx.constraintlayout.widget.ConstraintLayout
     android:layout_width="match_parent"

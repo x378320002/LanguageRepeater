@@ -1,14 +1,11 @@
 package com.language.repeater.utils
 
-import android.R
 import android.content.Context
 import android.net.Uri
-import android.provider.OpenableColumns
 import android.util.Log
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
-import com.language.repeater.MyApp
 
 object SubtitleUtils {
   fun createSubtitleConfig(context: Context, subUri: Uri): MediaItem.SubtitleConfiguration {

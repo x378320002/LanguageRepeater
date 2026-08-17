@@ -1,8 +1,8 @@
 [versions]
 agp = "9.2.1"
 iconsTablerOutlineAndroid = "2.2.1"
-kotlin = "2.4.0"
-composeBom = "2026.06.01"
+kotlin = "2.4.10"
+composeBom = "2026.08.00"
 ksp= "2.3.6"
 coreKtx = "1.19.0"
 junit = "4.13.2"
@@ -13,6 +13,8 @@ material = "1.14.0"
 activity = "1.13.0"
 constraintlayout = "2.1.4"
 kotlinJson = "1.11.0"
+media3UiCompose = "1.11.0"
+media3UiComposeMaterial3 = "1.11.0"
 navVersion = "2.9.1"
 
 ffmpegKitX6kb = "6.1.1"
@@ -29,6 +31,8 @@ room = "2.8.4"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-media3-ui-compose = { module = "androidx.media3:media3-ui-compose", version.ref = "media3UiCompose" }
+androidx-media3-ui-compose-material3 = { module = "androidx.media3:media3-ui-compose-material3", version.ref = "media3UiComposeMaterial3" }
 androidx-palette = { module = "androidx.palette:palette", version.ref = "palette" }
 icons-tabler-outline-android = { module = "com.composables:icons-tabler-outline-android", version.ref = "iconsTablerOutlineAndroid" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }

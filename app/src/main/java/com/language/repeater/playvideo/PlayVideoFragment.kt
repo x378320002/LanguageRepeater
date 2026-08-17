@@ -22,8 +22,17 @@ import com.language.repeater.playvideo.components.PlayUIActComponent
 import com.language.repeater.playvideo.components.SelectFileComponent
 import com.language.repeater.playvideo.components.SetSubtitleComponent
 
-
-class PlayVideoFragment: BaseFragment(), Player.Listener  {
+// -----------------------------------------------------------------------------
+// PlayVideoFragment — 旧 View 版本, 迁移到 Compose 期间作为对照参考保留.
+//
+// 命名说明:
+//   - 这个类保留原名 PlayVideoFragment, 因为 playvideo/components/ 下 6 个 Component
+//     里都用了 BaseComponent<PlayVideoFragment> 泛型, 改名会连锁修改.
+//   - 新的 Compose 版本叫 PlayVideoFragmentCompose (同目录下), 已注册进 NavGraph.
+//   - 阶段 8 全部迁移完成后, 本文件和 6 个 Component 一起删除,
+//     届时可以把 PlayVideoFragmentCompose 重命名回 PlayVideoFragment.
+// -----------------------------------------------------------------------------
+class PlayVideoFragment : BaseFragment(), Player.Listener {
   companion object {
     const val TAG = "wangzixu_PlayVideoFragment"
   }
@@ -84,9 +93,9 @@ class PlayVideoFragment: BaseFragment(), Player.Listener  {
     val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
     // 1. 隐藏状态栏 (顶部) 和 导航栏 (底部)
     windowInsetsController.hide(WindowInsetsCompat.Type.systemBars())
-    // 2. 设置交互模式：
+    // 2. 设置交互模式:
     // BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE:
-    // 用户从边缘滑动时，系统栏会暂时显示，几秒后自动隐藏（最适合视频播放）
+    // 用户从边缘滑动时, 系统栏会暂时显示, 几秒后自动隐藏 (最适合视频播放)
     windowInsetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
   }
 

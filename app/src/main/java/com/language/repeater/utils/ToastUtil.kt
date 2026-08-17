@@ -1,8 +1,7 @@
 package com.language.repeater.utils
 
 import android.widget.Toast
-import androidx.lifecycle.application
-import com.language.repeater.MyApp
+import com.language.repeater.app.MainApp
 
 /**
  * Date: 2025-10-10
@@ -12,7 +11,7 @@ import com.language.repeater.MyApp
 object ToastUtil {
   fun toast(content: String) {
     Toast
-      .makeText(MyApp.instance, content, Toast.LENGTH_SHORT)
+      .makeText(MainApp.instance, content, Toast.LENGTH_SHORT)
       .show()
   }
 

@@ -8,7 +8,6 @@ import android.view.View
 import android.widget.SeekBar
 import androidx.activity.OnBackPressedCallback
 import androidx.annotation.OptIn
-import androidx.interpolator.view.animation.FastOutSlowInInterpolator
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.CaptionStyleCompat
@@ -17,8 +16,8 @@ import androidx.transition.Slide
 import androidx.transition.TransitionManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.language.repeater.R
-import com.language.repeater.SettingPageKey
-import com.language.repeater.defaultNavOptions
+import com.language.repeater.app.SettingPageKey
+import com.language.repeater.app.defaultNavOptions
 import com.language.repeater.foundation.BaseComponent
 import com.language.repeater.playcore.SleepTimerManager
 import com.language.repeater.playvideo.PlayVideoFragment

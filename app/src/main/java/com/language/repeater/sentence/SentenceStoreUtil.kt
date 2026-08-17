@@ -2,8 +2,7 @@ package com.language.repeater.sentence
 
 import android.content.Context
 import android.util.Log
-import com.language.repeater.json
-import com.language.repeater.playvideo.model.VideoEntity
+import com.language.repeater.app.GlobalJson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -87,7 +86,7 @@ object SentenceStoreUtil {
     withContext(Dispatchers.IO) {
       try {
         // 1. 使用 kotlinx.serialization 将 List 转换为 JSON 字符串
-        val jsonString = json.encodeToString(data)
+        val jsonString = GlobalJson.encodeToString(data)
 
         // 2. 写入文件
         getFile(context, key).writeText(jsonString)
@@ -121,7 +120,7 @@ object SentenceStoreUtil {
         }
 
         // 2. 使用 kotlinx.serialization 将 JSON 字符串反序列化回 List<SentenceSegment>
-        json.decodeFromString<List<Sentence>>(jsonString)
+        GlobalJson.decodeFromString<List<Sentence>>(jsonString)
       } catch (e: Exception) {
         // 文件读取、JSON解析或反序列化错误
         e.printStackTrace()

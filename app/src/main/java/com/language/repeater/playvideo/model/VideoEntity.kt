@@ -1,15 +1,11 @@
 package com.language.repeater.playvideo.model
 
-import android.R.attr.mimeType
-import android.os.Bundle
-import android.util.Log
 import androidx.core.net.toUri
-import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import com.language.repeater.MyApp
+import com.language.repeater.app.MainApp
 import com.language.repeater.utils.SubtitleUtils
 import kotlinx.serialization.Serializable
 
@@ -68,7 +64,7 @@ fun VideoEntity.toMediaItem(): MediaItem {
   val subU = it.subUri
   if (subU != null && !subU.equals("null", true)) {
     val subtitleUri = subU.toUri()
-    val subtitleConfig = SubtitleUtils.createSubtitleConfig(MyApp.instance, subtitleUri)
+    val subtitleConfig = SubtitleUtils.createSubtitleConfig(MainApp.instance, subtitleUri)
     builder.setSubtitleConfigurations(listOf(subtitleConfig))
   }
   return builder.build()

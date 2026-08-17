@@ -9,22 +9,16 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.documentfile.provider.DocumentFile
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
-import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
-import com.language.repeater.dataStore
 import com.language.repeater.db.videoInfoDao
 import com.language.repeater.playvideo.model.toEntity
-import com.language.repeater.subtitleStore
-import com.language.repeater.utils.DataStoreUtil.KEY_SUBTITLE_FOLDER
-import com.language.repeater.utils.ResourcesUtil
+import com.language.repeater.datastore.DsManager
+import com.language.repeater.datastore.subtitleStore
 import com.language.repeater.utils.SubtitleUtils
-import com.language.repeater.utils.UriAccessUtil
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -98,9 +92,7 @@ class SubtitleAutoLoader(
   }
 
   private fun startObserving() {
-    observeJob = context.dataStore.data
-      .map { it[KEY_SUBTITLE_FOLDER] }
-      .distinctUntilChanged()
+    observeJob = DsManager.observe(DsManager.KEY_SUBTITLE_FOLDER, "")
       .onEach { path ->
         if (path != null) {
           subtitleFolderUri = path.toUri()

@@ -1,7 +1,8 @@
 package com.language.repeater.sentence
 
 import android.util.Log
-import com.language.repeater.MyApp
+import com.language.repeater.app.MainApp
+import com.language.repeater.datastore.DsManager
 import com.language.repeater.pcm.PcmConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -38,7 +39,7 @@ class LocalVoiceSentenceDetector(
   )
 
   /** 最小静音持续时间(毫秒)，低于此值不算句子间隔 */
-  val minSilenceDurationMs: Int = MyApp.instance.sentenceGap
+  var minSilenceDurationMs: Int = 600
 
   /** 最小语音持续时间(毫秒)，低于此值不算一句话 */
   val minSpeechDurationMs: Int = 50
@@ -88,6 +89,8 @@ class LocalVoiceSentenceDetector(
     if (con != null) {
       config = con
     }
+
+    minSilenceDurationMs = DsManager.get(DsManager.KEY_SENTENCE_GAP, 600)
 
     // 提取音频特征
     val features = extractFeatures(file)

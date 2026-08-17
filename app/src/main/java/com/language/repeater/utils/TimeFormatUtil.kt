@@ -1,9 +1,6 @@
 package com.language.repeater.utils
 
-import android.app.LocaleConfig
-import android.app.LocaleManager
 import androidx.media3.common.C
-import com.language.repeater.MyApp
 import java.util.Locale
 import kotlin.math.floor
 

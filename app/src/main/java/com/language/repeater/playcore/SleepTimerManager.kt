@@ -2,9 +2,8 @@ package com.language.repeater.playcore
 
 import android.annotation.SuppressLint
 import androidx.media3.common.Player
-import com.language.repeater.MyApp
+import com.language.repeater.app.MainApp
 import com.language.repeater.R
-import com.language.repeater.utils.ResourcesUtil
 import com.language.repeater.utils.ToastUtil
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -72,14 +71,14 @@ object SleepTimerManager {
       // 倒计时结束，执行回调
       if (_remainingSeconds.value == 0L) {
         onTimeout?.invoke()
-        PlaybackCore.getInstance(MyApp.instance).pause()
+        PlaybackCore.getInstance(MainApp.instance).pause()
       }
 
       // 重置状态
       _remainingSeconds.value = -1
     }
 
-    val string = MyApp.instance.resources.getString(R.string.timer_set_toast, formatTime(seconds))
+    val string = MainApp.instance.resources.getString(R.string.timer_set_toast, formatTime(seconds))
     ToastUtil.toast(string)
   }
 

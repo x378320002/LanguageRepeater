@@ -10,21 +10,15 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.net.toUri
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
-import com.language.repeater.R
-import com.language.repeater.dataStore
 import com.language.repeater.foundation.BaseComponent
 import com.language.repeater.playvideo.PlayVideoFragment
-import com.language.repeater.subtitleStore
-import com.language.repeater.utils.DataStoreUtil.KEY_SUBTITLE_FOLDER
-import com.language.repeater.pcm.FFmpegUtil
+import com.language.repeater.datastore.DsManager
+import com.language.repeater.datastore.subtitleStore
 import com.language.repeater.utils.FileUtil
 import com.language.repeater.utils.FileUtil.takePersistablePermission
-import com.language.repeater.utils.ResourcesUtil
-import com.language.repeater.utils.ToastUtil
 import com.language.repeater.utils.UriAccessUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -81,7 +75,9 @@ class SelectFileComponent : BaseComponent<PlayVideoFragment>() {
 
         //去文件夹寻找字幕
         if (needToCheckSubFolder) {
-          val folder = context.dataStore.data.map { p -> p[KEY_SUBTITLE_FOLDER] }.firstOrNull()?.toUri()
+          val folder = DsManager.get(DsManager.KEY_SUBTITLE_FOLDER, "")
+            .takeIf { it.isNotEmpty() }
+            ?.toUri()
           Log.d(PlayVideoFragment.TAG, "needToCheckSubFolder folder: $folder")
           val map = SubtitleAutoLoader.scanSubtitleFolder(context, folder)
           if (map.isNotEmpty()) {

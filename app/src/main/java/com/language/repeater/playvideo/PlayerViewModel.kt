@@ -2,19 +2,19 @@ package com.language.repeater.playvideo
 
 import android.app.Application
 import android.net.Uri
-import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.application
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.Player
-import com.language.repeater.dataStore
+import com.language.repeater.datastore.DsManager
 import com.language.repeater.db.historyDao
 import com.language.repeater.playcore.PlaybackCore
 import com.language.repeater.playvideo.model.VideoEntity
-import com.language.repeater.utils.DataStoreUtil.KEY_EDIT_SEN_MODE
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -26,9 +26,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
   //private val _editMode = MutableStateFlow<Boolean>(false)
   //val editMode = _editMode.asStateFlow()
-  val editMode = application.dataStore.data.map {
-    it[KEY_EDIT_SEN_MODE] ?: false
-  }.stateIn(viewModelScope, SharingStarted.Eagerly, false)
+  val editMode = DsManager.observe(DsManager.KEY_EDIT_SEN_MODE, false)
+    .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
   val playbackCore = PlaybackCore.getInstance(application)
 
@@ -60,6 +59,18 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     if (state == Player.STATE_BUFFERING && playWhenReady) return@combine true
     false
   }.stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+  // 当前媒体的总时长 (秒). Compose 层 Slider 需要它做 valueRange 上限.
+  // 派生策略: 复用 currentPositionSeconds 的变化频率, 每次触发时问一次 player.duration.
+  // 已经用 distinctUntilChanged 去重, 只在 duration 真变化时下发.
+  //TODO 这里这样获取总时长有问题 后面待改进
+  val durationSeconds: StateFlow<Float> = playbackCore.currentPositionSeconds
+    .map {
+      val d = getPlayer()?.duration ?: 0L
+      if (d > 0) d / 1000f else 0f
+    }
+    .distinctUntilChanged()
+    .stateIn(viewModelScope, SharingStarted.Eagerly, 0f)
 
   init {
     // ViewModel 初始化时，尝试连接/启动服务
@@ -239,9 +250,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
   fun editMode(edit: Boolean) {
     //_editMode.value = edit
     viewModelScope.launch {
-      application.dataStore.edit {
-        it[KEY_EDIT_SEN_MODE] = edit
-      }
+      DsManager.set(DsManager.KEY_EDIT_SEN_MODE, edit)
     }
   }
 }

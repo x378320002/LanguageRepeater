@@ -6,14 +6,12 @@ import android.util.Log
 import android.view.HapticFeedbackConstants
 import android.view.View
 import android.widget.TextView
-import com.language.repeater.dataStore
 import com.language.repeater.foundation.BaseComponent
 import com.language.repeater.playvideo.PlayVideoFragment
-import com.language.repeater.utils.DataStoreUtil
+import com.language.repeater.datastore.DsManager
 import com.language.repeater.widgets.GestureCardView
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
@@ -42,27 +40,21 @@ class PlayGestureComponent : BaseComponent<PlayVideoFragment>() {
     fragment.binding.root.isHapticFeedbackEnabled = true
 
     uiScope.launch {
-      context.dataStore.data.map {
-        it[DataStoreUtil.KEY_LEFT_BRIGHTNESS_GESTURE] ?: true
-      }.collect {
+      DsManager.observe(DsManager.KEY_LEFT_BRIGHTNESS_GESTURE, true).collect {
         fragment.binding.root.detectLeftScroll = it
         (fragment.binding.exoVideoViewWrapper as? GestureCardView)?.detectLeftScroll = it
       }
     }
 
     uiScope.launch {
-      context.dataStore.data.map {
-        it[DataStoreUtil.KEY_RIGHT_VOLUME_GESTURE] ?: true
-      }.collect {
+      DsManager.observe(DsManager.KEY_RIGHT_VOLUME_GESTURE, true).collect {
         fragment.binding.root.detectRightScroll = it
         (fragment.binding.exoVideoViewWrapper as? GestureCardView)?.detectRightScroll = it
       }
     }
 
     uiScope.launch {
-      context.dataStore.data.map {
-        it[DataStoreUtil.KEY_LONG_PRESS_SPEED] ?: 0.5f
-      }.collect {
+      DsManager.observe(DsManager.KEY_LONG_PRESS_SPEED, 0.5f).collect {
         longPressSpeed = it
       }
     }
@@ -71,9 +63,7 @@ class PlayGestureComponent : BaseComponent<PlayVideoFragment>() {
       fragment.binding.root.setOnGestureListener(gestureListener)
     } else {
       uiScope.launch {
-        context.dataStore.data.map {
-          it[DataStoreUtil.KEY_FULL_GESTURE] ?: false
-        }.collect {
+        DsManager.observe(DsManager.KEY_FULL_GESTURE, false).collect {
           if (it) {
             fragment.binding.root.setOnGestureListener(gestureListener)
             (fragment.binding.exoVideoViewWrapper as GestureCardView).setOnGestureListener(null)

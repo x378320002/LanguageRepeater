@@ -2,6 +2,8 @@ package com.language.repeater.setting
 
 import android.widget.Toast
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -41,123 +43,50 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
+import com.language.repeater.setting.action.ActionClearCache
+import com.language.repeater.setting.action.ActionFullGestureChange
+import com.language.repeater.setting.action.ActionLeftBrightnessGestureChange
+import com.language.repeater.setting.action.ActionLongPressSpeedChange
+import com.language.repeater.setting.action.ActionRightVolumeGestureChange
+import com.language.repeater.setting.action.ActionSentenceGapChange
+import com.language.repeater.setting.action.ActionThemeChange
 
-/**
- * Setting 页面入口 Composable
- *
- * 职责：
- * 1. 从 ViewModel 收集所有 StateFlow → State
- * 2. 把状态和事件回调向下传递给子 Composable
- * 3. 控制对话框的显示/隐藏（用局部 remember { mutableStateOf } 管理）
- *
- * @param viewModel  由 Fragment 传入，不在这里创建，保证与 Fragment 生命周期一致
- * @param onNavigateUp  返回按钮回调，由 Fragment 传入 findNavController().navigateUp()
- * @param onPickSubtitleFolder  选择字幕文件夹回调，由 Fragment 传入 openDirLauncher.launch(null)
- */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationStyleApi::class)
 @Composable
 fun SettingScreen(
-  nightMode: Boolean,
-  onNightModeChange: (Boolean) -> Unit,
-  onBack: () -> Unit,
-  onPickSubtitleFolder: () -> Unit,
+  navController: NavController?,
+  viewModel: SettingViewModel = viewModel()
 ) {
-  val viewModel: SettingViewModel = viewModel()
-
-  // -----------------------------------------------------------------------
-  // 从 ViewModel 收集状态
-  // collectAsState() 会在值变化时自动触发 recomposition
-  // -----------------------------------------------------------------------
-  val subtitleFolder by viewModel.subtitleFolder.collectAsState()
-  val sentenceGap by viewModel.sentenceGap.collectAsState()
-  val longPressSpeed by viewModel.longPressSpeed.collectAsState()
-  val cacheSizeText by viewModel.cacheSizeFlow.collectAsState()
-
-  // -----------------------------------------------------------------------
-  // 对话框显示控制（UI 局部状态，不需要放进 ViewModel）
-  // -----------------------------------------------------------------------
-
-  /** 是否显示"句子最小间隔"输入对话框 */
   var showSentenceGapDialog by remember { mutableStateOf(false) }
-
-  /** 是否显示"长按倍速"输入对话框 */
   var showLongPressSpeedDialog by remember { mutableStateOf(false) }
 
-  // -----------------------------------------------------------------------
-  // 布局
-  // -----------------------------------------------------------------------
   Scaffold(
     topBar = {
-      MyTopAppBar(
-        nightMode = nightMode,
-        onNightModeChange = onNightModeChange,
-        onBack = onBack
+      SettingTopAppBar(
+        viewModel = viewModel,
+        onBack = { navController?.popBackStack() }
       )
     }
   ) { paddingValues ->
-    Column(
-      modifier = Modifier
-        .padding(paddingValues)
-        .padding(horizontal = 19.dp)
-        .fillMaxSize()
-        .verticalScroll(rememberScrollState())
-    ) {
-      // 第一组卡片：字幕文件夹 / 清除缓存 / 句子最小间隔
-      SettingGroup1(
-        subtitleFolder = subtitleFolder,
-        cacheSizeText = cacheSizeText,
-        sentenceGap = sentenceGap,
-        speed = longPressSpeed,
-        onPickSubtitleFolder = {
-          onPickSubtitleFolder()
-        },
-        onClearCache = {
-          viewModel.clearCache()
-        },
-        onSentenceGapClick = {
-          showSentenceGapDialog = true
-        },
-        onSpeedClick = {
-          showLongPressSpeedDialog = true
-        }
-      )
-
-      Spacer(modifier = Modifier.height(30.dp))
-
-      // 手势设置 分组标题文字
-      Text(
-        text = "手势设置",
-        modifier = Modifier.padding(start = 0.dp, bottom = 8.dp),
-        style = MaterialTheme.typography.titleSmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant
-      )
-      SettingGroup2()
-    }
+    MainContent(
+      viewModel = viewModel,
+      paddingValues = paddingValues,
+      onShowSentenceGapDialog = { showSentenceGapDialog = true },
+      onShowLongPressSpeedDialog = { showLongPressSpeedDialog = true }
+    )
   }
-
-
-  // -----------------------------------------------------------------------
-  // 对话框：悬浮在布局之上，仅在 showXxxDialog == true 时显示
-  // -----------------------------------------------------------------------
 
   if (showSentenceGapDialog) {
     SentenceGapDialog(
-      currentValue = sentenceGap,
-      onConfirm = { value ->
-        viewModel.saveSentenceGap(value)
-        showSentenceGapDialog = false
-      },
+      viewModel = viewModel,
       onDismiss = { showSentenceGapDialog = false }
     )
   }
 
   if (showLongPressSpeedDialog) {
     LongPressSpeedDialog(
-      currentValue = longPressSpeed,
-      onConfirm = { value ->
-        viewModel.saveLongPressSpeed(value)
-        showLongPressSpeedDialog = false
-      },
+      viewModel = viewModel,
       onDismiss = { showLongPressSpeedDialog = false }
     )
   }
@@ -165,141 +94,117 @@ fun SettingScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun MyTopAppBar(
-  nightMode: Boolean,
-  onNightModeChange: (Boolean) -> Unit,
-  onBack: () -> Unit,
+private fun SettingTopAppBar(
+  viewModel: SettingViewModel,
+  onBack: () -> Unit
 ) {
+  val nightMode = isSystemInDarkTheme()
   TopAppBar(
     title = {
       Text(
         text = "设置",
-        style = MaterialTheme.typography.titleLarge
+        style = MaterialTheme.typography.titleMedium
       )
     },
     navigationIcon = {
       IconButton(onClick = onBack) {
         Icon(
-          painter = painterResource(com.composables.icons.tabler.outline.R.drawable.tabler_ic_chevron_left_outline),
+          painter = painterResource(com.composables.icons.tabler.outline.R.drawable.tabler_ic_arrow_left_outline),
           contentDescription = null
         )
       }
     },
     actions = {
-      IconButton(onClick = { onNightModeChange(!nightMode) }) {
+      IconButton(onClick = { viewModel.onAction(ActionThemeChange(!nightMode)) }) {
         Icon(
           painter = if (nightMode) {
-            painterResource(com.composables.icons.tabler.outline.R.drawable.tabler_ic_moon_outline)
-          } else {
             painterResource(com.composables.icons.tabler.outline.R.drawable.tabler_ic_sun_outline)
+          } else {
+            painterResource(com.composables.icons.tabler.outline.R.drawable.tabler_ic_moon_outline)
           },
           contentDescription = null
         )
-
       }
     }
   )
 }
 
+@OptIn(ExperimentalFoundationStyleApi::class)
 @Composable
-private fun MyDivider() {
+private fun MainContent(
+  viewModel: SettingViewModel,
+  paddingValues: PaddingValues,
+  onShowSentenceGapDialog: () -> Unit,
+  onShowLongPressSpeedDialog: () -> Unit
+) {
+  Column(
+    modifier = Modifier
+      .padding(paddingValues)
+      .padding(horizontal = 19.dp)
+      .fillMaxSize()
+      .verticalScroll(rememberScrollState())
+  ) {
+    val fullGesture by viewModel.stateHolder.fullGesture.collectAsState()
+    val leftBrightnessGesture by viewModel.stateHolder.leftBrightnessGesture.collectAsState()
+    val rightVolumeGesture by viewModel.stateHolder.rightVolumeGesture.collectAsState()
+    Card {
+      SettingSwitchItem(title = "全屏手势", checked = fullGesture) {
+        viewModel.onAction(ActionFullGestureChange(it))
+      }
+      SettingDivider()
+      SettingSwitchItem(title = "左侧亮度手势", checked = leftBrightnessGesture) {
+        viewModel.onAction(ActionLeftBrightnessGestureChange(it))
+      }
+      SettingDivider()
+      SettingSwitchItem(title = "右侧音量手势", checked = rightVolumeGesture) {
+        viewModel.onAction(ActionRightVolumeGestureChange(it))
+      }
+    }
+
+    Spacer(modifier = Modifier.height(30.dp))
+
+    // 第一组卡片：字幕文件夹 / 清除缓存 / 句子最小间隔 / 长按倍速
+    val subtitleFolder by viewModel.stateHolder.subtitleFolder.collectAsState()
+    val cacheSizeText by viewModel.stateHolder.cacheSizeFlow.collectAsState()
+    val sentenceGap by viewModel.stateHolder.sentenceGap.collectAsState()
+    val speed by viewModel.stateHolder.longPressSpeed.collectAsState()
+    Card {
+      SettingClickItem(
+        title = "长按倍速",
+        desc = "$speed x",
+        onClick = onShowLongPressSpeedDialog
+      )
+
+      SettingDivider()
+      SettingClickItem(
+        title = "句子最小间隔",
+        desc = "$sentenceGap ms",
+        onClick = onShowSentenceGapDialog
+      )
+
+      SettingDivider()
+      SettingClickItem(
+        title = "清除缓存",
+        desc = cacheSizeText,
+        onClick = { viewModel.onAction(ActionClearCache) }
+      )
+
+      SettingDivider()
+
+      SettingClickItem(
+        title = "默认查找字幕文件夹",
+        desc = subtitleFolder,
+        onClick = { /* TODO: 需要 Fragment 提供文件选择器 */ }
+      )
+    }
+  }
+}
+
+@Composable
+private fun SettingDivider() {
   HorizontalDivider(thickness = 0.5.dp, modifier = Modifier.padding(horizontal = 15.dp))
 }
 
-// ---------------------------------------------------------------------------
-// 第一组卡片
-// ---------------------------------------------------------------------------
-
-/**
- * 卡片组1：字幕文件夹 / 清除缓存 / 句子最小间隔
- * 三个点击项叠在一张卡片里，中间用 HorizontalDivider 分隔
- *
- * @param subtitleFolder      当前字幕文件夹路径（空字符串表示未设置）
- * @param cacheSizeText       缓存大小展示文字，如 "1.23 MB"
- * @param sentenceGap         当前句子最小间隔值
- * @param onPickSubtitleFolder 点击字幕文件夹行的回调
- * @param onClearCache        点击清除缓存行的回调
- * @param onSentenceGapClick  点击句子间隔行的回调（打开对话框）
- */
-@Composable
-private fun SettingGroup1(
-  subtitleFolder: String,
-  cacheSizeText: String,
-  sentenceGap: Int,
-  speed: Float,
-  onPickSubtitleFolder: () -> Unit,
-  onClearCache: () -> Unit,
-  onSentenceGapClick: () -> Unit,
-  onSpeedClick: () -> Unit,
-) {
-  Card {
-    SettingClickItem(
-      title = "字幕文件夹",
-      desc = subtitleFolder,
-      onClick = onPickSubtitleFolder
-    )
-
-    MyDivider()
-    SettingClickItem(
-      title = "清除缓存",
-      desc = cacheSizeText,
-      onClick = onClearCache
-    )
-
-    MyDivider()
-    SettingClickItem(
-      title = "句子最小间隔",
-      desc = "$sentenceGap ms",
-      onClick = onSentenceGapClick
-    )
-
-    MyDivider()
-    SettingClickItem(
-      title = "长按倍速",
-      desc = "$speed x",
-      onClick = onSpeedClick
-    )
-  }
-}
-
-// ---------------------------------------------------------------------------
-// 第二组卡片
-// ---------------------------------------------------------------------------
-
-@Composable
-private fun SettingGroup2() {
-  val viewModel: SettingViewModel = viewModel()
-  val fullGesture by viewModel.fullGesture.collectAsState()
-  val leftBrightnessGesture by viewModel.leftBrightnessGesture.collectAsState()
-  val rightVolumeGesture by viewModel.rightVolumeGesture.collectAsState()
-
-  Card {
-    SettingSwitchItem(title = "全屏手势", checked = fullGesture) {
-      viewModel.saveFullGesture(it)
-    }
-    MyDivider()
-    SettingSwitchItem(title = "左侧亮度手势", checked = leftBrightnessGesture, {
-      viewModel.saveLeftBrightnessGesture(it)
-    })
-    MyDivider()
-    SettingSwitchItem(title = "右侧音量手势", checked = rightVolumeGesture, {
-      viewModel.saveRightVolumeGesture(it)
-    })
-  }
-}
-
-// ---------------------------------------------------------------------------
-// 通用 Item 组件
-// ---------------------------------------------------------------------------
-
-/**
- * 点击类型的设置项：左侧标题 + 左侧副标题，整行可点击
- * 对应原 XML 中两行 TextView 叠在 ConstraintLayout 里的样式
- *
- * @param title   主标题
- * @param desc    副标题（灰色小字），传 null 则不显示
- * @param onClick 点击回调
- */
 @Composable
 private fun SettingClickItem(
   title: String,
@@ -329,14 +234,6 @@ private fun SettingClickItem(
   )
 }
 
-/**
- * 开关类型的设置项：左侧标题，右侧 Switch
- * 对应原 XML 中 TextView + SwitchMaterial 的 ConstraintLayout 样式
- *
- * @param title          主标题
- * @param checked        Switch 当前状态
- * @param onCheckedChange Switch 变化回调
- */
 @OptIn(ExperimentalFoundationStyleApi::class)
 @Composable
 private fun SettingSwitchItem(
@@ -360,56 +257,25 @@ private fun SettingSwitchItem(
       )
     }
   )
-
-  //Row(
-  //  modifier = Modifier
-  //    .clickable {
-  //      onCheckedChange(!checked)
-  //    }
-  //    .height(48.dp)
-  //    .padding(horizontal = 15.dp)
-  //    .fillMaxWidth(),
-  //  verticalAlignment = Alignment.CenterVertically,
-  //  horizontalArrangement = Arrangement.SpaceBetween
-  //) {
-  //  Text(
-  //    text = title,
-  //    style = MaterialTheme.typography.bodyMedium
-  //  )
-  //
-  //  Switch(checked = checked, onCheckedChange = onCheckedChange)
-  //}
 }
 
-// ---------------------------------------------------------------------------
-// 对话框
-// ---------------------------------------------------------------------------
-
-/**
- * 句子最小间隔输入对话框
- * 对应原 Fragment 里 MaterialAlertDialogBuilder + dialog_edit_num.xml 的交互
- *
- * @param currentValue 当前间隔值，显示为输入框初始值
- * @param onConfirm    用户点击确认后的回调，参数为输入的新值
- * @param onDismiss    用户取消/点击对话框外部时的回调
- */
 @Composable
 private fun SentenceGapDialog(
-  currentValue: Int,
-  onConfirm: (Int) -> Unit,
-  onDismiss: () -> Unit,
+  viewModel: SettingViewModel,
+  onDismiss: () -> Unit
 ) {
+  val currentValue by viewModel.stateHolder.sentenceGap.collectAsState()
   var text by remember { mutableIntStateOf(currentValue) }
+
   AlertDialog(
-    onDismissRequest = {
-      onDismiss()
-    },
+    onDismissRequest = onDismiss,
     confirmButton = {
       TextButton(
         onClick = {
           if (text != currentValue) {
-            onConfirm(text)
+            viewModel.onAction(ActionSentenceGapChange(text))
           }
+          onDismiss()
         }
       ) {
         Text("确认")
@@ -447,26 +313,18 @@ private fun SentenceGapDialog(
   )
 }
 
-/**
- * 长按播放倍速输入对话框
- *
- * @param currentValue 当前倍速值
- * @param onConfirm    用户确认后的回调，参数为新倍速（校验范围 0.1f ~ 2.0f）
- * @param onDismiss    取消回调
- */
 @Composable
 private fun LongPressSpeedDialog(
-  currentValue: Float,
-  onConfirm: (Float) -> Unit,
-  onDismiss: () -> Unit,
+  viewModel: SettingViewModel,
+  onDismiss: () -> Unit
 ) {
-  val regex = remember { Regex("^\\d*(\\.\\d*)?$") }
+  val currentValue by viewModel.stateHolder.longPressSpeed.collectAsState()
   var value by remember { mutableFloatStateOf(currentValue) }
+  val regex = remember { Regex("^\\d*(\\.\\d*)?$") }
   val context = LocalContext.current
+
   AlertDialog(
-    onDismissRequest = {
-      onDismiss()
-    },
+    onDismissRequest = onDismiss,
     confirmButton = {
       TextButton(
         onClick = {
@@ -480,9 +338,10 @@ private fun LongPressSpeedDialog(
               ).show()
             } else {
               // 保存
-              onConfirm(value)
+              viewModel.onAction(ActionLongPressSpeedChange(value))
             }
           }
+          onDismiss()
         }
       ) {
         Text("确认")

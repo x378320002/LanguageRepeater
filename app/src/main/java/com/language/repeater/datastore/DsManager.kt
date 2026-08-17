@@ -1,0 +1,71 @@
+package com.language.repeater.datastore
+
+import android.content.Context
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.floatPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.preferencesDataStore
+import com.language.repeater.app.MainApp
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+
+val Context.subtitleStore: DataStore<Preferences> by preferencesDataStore(name = "video_subtitle_map")
+val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "app_config")
+
+object DsManager {
+  //当前的subtitle备用寻找文件夹
+  val KEY_SUBTITLE_FOLDER = stringPreferencesKey("subtitle_folder_uri")
+  //当前播放的视频ID
+  val KEY_CURRENT_PLAY_ID = stringPreferencesKey("key_current_play_id")
+  //当前是否开启了AB句子模式
+  val KEY_AB_REPEATED = booleanPreferencesKey("key_is_repeated")
+  //当前的播放模式
+  val KEY_PLAYER_PLAY_MODE = intPreferencesKey("key_player_play_mode")
+  //当前是否在编辑模式
+  val KEY_EDIT_SEN_MODE = booleanPreferencesKey("key_edit_sen_mode")
+
+  //settings
+  //句子最小间隔
+  val KEY_SENTENCE_GAP = intPreferencesKey("key_sentence_gap")
+  //竖屏当前是否全屏响应手势
+  val KEY_FULL_GESTURE = booleanPreferencesKey("key_full_gesture")
+  //全屏手势区域左侧上下滑动是否响应亮度调整
+  val KEY_LEFT_BRIGHTNESS_GESTURE = booleanPreferencesKey("key_left_brightness_gesture")
+  //全屏手势区域右侧上下滑动是否响应音量调整
+  val KEY_RIGHT_VOLUME_GESTURE = booleanPreferencesKey("key_right_volume_gesture")
+  //长按手势触发的播放倍速
+  val KEY_LONG_PRESS_SPEED = floatPreferencesKey("key_long_press_speed")
+  //是否开启暗色模式
+  val KEY_NIGHT_MODE = booleanPreferencesKey("key_night_mode")
+
+  fun <T> observe(
+    key: Preferences.Key<T>,
+    default: T
+  ): Flow<T> {
+    return MainApp.instance.dataStore.data.map { preferences ->
+        preferences[key] ?: default
+      }
+      .distinctUntilChanged() // 统一在这里加，永远不会忘！
+  }
+
+  suspend fun <T> get(
+    key: Preferences.Key<T>,
+    default: T
+  ): T {
+    return MainApp.instance.dataStore.data.map { preferences ->
+      preferences[key] ?: default
+    }.first()
+  }
+
+  suspend fun <T> set(key: Preferences.Key<T>, value: T) {
+    MainApp.instance.dataStore.edit { preferences ->
+      preferences[key] = value
+    }
+  }
+}

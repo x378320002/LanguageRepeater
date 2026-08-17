@@ -1,7 +1,6 @@
 package com.language.repeater.playvideo.playlist
 
 import android.annotation.SuppressLint
-import androidx.media3.common.C
 import com.language.repeater.foundation.BasePlaySheetFragment
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -20,7 +19,7 @@ import com.language.repeater.R
 import com.language.repeater.databinding.PlaylistSheetFragmentBinding
 import com.language.repeater.playvideo.PlayerViewModel
 import com.language.repeater.playvideo.model.isPlaceHold
-import com.language.repeater.utils.DataStoreUtil
+import com.language.repeater.datastore.DsManager
 import kotlinx.coroutines.launch
 
 class PlaylistSheetFragment : BasePlaySheetFragment() {
@@ -100,7 +99,7 @@ class PlaylistSheetFragment : BasePlaySheetFragment() {
     viewLifecycleOwner.lifecycleScope.launch {
       repeatOnLifecycle(Lifecycle.State.STARTED) {
         launch {
-          DataStoreUtil.observeRepeatMode().collect {
+          DsManager.observe(DsManager.KEY_PLAYER_PLAY_MODE, 1).collect {
             currentRepeatMode = it
             when (it) {
               Player.REPEAT_MODE_ONE -> {

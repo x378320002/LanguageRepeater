@@ -98,4 +98,7 @@ dependencies {
   implementation(libs.androidx.compose.ui.tooling.preview)
 
   implementation(libs.icons.tabler.outline.android)
+
+  implementation(libs.androidx.media3.ui.compose)
+  implementation(libs.androidx.media3.ui.compose.material3)
 }
