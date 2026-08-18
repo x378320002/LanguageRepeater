@@ -11,13 +11,10 @@ import androidx.annotation.OptIn
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.CaptionStyleCompat
-import androidx.navigation.fragment.findNavController
 import androidx.transition.Slide
 import androidx.transition.TransitionManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.language.repeater.R
-import com.language.repeater.app.SettingPageKey
-import com.language.repeater.app.defaultNavOptions
 import com.language.repeater.foundation.BaseComponent
 import com.language.repeater.playcore.SleepTimerManager
 import com.language.repeater.playvideo.PlayVideoFragment
@@ -278,7 +275,7 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
       }
 
       fragment.binding.ivSetting -> {
-        fragment.findNavController().navigate(SettingPageKey, defaultNavOptions)
+        // 阶段 1: 旧 View 版本不再处理导航，由 MainActivity 中的 NavDisplay 统一处理
       }
 
       fragment.binding.subActionMore -> {

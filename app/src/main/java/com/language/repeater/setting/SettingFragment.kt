@@ -8,12 +8,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.ComposeView
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.fragment.findNavController
-import com.language.repeater.app.GlobalState
 import com.language.repeater.foundation.BaseFragment
 
 /**
@@ -33,7 +28,7 @@ class SettingFragment : BaseFragment() {
     return ComposeView(requireContext()).apply {
       setContent {
         MaterialTheme(colorScheme = if (isSystemInDarkTheme()) darkColorScheme() else lightColorScheme()) {
-          SettingScreen(findNavController())
+          SettingScreen()
         }
       }
     }

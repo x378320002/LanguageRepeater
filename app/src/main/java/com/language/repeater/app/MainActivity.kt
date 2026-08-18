@@ -2,36 +2,32 @@ package com.language.repeater.app
 
 import android.os.Bundle
 import android.view.LayoutInflater
+import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.ComposeView
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
-import androidx.navigation.NavOptions
-import androidx.navigation.createGraph
-import androidx.navigation.fragment.NavHostFragment
-import androidx.navigation.fragment.fragment
-import com.language.repeater.R
+import androidx.navigation3.runtime.NavKey
+import androidx.navigation3.runtime.entryProvider
+import androidx.navigation3.runtime.rememberNavBackStack
+import androidx.navigation3.ui.NavDisplay
 import com.language.repeater.databinding.ActivityNavHostBinding
 import com.language.repeater.foundation.BaseActivity
-import com.language.repeater.playvideo.PlayVideoFragmentCompose
-import com.language.repeater.setting.SettingFragment
+import com.language.repeater.playvideo.PlayVideoScreen
+import com.language.repeater.setting.SettingScreen
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 
 @Serializable
-object PlayVideoPageKey
+object PlayVideoPageKey : NavKey
 
 @Serializable
-object TestPageKey
-
-@Serializable
-object SettingPageKey
-
-val defaultNavOptions = NavOptions.Builder()
-  .setEnterAnim(R.anim.slide_in_right)
-  .setExitAnim(R.anim.slide_out_left)
-  .setPopEnterAnim(R.anim.slide_in_left)
-  .setPopExitAnim(R.anim.slide_out_right)
-  .build()
+object SettingPageKey : NavKey
 
 class MainActivity : BaseActivity<ActivityNavHostBinding>() {
   override fun inflateBinding(layoutInflater: LayoutInflater): ActivityNavHostBinding {
@@ -41,15 +37,26 @@ class MainActivity : BaseActivity<ActivityNavHostBinding>() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
 
-    val navHostFragment =
-      supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
-    val navController = navHostFragment.navController
-    navController.graph = navController.createGraph(startDestination = PlayVideoPageKey) {
-      fragment<PlayVideoFragmentCompose, PlayVideoPageKey> {
-        label = "PlayVideoPageKey"
-      }
-      fragment<SettingFragment, SettingPageKey> {
-        label = "PlayVideoPageKey"
+    setContent {
+      MaterialTheme(colorScheme = if (isSystemInDarkTheme()) darkColorScheme() else lightColorScheme()) {
+        val backStack = rememberNavBackStack(PlayVideoPageKey)
+
+        NavDisplay(
+          backStack = backStack,
+          onBack = { backStack.removeLastOrNull() },
+          entryProvider = entryProvider {
+            entry<PlayVideoPageKey> {
+              PlayVideoScreen(
+                backStack = backStack
+              )
+            }
+            entry<SettingPageKey> {
+              SettingScreen(
+                backStack = backStack
+              )
+            }
+          }
+        )
       }
     }
 

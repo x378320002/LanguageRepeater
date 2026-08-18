@@ -42,8 +42,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavController
+import androidx.navigation3.runtime.NavBackStack
+import androidx.navigation3.runtime.NavKey
 import com.language.repeater.setting.action.ActionClearCache
 import com.language.repeater.setting.action.ActionFullGestureChange
 import com.language.repeater.setting.action.ActionLeftBrightnessGestureChange
@@ -55,7 +57,7 @@ import com.language.repeater.setting.action.ActionThemeChange
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationStyleApi::class)
 @Composable
 fun SettingScreen(
-  navController: NavController?,
+  backStack: NavBackStack<NavKey>? = null,
   viewModel: SettingViewModel = viewModel()
 ) {
   var showSentenceGapDialog by remember { mutableStateOf(false) }
@@ -65,7 +67,7 @@ fun SettingScreen(
     topBar = {
       SettingTopAppBar(
         viewModel = viewModel,
-        onBack = { navController?.popBackStack() }
+        onBack = { backStack?.removeLastOrNull() }
       )
     }
   ) { paddingValues ->

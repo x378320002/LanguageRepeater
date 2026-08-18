@@ -9,20 +9,8 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.ComposeView
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.fragment.findNavController
-import com.language.repeater.app.GlobalState
-import com.language.repeater.app.GlobalState.nightMode
-import com.language.repeater.app.SettingPageKey
-import com.language.repeater.app.defaultNavOptions
 import com.language.repeater.foundation.BaseFragment
-import com.language.repeater.playvideo.PlayVideoFragmentCompose.Companion.TAG
-import com.language.repeater.playvideo.history.HistorySheetFragment
-import com.language.repeater.playvideo.playlist.PlaylistSheetFragment
-import com.language.repeater.playvideo.sleeptimer.SleepTimerSheetFragment
 
 
 /**
@@ -58,9 +46,7 @@ class PlayVideoFragmentCompose : BaseFragment() {
     return ComposeView(requireContext()).apply {
       setContent {
         MaterialTheme(colorScheme = if (isSystemInDarkTheme()) darkColorScheme() else lightColorScheme()) {
-          PlayVideoScreen(
-            findNavController()
-          )
+          PlayVideoScreen()
         }
       }
     }

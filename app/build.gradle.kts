@@ -52,8 +52,10 @@ android {
 }
 
 dependencies {
-  implementation(libs.androidx.navigation.fragment)
-  implementation(libs.androidx.navigation.ui)
+  implementation(libs.androidx.navigation3.ui)
+  implementation(libs.androidx.navigation3.runtime)
+  implementation(libs.androidx.lifecycle.viewmodel.navigation3)
+  implementation(libs.androidx.fragment.ktx)
   implementation(libs.androidx.core.ktx)
   implementation(libs.androidx.appcompat)
   implementation(libs.material)

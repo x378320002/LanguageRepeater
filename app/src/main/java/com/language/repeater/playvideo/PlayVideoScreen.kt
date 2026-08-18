@@ -27,8 +27,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavController
+import androidx.navigation3.runtime.NavBackStack
+import androidx.navigation3.runtime.NavKey
 import com.composables.icons.tabler.outline.R
 import com.language.repeater.app.SettingPageKey
 import com.language.repeater.playcore.PlaybackCore
@@ -36,7 +38,7 @@ import com.language.repeater.playvideo.compose.PlayTopBar
 
 @Composable
 fun PlayVideoScreen(
-  navController: NavController? = null,
+  backStack: NavBackStack<NavKey>? = null,
   viewModel: PlayerViewModel = viewModel()
 ) {
   val context = LocalContext.current
@@ -52,7 +54,7 @@ fun PlayVideoScreen(
       }, onHistory = {
 
       }, onSetting = {
-        navController?.navigate(SettingPageKey)
+        backStack?.add(SettingPageKey)
       })
     }
   ) { innerPadding: PaddingValues ->
