@@ -3,7 +3,7 @@
   xmlns:android="http://schemas.android.com/apk/res/android">
   <item
     android:state_selected="true"
-    android:drawable="@drawable/ic_ab_on"
+    android:drawable="@drawable/tabler_ic_a_b_outline"
     />
-  <item android:drawable="@drawable/ic_ab_off" />
+  <item android:drawable="@drawable/tabler_ic_a_b_off_outline" />
 </selector>

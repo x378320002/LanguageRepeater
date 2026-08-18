@@ -3,8 +3,10 @@ package com.language.repeater.setting
 import android.annotation.SuppressLint
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.application
 import androidx.lifecycle.viewModelScope
+import com.language.repeater.app.MainApp
 import com.language.repeater.app.action.IAction
 import com.language.repeater.datastore.DsManager
 import com.language.repeater.pcm.FFmpegUtil
@@ -21,7 +23,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class SettingViewModel(application: Application) : AndroidViewModel(application) {
+class SettingViewModel : ViewModel() {
 
     // -----------------------------------------------------------------------
     // State Holder：集中管理所有状态
@@ -113,8 +115,8 @@ class SettingViewModel(application: Application) : AndroidViewModel(application)
                 //    add(player.getMediaItemAt(i).mediaId)
                 //}
             }
-            FFmpegUtil.clearTempData(application, mediaIds)
-            FFmpegUtil.clearTempData(application, mediaIds)
+            FFmpegUtil.clearTempData(MainApp.instance, mediaIds)
+            FFmpegUtil.clearTempData(MainApp.instance, mediaIds)
             calculateCacheSize()
             delay(2000)
             stateHolder.cacheSizeFlow.value = "0.00M"
@@ -123,8 +125,8 @@ class SettingViewModel(application: Application) : AndroidViewModel(application)
 
     @SuppressLint("DefaultLocale")
     private suspend fun calculateCacheSize(): String  = withContext(Dispatchers.IO){
-        val size1 = FFmpegUtil.getDirectorySize(application)
-        val size2 = SentenceStoreUtil.getDirectorySize(application)
+        val size1 = FFmpegUtil.getDirectorySize(MainApp.instance)
+        val size2 = SentenceStoreUtil.getDirectorySize(MainApp.instance)
         val totalSizeBytes = size1 + size2
         val totalSizeMB = totalSizeBytes / (1024 * 1024).toDouble()
         "${String.format("%.2f", totalSizeMB)} MB"

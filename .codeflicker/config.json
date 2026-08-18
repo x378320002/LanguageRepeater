@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "composables": {
+      "type": "stdio",
+      "command": "composables",
+      "args": [
+        "mcp",
+        "start"
+      ]
+    }
+  }
+}

@@ -202,8 +202,8 @@ class PlayUIActComponent : BaseComponent<PlayVideoFragment>(), View.OnClickListe
       fragment.binding.playPauseBtn.isSelected = it
     }.launchIn(uiScope)
 
-    fragment.viewModel.playbackCore.playbackState.onEach {
-      if (it == Player.STATE_READY) {
+    fragment.viewModel.playerEngine.state.onEach { state ->
+      if (state.playbackState == com.language.repeater.player.PlaybackState.Ready) {
         val player = fragment.viewModel.playerInstance.value ?: return@onEach
         val duration = player.duration
         val position = fragment.viewModel.currentPosition.value

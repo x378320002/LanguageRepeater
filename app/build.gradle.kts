@@ -32,6 +32,12 @@ android {
       isMinifyEnabled = false
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
     }
+
+    create("performance") {
+      initWith(getByName("release"))
+      signingConfig = signingConfigs.getByName("debug")
+      matchingFallbacks += listOf("release")
+    }
   }
   compileOptions {
     sourceCompatibility = JavaVersion.VERSION_11
@@ -103,4 +109,6 @@ dependencies {
 
   implementation(libs.androidx.media3.ui.compose)
   implementation(libs.androidx.media3.ui.compose.material3)
+
+  implementation(libs.ui)
 }

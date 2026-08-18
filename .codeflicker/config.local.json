@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Write(/app/src/main/java/com/language/repeater/playvideo/compose/**)",
+      "Edit(/app/src/main/java/com/language/repeater/playvideo/compose/**)",
+      "Edit(/app/src/main/java/com/language/repeater/playvideo/**)"
+    ]
+  }
+}

@@ -1,0 +1,11 @@
+{
+    "mcpServers": {
+        "composables": {
+            "command": "composables",
+            "args": [
+                "mcp",
+                "start"
+            ]
+        }
+    }
+}

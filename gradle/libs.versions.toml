@@ -1,5 +1,6 @@
 [versions]
 agp = "9.2.1"
+composeunstyled = "2.9.0"
 iconsTablerOutlineAndroid = "2.2.1"
 kotlin = "2.4.10"
 composeBom = "2026.08.00"
@@ -16,12 +17,13 @@ kotlinJson = "1.11.0"
 media3UiCompose = "1.11.0"
 media3UiComposeMaterial3 = "1.11.0"
 navVersion = "2.9.1"
-nav3Core = "1.0.0"
-lifecycleViewmodelNav3 = "2.10.0-rc01"
+nav3Core = "1.1.6"
+lifecycleViewmodelNav3 = "2.11.0"
 
 ffmpegKitX6kb = "6.1.1"
 exoplayer = "1.10.1"
 palette = "1.0.0"
+ui = "0.2.0"
 vad = "2.0.10"
 
 lottie = "0.12.5"
@@ -36,6 +38,7 @@ androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = 
 androidx-media3-ui-compose = { module = "androidx.media3:media3-ui-compose", version.ref = "media3UiCompose" }
 androidx-media3-ui-compose-material3 = { module = "androidx.media3:media3-ui-compose-material3", version.ref = "media3UiComposeMaterial3" }
 androidx-palette = { module = "androidx.palette:palette", version.ref = "palette" }
+composeunstyled = { module = "com.composables:composeunstyled", version.ref = "composeunstyled" }
 icons-tabler-outline-android = { module = "com.composables:icons-tabler-outline-android", version.ref = "iconsTablerOutlineAndroid" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
@@ -55,6 +58,7 @@ androidx-exoplayer-ui = { group = "androidx.media3", name = "media3-ui", version
 androidx-exoplayer-session = { group = "androidx.media3", name = "media3-session", version.ref = "exoplayer" }
 
 ffmpeg-kit-x6kb = { module = "com.moizhassan.ffmpeg:ffmpeg-kit-16kb", version.ref = "ffmpegKitX6kb" }
+ui = { module = "com.composables:ui", version.ref = "ui" }
 vad-webrtc = { group = "com.github.gkonovalov.android-vad", name = "webrtc", version.ref = "vad" }
 vad-silero = { group = "com.github.gkonovalov.android-vad", name = "silero", version.ref = "vad" }
 
