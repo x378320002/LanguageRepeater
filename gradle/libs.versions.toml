@@ -29,7 +29,7 @@ vad = "2.0.10"
 lottie = "0.12.5"
 flexbox = "3.0.0"
 documentfile = "1.1.0"
-coil = "3.3.0"
+coil = "3.5.0"
 datastore = "1.2.1"
 room = "2.8.4"
 
@@ -40,6 +40,7 @@ androidx-media3-ui-compose-material3 = { module = "androidx.media3:media3-ui-com
 androidx-palette = { module = "androidx.palette:palette", version.ref = "palette" }
 composeunstyled = { module = "com.composables:composeunstyled", version.ref = "composeunstyled" }
 icons-tabler-outline-android = { module = "com.composables:icons-tabler-outline-android", version.ref = "iconsTablerOutlineAndroid" }
+icons-tabler-filled-android = { module = "com.composables:icons-tabler-filled-android", version.ref ="iconsTablerOutlineAndroid" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
@@ -58,7 +59,6 @@ androidx-exoplayer-ui = { group = "androidx.media3", name = "media3-ui", version
 androidx-exoplayer-session = { group = "androidx.media3", name = "media3-session", version.ref = "exoplayer" }
 
 ffmpeg-kit-x6kb = { module = "com.moizhassan.ffmpeg:ffmpeg-kit-16kb", version.ref = "ffmpegKitX6kb" }
-ui = { module = "com.composables:ui", version.ref = "ui" }
 vad-webrtc = { group = "com.github.gkonovalov.android-vad", name = "webrtc", version.ref = "vad" }
 vad-silero = { group = "com.github.gkonovalov.android-vad", name = "silero", version.ref = "vad" }
 
@@ -75,6 +75,8 @@ androidx-documentfile = { group = "androidx.documentfile", name = "documentfile"
 #image load
 coil-video = { group = "io.coil-kt.coil3", name = "coil-video", version.ref = "coil" }
 coil = { group = "io.coil-kt.coil3", name = "coil", version.ref = "coil" }
+coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
+coil-network-okhttp = { module = "io.coil-kt.coil3:coil-network-okhttp", version.ref = "coil" }
 
 #data-preference
 datastore-preference = { group = "androidx.datastore", name = "datastore-preferences", version.ref ="datastore" }

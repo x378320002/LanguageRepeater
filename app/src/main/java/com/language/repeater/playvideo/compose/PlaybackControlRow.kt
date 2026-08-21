@@ -34,19 +34,22 @@ fun PlaybackControlRow(
   onOpenPlaylist: () -> Unit,
   modifier: Modifier = Modifier,
 ) {
+
+  val iconSize = 50.dp
+  val centerIconSize = 70.dp
+
   Row(
     modifier = modifier
       .fillMaxWidth()
       .height(80.dp),
     verticalAlignment = Alignment.CenterVertically,
-    horizontalArrangement = Arrangement.spacedBy(0.dp),
+    horizontalArrangement = Arrangement.SpaceEvenly,
   ) {
     // 上一句
     IconButton(
       onClick = onSeekPrevSentence,
       modifier = Modifier
-        .weight(1f)
-        .fillMaxHeight(),
+        .size(iconSize),
     ) {
       Icon(
         painter = painterResource(R.drawable.ic_pre_sentence),
@@ -59,8 +62,7 @@ fun PlaybackControlRow(
     IconButton(
       onClick = onBackSentenceHead,
       modifier = Modifier
-        .weight(1f)
-        .fillMaxHeight(),
+        .size(iconSize),
     ) {
       Icon(
         painter = painterResource(R.drawable.ic_go_sentence_head_1),
@@ -71,16 +73,15 @@ fun PlaybackControlRow(
 
     // 播放/暂停大按钮
     val playPauseIconRes = if (isPlaying) {
-      R.drawable.ic_pause
+      com.composables.icons.tabler.filled.R.drawable.tabler_ic_player_stop_filled
     } else {
-      R.drawable.ic_play
+      com.composables.icons.tabler.filled.R.drawable.tabler_ic_player_play_filled
     }
     IconButton(
       onClick = onTogglePlayPause,
       modifier = Modifier
-        .size(80.dp)
-        .clip(CircleShape)
-        .background(MaterialTheme.colorScheme.surfaceVariant),
+        .size(centerIconSize)
+        .background(MaterialTheme.colorScheme.surfaceVariant, shape = CircleShape),
     ) {
       Icon(
         painter = painterResource(id = playPauseIconRes),
@@ -94,8 +95,7 @@ fun PlaybackControlRow(
     IconButton(
       onClick = onSeekNextSentence,
       modifier = Modifier
-        .weight(1f)
-        .fillMaxHeight(),
+        .size(iconSize),
     ) {
       Icon(
         painter = painterResource(R.drawable.ic_next_sentence),
@@ -108,8 +108,7 @@ fun PlaybackControlRow(
     IconButton(
       onClick = onOpenPlaylist,
       modifier = Modifier
-        .weight(1f)
-        .fillMaxHeight(),
+        .size(iconSize),
     ) {
       Icon(
         painter = painterResource(R.drawable.ic_list),

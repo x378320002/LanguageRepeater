@@ -70,4 +70,6 @@
   <string name="speed_1.25">1.25X</string>
   <string name="speed_1.5">1.5X</string>
   <string name="speed_2.0">2.0X</string>
+
+  <string name="long_text">超长文本测试超长文本测试超长文本测试超长文本测试超长文本测试超长文本测试超长文本测试</string>
 </resources>

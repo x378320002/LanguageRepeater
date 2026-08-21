@@ -62,7 +62,6 @@ fun PlayVideoScreen(
   val sentences by viewModel.sentencesFlow.collectAsState()
   val curAbSentence by viewModel.curAbSentenceFlow.collectAsState()
   val pcmLoader by viewModel.pcmLoaderStateFlow.collectAsState()
-  val playlist by viewModel.playerEngine.playlist.collectAsState()
   val currentIndex by viewModel.playerEngine.currentIndex.collectAsState()
   val sleepTimerRemaining by viewModel.sleepTimerRemaining.collectAsState()
 
@@ -198,9 +197,6 @@ fun PlayVideoScreen(
         },
       )
 
-      // 用 Spacer + weight 把 PlaybackControlRow 推到底部
-      Spacer(modifier = Modifier.height(5.dp))
-
       // ---------- 播放控制栏 ----------
       PlaybackControlRow(
         isPlaying = engineState.isPlaying,
@@ -218,6 +214,7 @@ fun PlayVideoScreen(
 
   // ---------- 播放列表 BottomSheet ----------
   if (showPlaylistSheet) {
+    val playlist by viewModel.playerEngine.playlist.collectAsState()
     PlaylistSheet(
       playlist = playlist,
       currentIndex = currentIndex,

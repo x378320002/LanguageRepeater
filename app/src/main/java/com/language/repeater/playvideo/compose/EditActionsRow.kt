@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.language.repeater.R
@@ -42,13 +43,13 @@ fun EditActionsRow(
 ) {
   Row(
     modifier = modifier
-      .fillMaxWidth()
       .padding(horizontal = 15.dp, vertical = 6.dp)
+      .fillMaxWidth()
+      .height(50.dp)
       .background(
         color = MaterialTheme.colorScheme.surfaceVariant,
         shape = MaterialTheme.shapes.small
-      )
-      .padding(vertical = 8.dp),
+      ),
     horizontalArrangement = Arrangement.SpaceEvenly,
     verticalAlignment = Alignment.CenterVertically,
   ) {
@@ -106,13 +107,14 @@ private fun EditActionButton(
       modifier = Modifier.size(20.dp),
       tint = MaterialTheme.colorScheme.onSurfaceVariant,
     )
-    Spacer(modifier = Modifier.height(4.dp))
     Text(
       text = stringResource(textRes),
-      fontSize = 10.sp,
+      fontSize = 9.sp,
+      lineHeight = 14.sp,
       color = MaterialTheme.colorScheme.onSurfaceVariant,
       textAlign = TextAlign.Center,
-      maxLines = 2,
+      maxLines = 1,
+      overflow = TextOverflow.Ellipsis
     )
   }
 }

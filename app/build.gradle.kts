@@ -106,9 +106,11 @@ dependencies {
   implementation(libs.androidx.compose.ui.tooling.preview)
 
   implementation(libs.icons.tabler.outline.android)
+  implementation(libs.icons.tabler.filled.android)
 
   implementation(libs.androidx.media3.ui.compose)
   implementation(libs.androidx.media3.ui.compose.material3)
 
-  implementation(libs.ui)
+  implementation(libs.coil.compose)
+  implementation(libs.coil.network.okhttp)
 }

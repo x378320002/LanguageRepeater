@@ -1,6 +1,7 @@
 package com.language.repeater.setting
 
 import android.widget.Toast
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.PaddingValues
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.style.ExperimentalFoundationStyleApi
 import androidx.compose.foundation.text.KeyboardOptions
@@ -44,7 +46,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavKey
-import com.composables.ui.components.Switch
+import androidx.compose.material3.Switch
+import androidx.compose.ui.graphics.graphicsLayer
+//import com.composables.ui.components.Switch
 import com.language.repeater.setting.action.ActionClearCache
 import com.language.repeater.setting.action.ActionFullGestureChange
 import com.language.repeater.setting.action.ActionLeftBrightnessGestureChange
@@ -254,7 +258,9 @@ private fun SettingSwitchItem(
     trailingContent = {
       Switch(
         checked = checked,
-        onCheckedChange = onCheckedChange
+        onCheckedChange = onCheckedChange,
+        modifier = Modifier
+          .graphicsLayer(scaleX = 0.8f, scaleY = 0.8f)
       )
     }
   )

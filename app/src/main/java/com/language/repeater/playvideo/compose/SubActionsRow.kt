@@ -1,15 +1,12 @@
 package com.language.repeater.playvideo.compose
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.DropdownMenu
@@ -21,7 +18,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -63,8 +59,7 @@ fun SubActionsRow(
   Row(
     modifier = modifier
       .fillMaxWidth()
-      .height(60.dp)
-      .padding(top = 5.dp),
+      .height(56.dp),
     verticalAlignment = Alignment.CenterVertically,
     horizontalArrangement = Arrangement.Center,
   ) {
@@ -90,7 +85,7 @@ fun SubActionsRow(
 
     // 播放速度（带菜单）
     Box {
-      SubActionIconWithBadge(
+      SubActionIconWithText(
         iconRes = com.composables.icons.tabler.outline.R.drawable.tabler_ic_brand_speedtest_outline,
         contentDescription = "播放速度",
         badgeText = playSpeedText,
@@ -99,7 +94,7 @@ fun SubActionsRow(
       )
       DropdownMenu(
         expanded = showSpeedMenu,
-        onDismissRequest = { showSpeedMenu = false },
+        onDismissRequest = { showSpeedMenu = false }
       ) {
         val speeds = listOf(0.25f, 0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 2.0f)
         val speedLabels = listOf("0.25x", "0.5x", "0.75x", "1.0x", "1.25x", "1.5x", "2.0x")
@@ -122,7 +117,7 @@ fun SubActionsRow(
 
     // 睡眠定时（带菜单）
     Box {
-      SubActionIconWithBadge(
+      SubActionIconWithText(
         iconRes = com.composables.icons.tabler.outline.R.drawable.tabler_ic_alarm_outline,
         contentDescription = "睡眠定时",
         badgeText = sleepTimerText,
@@ -215,15 +210,14 @@ private fun SubActionIcon(
 ) {
   Box(
     modifier = Modifier
-      .size(44.dp)
+      .size(iconWrapperSize)
       .clickable(
-        interactionSource = remember { MutableInteractionSource() },
-        indication = null,
         onClick = onClick,
       ),
     contentAlignment = Alignment.Center,
   ) {
     Icon(
+      modifier = Modifier.size(innerIconSize),
       painter = painterResource(iconRes),
       contentDescription = contentDescription,
       tint = tint,
@@ -235,7 +229,7 @@ private fun SubActionIcon(
  * 带底部小字的副操作按钮：图标居中，小字叠加在图标下方
  */
 @Composable
-private fun SubActionIconWithBadge(
+private fun SubActionIconWithText(
   iconRes: Int,
   contentDescription: String,
   badgeText: String,
@@ -244,30 +238,33 @@ private fun SubActionIconWithBadge(
 ) {
   Box(
     modifier = Modifier
-      .width(44.dp)
+      .width(iconWrapperSize)
       .fillMaxHeight()
       .clickable(
-        interactionSource = remember { MutableInteractionSource() },
-        indication = null,
         onClick = onClick,
       ),
     contentAlignment = Alignment.Center,
   ) {
-    Icon(
-      painter = painterResource(iconRes),
-      contentDescription = contentDescription,
-      tint = tint,
-    )
     if (badgeText.isNotEmpty()) {
       Text(
         text = badgeText,
         fontSize = 10.sp,
+        maxLines = 1,
         fontWeight = FontWeight.Bold,
         color = tint,
-        modifier = Modifier
-          .align(Alignment.BottomCenter)
-          .padding(bottom = 6.dp),
+        lineHeight = 14.sp,
+        letterSpacing = 0.sp
+      )
+    } else {
+      Icon(
+        modifier = Modifier.size(innerIconSize),
+        painter = painterResource(iconRes),
+        contentDescription = contentDescription,
+        tint = tint,
       )
     }
   }
 }
+
+private val innerIconSize = 20.dp
+private val iconWrapperSize = 42.dp
