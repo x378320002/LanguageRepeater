@@ -257,19 +257,34 @@ class ScrollWaveformView @JvmOverloads constructor(
   /**
    * 设置PCM文件
    */
-  fun setPCMLoader(loader: PCMSegmentLoader) {
-    if (pcmLoader == loader) {
+  fun setPCMLoader(loader: PCMSegmentLoader?) {
+    if (pcmLoader === loader) {
       return
     }
 
     pcmLoader = loader
-    totalDuration = pcmLoader?.totalDuration ?: 0f
-    currentTime = currentTime.coerceIn(0f, totalDuration)
+    leftData.clear()
+    midData.clear()
+    rightData.clear()
+    visibleStartTime = 0f
+    visibleEndTime = 0f
 
-    //waveformCache.clear()
-    //提前绘制一遍, 清空上一个视频的内容
-    //invalidate()
+    if (loader == null) {
+      totalDuration = 0f
+      currentTime = 0f
+      isSeeking = false
+      dragABResult = null
+      invalidate()
+      return
+    }
+
+    totalDuration = loader.totalDuration
+    currentTime = currentTime.coerceIn(0f, totalDuration)
     refreshWave()
+  }
+
+  fun clearPCMLoader() {
+    setPCMLoader(null)
   }
 
   fun setSentenceData(data: List<Sentence>) {
@@ -288,7 +303,13 @@ class ScrollWaveformView @JvmOverloads constructor(
    * 重新计算可见时间范围
    */
   private fun refreshWave() {
-    if (width == 0 || pcmLoader == null) return
+    if (width == 0 || pcmLoader == null) {
+      leftData.clear()
+      midData.clear()
+      rightData.clear()
+      invalidate()
+      return
+    }
 
     // 中心线在屏幕中央
     val centerX = width / 2f
@@ -580,7 +601,7 @@ class ScrollWaveformView @JvmOverloads constructor(
   }
 
   private fun drawEditSign(canvas: Canvas, time: Float, rect: Rect) {
-    if (time < visibleStartTime || time > visibleEndTime) {
+    if (time !in visibleStartTime..visibleEndTime) {
       rect.set(0, 0, 0, 0)
       return
     }
@@ -601,7 +622,7 @@ class ScrollWaveformView @JvmOverloads constructor(
 
     editDrawable.setBounds(left, top, right, bottom)
     editDrawable.draw(canvas)
-    rect.set(left - 15, top - 15, right + 15, bottom + 15)
+    rect.set(left - 15, (aby - abBgRadius).toInt(), right + 15, bottom + 30)
   }
 
   /**

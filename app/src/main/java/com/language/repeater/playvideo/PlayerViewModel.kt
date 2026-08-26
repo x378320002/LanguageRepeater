@@ -1,23 +1,17 @@
 package com.language.repeater.playvideo
 
-import android.app.Application
 import android.net.Uri
 import androidx.core.net.toUri
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.application
 import androidx.lifecycle.viewModelScope
 import com.language.repeater.app.MainApp
 import com.language.repeater.datastore.DsManager
 import com.language.repeater.datastore.subtitleStore
-import com.language.repeater.db.historyDao
-import com.language.repeater.playcore.PlaybackCore
-import com.language.repeater.player.Media3PlayerEngine
-import com.language.repeater.player.PlayerEngine
 import com.language.repeater.playvideo.model.VideoEntity
 import com.language.repeater.utils.FileUtil
+import com.language.repeater.utils.SubtitleFolderScanner
 import com.language.repeater.utils.UriAccessUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
@@ -27,69 +21,27 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class PlayerViewModel : ViewModel() {
-  companion object {
-    private const val TAG = "wangzixu_PlayerViewModel"
-  }
-
   val editMode = DsManager.observe(DsManager.KEY_EDIT_SEN_MODE, false)
     .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
-  private val playbackCore = PlaybackCore.getInstance(MainApp.instance)
+  private val playbackGraph = MainApp.instance.playbackGraph
+  private val mediaAnalysisController = playbackGraph.sentenceController
 
-  /**
-   * 播放器引擎抽象 — 业务层通过它访问播放能力
-   * 未来替换为腾讯播放器时，只需替换这里的实现
-   */
-  val playerEngine: PlayerEngine = Media3PlayerEngine(MainApp.instance, playbackCore)
+  // 播放事实、列表和当前媒体分析均来自应用级对象，ViewModel 只转发 UI 意图。
+  val player = playbackGraph.player
+  val playbackListController = playbackGraph.playbackListController
+  val videoOutput = playbackGraph.videoOutput
 
-  /**
-   * 暴露给旧 View 组件使用的底层 Core，阶段 3 删除旧 View 后移除
-   */
-  @Deprecated("仅旧 View 组件使用，阶段 3 删除", ReplaceWith("playerEngine"))
-  val legacyPlaybackCore: PlaybackCore
-    get() = playbackCore
+  val playbackMode = playbackListController.playbackMode
 
-  // 业务数据流（不暴露 Media3 类型）
-  val pcmLoaderStateFlow = playbackCore.pcmLoaderStateFlow
-  val allWaveDataFlow = playbackCore.allWaveDataFlow
-  val sentencesFlow = playbackCore.sentencesFlow
-  val repeatable = playbackCore.repeatAb
-  val curAbSentenceFlow = playbackCore.curAbSentenceFlow
+  private val progressController = playbackGraph.progressController
 
-  // ========== 以下属性仅供旧 View 组件使用，阶段 3 删除 ==========
-  @Deprecated("仅旧 View 使用", ReplaceWith("playerEngine.state"))
-  val playerInstance = playbackCore.playerInstance
+  val pcmLoaderStateFlow = mediaAnalysisController.pcmLoader
+  val sentencesFlow = mediaAnalysisController.sentences
+  val repeatable = mediaAnalysisController.repeatAb
+  val curAbSentenceFlow = mediaAnalysisController.currentSentence
 
-  @Deprecated("仅旧 View 使用", ReplaceWith("currentMediaTitle"))
-  val currentMediaItem = playbackCore.currentMediaItem
-
-  @Deprecated("仅旧 View 使用")
-  val mediaItemCount = playbackCore.mediaItemCount
-
-  @Deprecated("仅旧 View 使用")
-  val playlistRefreshEvent = playbackCore.playlistRefreshEvent
-
-  @Deprecated("仅旧 View 使用")
-  val currentPosition = playbackCore.currentPosition
-
-  @Deprecated("仅旧 View 使用")
-  val currentPositionSeconds = playbackCore.currentPositionSeconds
-
-  @Deprecated("仅旧 View 使用")
-  val isUiPlaying = playbackCore.isPlaying
-
-  @Deprecated("仅旧 View 使用")
-  val playSpeedState = playbackCore.playSpeed
-
-  @Deprecated("仅旧 View 使用", ReplaceWith("playerEngine"))
-  fun getPlayer(): androidx.media3.common.Player? = playbackCore.playerInstance.value
-  // ========== 旧 View 属性结束 ==========
-
-  init {
-    playbackCore.connect()
-  }
-
-  // 睡眠定时
+  // 复读与句子控制由独立协调器处理，只通过 PlaybackPlayer 执行 seek。
   val sleepTimerRemaining = com.language.repeater.playcore.SleepTimerManager.remainingSeconds
 
   fun startSleepTimer(minutes: Int) {
@@ -101,108 +53,122 @@ class PlayerViewModel : ViewModel() {
   }
 
   fun startSleepTimerByCurrentItem() {
-    val player = playbackCore.playerInstance.value
-    if (player != null) {
-      com.language.repeater.playcore.SleepTimerManager.startByCurrentItem(player)
+    val state = player.state.value
+    val remainingMs = state.durationMs - state.positionMs
+    if (state.durationMs > 0L && remainingMs > 0L) {
+      com.language.repeater.playcore.SleepTimerManager.startTimer(
+        seconds = remainingMs / 1000L + 1L
+      )
     }
   }
 
   fun togglePlayPause() {
-    val state = playerEngine.state.value
-    if (state.isPlaying || state.playbackState == com.language.repeater.player.PlaybackState.Buffering) {
-      playerEngine.pause()
+    if (player.state.value.isPlaying) {
+      player.pause()
     } else {
-      playerEngine.play()
+      player.play()
     }
   }
 
   fun play() {
-    playerEngine.play()
+    player.play()
   }
 
   fun pause() {
-    playerEngine.pause()
+    player.pause()
   }
 
   fun saveCurrentPos() {
-    playbackCore.saveCurrentPositionImmediate()
-  }
-
-  fun deleteItem(index: Int) {
-    playbackCore.removeMediaItem(index)
-  }
-
-  fun moveItemToFirst(index: Int) {
-    // 通过 PlayerEngine 移动
-    playerEngine.moveItem(index, 0)
-  }
-
-  fun moveItem(from: Int, to: Int) {
-    playbackCore.changeItemPositionSilent(from, to)
-  }
-
-  // 复读控制
-  fun toggleRepeat() = playbackCore.toggleRepeat()
-  fun seekToNextSentence() = playbackCore.seekToNextSentence()
-  fun seekToPreviousSentence() = playbackCore.seekToPreviousSentence()
-  fun backToSentenceHead() = playbackCore.backToSentenceHead()
-
-  // 手动选字幕
-  fun onSubtitleSelected(uri: Uri) = playbackCore.updateSubtitle(uri)
-
-  fun updatePosition(position: Float) {
-    playbackCore.updatePosition(false, (position * 1000).toLong())
-  }
-
-  fun updatePosition(position: Long) {
-    playbackCore.updatePosition(false, position)
-  }
-
-  fun loadSentenceData(forceUseVad: Boolean = false) {
-    playbackCore.forceLoadCurrentSentences(forceUseVad)
-  }
-
-  fun splitCurrentSentence() {
-    playbackCore.splitCurrentSentence()
-  }
-
-  fun saveSentenceData() {
     viewModelScope.launch {
-      playbackCore.mergeAndSaveSentences()
+      progressController.saveCurrentPosition()
     }
   }
 
-  fun setPlayerRepeatMode(mode: Int) {
-    playbackCore.setPlayerRepeatMode(mode)
+  fun cyclePlaybackMode() {
+    playbackListController.cyclePlaybackMode()
+  }
+
+  fun deleteItem(mediaId: String) {
+    viewModelScope.launch {
+      playbackListController.remove(mediaId)
+    }
+  }
+
+  fun moveItemToFirst(mediaId: String) {
+    viewModelScope.launch {
+      playbackListController.moveToFirst(mediaId)
+    }
+  }
+
+  fun selectItem(mediaId: String) {
+    viewModelScope.launch {
+      playbackListController.select(mediaId)
+    }
+  }
+
+  // 复读与句子控制由独立协调器处理，只通过 PlaybackPlayer 执行 seek。
+  fun toggleRepeat() = mediaAnalysisController.toggleRepeat()
+  fun seekToNextSentence() = mediaAnalysisController.seekToNextSentence()
+  fun seekToPreviousSentence() = mediaAnalysisController.seekToPreviousSentence()
+  fun backToSentenceHead() = mediaAnalysisController.backToSentenceHead()
+
+  fun onSubtitleSelected(uri: Uri) {
+    mediaAnalysisController.updateSubtitle(uri)
+  }
+
+  fun updatePosition(position: Float) {
+    mediaAnalysisController.previewPosition((position * 1000f).toLong())
+  }
+
+  fun updatePosition(position: Long) {
+    mediaAnalysisController.previewPosition(position)
+  }
+
+  fun loadSentenceData(forceUseVad: Boolean = false) {
+    mediaAnalysisController.reloadSentences(forceUseVad)
+  }
+
+  fun splitCurrentSentence() {
+    mediaAnalysisController.splitCurrentSentence()
+  }
+
+  fun saveSentenceData() {
+    mediaAnalysisController.mergeAndSaveSentences()
   }
 
   fun deleteCurrentSentence() {
-    playbackCore.deleteCurSentence()
+    mediaAnalysisController.deleteCurrentSentence()
   }
 
-  // 直接暴露 Flow 给 UI 监听
-  fun getHistoryFlow() = MainApp.instance.historyDao.getAllHistory()
+  fun getHistoryFlow() = mediaAnalysisController.history
 
   fun addPlayList(
     list: List<VideoEntity>,
     isReplace: Boolean
   ) {
-    playbackCore.addPlayList(list, isReplace)
+    viewModelScope.launch {
+      if (isReplace) {
+        playbackListController.replace(list)
+      } else {
+        playbackListController.addToFront(list)
+      }
+    }
   }
 
-  // 播放历史记录中的某一项
+  // 历史项加入列表后按稳定 mediaId 选择播放。
   fun playHistoryItem(item: VideoEntity) {
-    playbackCore.playItem(item)
+    viewModelScope.launch {
+      playbackListController.addToFront(listOf(item))
+      playbackListController.select(item.id)
+    }
   }
 
-  fun playItem(index: Int) {
-    playbackCore.seekToItem(index)
+  fun playItem(mediaId: String) {
+    selectItem(mediaId)
   }
 
   fun deleteHistory(item: VideoEntity) {
-    viewModelScope.launch(Dispatchers.IO) {
-      MainApp.instance.historyDao.deleteByVideoId(item.id)
-    }
+    mediaAnalysisController.deleteHistory(item.id)
   }
 
   /**
@@ -210,7 +176,9 @@ class PlayerViewModel : ViewModel() {
    * 包括：获取文件信息、申请权限、查找字幕、添加到播放列表
    */
   fun handleSelectedVideos(uris: List<Uri>) {
-    if (uris.isEmpty()) return
+    if (uris.isEmpty()) {
+      return
+    }
 
     viewModelScope.launch(Dispatchers.IO) {
       val context = MainApp.instance
@@ -241,14 +209,16 @@ class PlayerViewModel : ViewModel() {
         info
       }
 
-      if (infos.isEmpty()) return@launch
+      if (infos.isEmpty()) {
+        return@launch
+      }
 
       // 去文件夹寻找字幕
       if (needToCheckSubFolder) {
         val folder = DsManager.get(DsManager.KEY_SUBTITLE_FOLDER, "")
           .takeIf { it.isNotEmpty() }
           ?.toUri()
-        val map = com.language.repeater.playvideo.components.SubtitleAutoLoader.scanSubtitleFolder(context, folder)
+        val map = SubtitleFolderScanner.scan(context, folder)
         if (map.isNotEmpty()) {
           infos.forEach { info ->
             if (info.subUri == null) {
@@ -272,15 +242,15 @@ class PlayerViewModel : ViewModel() {
   }
 
   fun mergePreSentence() {
-    playbackCore.mergePre()
+    mediaAnalysisController.mergePreviousSentence()
   }
 
   fun mergeNextSentence() {
-    playbackCore.mergeNext()
+    mediaAnalysisController.mergeNextSentence()
   }
 
   fun insertSentence() {
-    playbackCore.insertSentence()
+    mediaAnalysisController.insertSentence()
   }
 
   fun editMode(edit: Boolean) {

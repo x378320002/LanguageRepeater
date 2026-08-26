@@ -3,6 +3,8 @@ package com.language.repeater
 import android.R.attr.name
 import android.util.Log
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
@@ -31,10 +33,16 @@ fun PointerEventDemo() {
       .pointerInput(Unit) {
         logPointer("A", PointerEventPass.Main)
       }
-
       // B
       .pointerInput(Unit) {
         logPointer("B", PointerEventPass.Main)
+      }        // C
+      .pointerInput(Unit) {
+        logPointer("C", PointerEventPass.Main)
+      }
+      // D
+      .pointerInput(Unit) {
+        logPointer("D", PointerEventPass.Main)
       }
   ) {
 
@@ -42,16 +50,6 @@ fun PointerEventDemo() {
       modifier = Modifier
         .size(250.dp)
         .background(Color.White)
-
-        // C
-        .pointerInput(Unit) {
-          logPointer("C", PointerEventPass.Main)
-        }
-
-        // D
-        .pointerInput(Unit) {
-          logPointer("D", PointerEventPass.Main)
-        }
     )
   }
 }
@@ -61,24 +59,23 @@ suspend fun PointerInputScope.logPointer(
   name: String,
   pass: PointerEventPass
 ) {
-
   awaitPointerEventScope {
     while (true) {
 
-      val initial = awaitPointerEvent(
-        PointerEventPass.Initial
-      )
-
-      Log.d(
-        TAG,
-        "Initial $name consumed = ${
-          initial.changes.firstOrNull()?.isConsumed
-        }"
-      )
-
-      initial.changes.forEach {
-        it.consume()
-      }
+//      val initial = awaitPointerEvent(
+//        PointerEventPass.Initial
+//      )
+//
+//      Log.d(
+//        TAG,
+//        "Initial $name consumed = ${
+//          initial.changes.firstOrNull()?.isConsumed
+//        }"
+//      )
+//
+//      initial.changes.forEach {
+//        it.consume()
+//      }
 
       val main = awaitPointerEvent(
         PointerEventPass.Main
@@ -91,16 +88,16 @@ suspend fun PointerInputScope.logPointer(
         }"
       )
 
-      val final = awaitPointerEvent(
-        PointerEventPass.Final
-      )
-
-      Log.d(
-        TAG,
-        "Final $name consumed = ${
-          final.changes.firstOrNull()?.isConsumed
-        }"
-      )
+//      val final = awaitPointerEvent(
+//        PointerEventPass.Final
+//      )
+//
+//      Log.d(
+//        TAG,
+//        "Final $name consumed = ${
+//          final.changes.firstOrNull()?.isConsumed
+//        }"
+//      )
     }
   }
 }

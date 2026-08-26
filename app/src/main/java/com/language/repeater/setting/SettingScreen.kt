@@ -1,6 +1,8 @@
 package com.language.repeater.setting
 
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -55,7 +57,9 @@ import com.language.repeater.setting.action.ActionLeftBrightnessGestureChange
 import com.language.repeater.setting.action.ActionLongPressSpeedChange
 import com.language.repeater.setting.action.ActionRightVolumeGestureChange
 import com.language.repeater.setting.action.ActionSentenceGapChange
+import com.language.repeater.setting.action.ActionSubtitleFolderChange
 import com.language.repeater.setting.action.ActionThemeChange
+import com.language.repeater.utils.FileUtil
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationStyleApi::class)
 @Composable
@@ -65,6 +69,15 @@ fun SettingScreen(
 ) {
   var showSentenceGapDialog by remember { mutableStateOf(false) }
   var showLongPressSpeedDialog by remember { mutableStateOf(false) }
+  val context = LocalContext.current
+  val subtitleFolderPicker = rememberLauncherForActivityResult(
+    ActivityResultContracts.OpenDocumentTree()
+  ) { uri ->
+    if (uri != null) {
+      FileUtil.takePersistablePermission(context, uri)
+      viewModel.onAction(ActionSubtitleFolderChange(uri.toString()))
+    }
+  }
 
   Scaffold(
     topBar = {
@@ -78,7 +91,8 @@ fun SettingScreen(
       viewModel = viewModel,
       paddingValues = paddingValues,
       onShowSentenceGapDialog = { showSentenceGapDialog = true },
-      onShowLongPressSpeedDialog = { showLongPressSpeedDialog = true }
+      onShowLongPressSpeedDialog = { showLongPressSpeedDialog = true },
+      onSelectSubtitleFolder = { subtitleFolderPicker.launch(null) }
     )
   }
 
@@ -140,7 +154,8 @@ private fun MainContent(
   viewModel: SettingViewModel,
   paddingValues: PaddingValues,
   onShowSentenceGapDialog: () -> Unit,
-  onShowLongPressSpeedDialog: () -> Unit
+  onShowLongPressSpeedDialog: () -> Unit,
+  onSelectSubtitleFolder: () -> Unit
 ) {
   Column(
     modifier = Modifier
@@ -199,7 +214,7 @@ private fun MainContent(
       SettingClickItem(
         title = "默认查找字幕文件夹",
         desc = subtitleFolder,
-        onClick = { /* TODO: 需要 Fragment 提供文件选择器 */ }
+        onClick = onSelectSubtitleFolder
       )
     }
   }

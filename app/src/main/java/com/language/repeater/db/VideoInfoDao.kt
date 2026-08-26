@@ -15,6 +15,9 @@ interface VideoInfoDao {
   @Upsert
   suspend fun insertOrUpdateInfo(video: VideoEntity)
 
+  @Upsert
+  suspend fun insertOrUpdateInfo(videos: List<VideoEntity>)
+
   @Query("SELECT * FROM video_info_table WHERE id = :id")
   suspend fun getVideoById(id: String): VideoEntity?
 

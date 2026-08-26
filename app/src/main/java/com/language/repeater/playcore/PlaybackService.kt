@@ -17,91 +17,98 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.DefaultMediaNotificationProvider
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
-import com.language.repeater.app.MainActivity
 import com.language.repeater.R
+import com.language.repeater.app.MainActivity
+import com.language.repeater.app.MainApp
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 
 /**
- * 继承MediaSessionService, 提供真实播放服务
- * 连接系统媒体服务, 能无权限展示Notification, 能直接系统的默认Notification
+ * Media3 平台宿主。ExoPlayer 只在此处创建和释放，业务控制交给应用级 PlaybackGraph。
  */
 class PlaybackService : MediaSessionService() {
-  companion object {
-    private const val TAG = "wangzixu_PlaybackService"
-  }
-
+  private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
   private var player: Player? = null
   private var mediaSession: MediaSession? = null
+  private lateinit var audioManager: AudioManager
+  private var resumeOnFocusGain = false
+  private var hasAudioFocus = false
+
+  private val playbackGraph
+    get() = (application as MainApp).playbackGraph
 
   private val becomingNoisyReceiver = object : BroadcastReceiver() {
     override fun onReceive(context: Context?, intent: Intent?) {
       if (AudioManager.ACTION_AUDIO_BECOMING_NOISY == intent?.action) {
-        Log.i(TAG, "ACTION_AUDIO_BECOMING_NOISY → pause")
-        // 统一走你的播放核心逻辑
-        PlaybackCore.getInstance(this@PlaybackService).pause()
+        playbackGraph.player.pause()
       }
     }
   }
 
-  private lateinit var audioManager: AudioManager
-  private var resumeOnFocusGain = false
-  private var hasAudioFocus = false
-  private val audioFocusListener =
-    AudioManager.OnAudioFocusChangeListener { focus ->
-      val core = PlaybackCore.getInstance(this@PlaybackService)
-      when (focus) {
+  private val audioFocusListener = AudioManager.OnAudioFocusChangeListener { focus ->
+    when (focus) {
+      AudioManager.AUDIOFOCUS_LOSS -> {
+        resumeOnFocusGain = false
+        hasAudioFocus = false
+        pauseForAudioFocusLoss()
+      }
 
-        AudioManager.AUDIOFOCUS_LOSS -> {
-          resumeOnFocusGain = false
-          core.pause()
-          abandonAudioFocus()
-        }
+      AudioManager.AUDIOFOCUS_LOSS_TRANSIENT,
+      AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
+        // 学习场景不降低语音音量，统一暂停，避免句子内容被遮盖。
+        resumeOnFocusGain = playbackGraph.player.state.value.isPlaying
+        hasAudioFocus = false
+        pauseForAudioFocusLoss()
+      }
 
-        AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
-          resumeOnFocusGain = core.isPlaying.value
-          core.pause()
-        }
-
-        AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
-          // 学习类音频，直接暂停更合理
-          //resumeOnFocusGain = core.isPlaying.value
-          //core.pause()
-        }
-
-        AudioManager.AUDIOFOCUS_GAIN -> {
-          if (resumeOnFocusGain) {
-            core.play()
-            resumeOnFocusGain = false
-          }
+      AudioManager.AUDIOFOCUS_GAIN -> {
+        hasAudioFocus = true
+        val shouldResume = resumeOnFocusGain
+        resumeOnFocusGain = false
+        if (shouldResume) {
+          playbackGraph.player.play()
         }
       }
     }
+  }
 
   @OptIn(UnstableApi::class)
   override fun onCreate() {
     super.onCreate()
+    audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
 
-    // 1. 创建真身
     val realPlayer = ExoPlayer.Builder(this).build()
-
-    // 2. 创建拦截器 (处理耳机按键)
-    // 这里拦截的逻辑最终调用 PlaybackConnection 的业务方法
     val interceptingPlayer = object : ForwardingPlayer(realPlayer) {
-      // 拦截耳机/蓝牙的"下一首"指令 (双击)
       override fun seekToNext() {
-        Log.i(TAG, "interceptingPlayer seekToNext")
-        // 转交给 Connection 处理业务逻辑 (跳到下一句)
-        PlaybackCore.getInstance(this@PlaybackService).seekToNextSentence()
+        seekToNextSentence()
       }
 
-      // 拦截耳机/蓝牙的"上一首"指令 (三击)
+      override fun seekToNextMediaItem() {
+        seekToNextSentence()
+      }
+
       override fun seekToPrevious() {
-        Log.i(TAG, "interceptingPlayer seekToPrevious")
-        PlaybackCore.getInstance(this@PlaybackService).seekToPreviousSentence()
+        seekToPreviousSentence()
+      }
+
+      override fun seekToPreviousMediaItem() {
+        seekToPreviousSentence()
+      }
+
+      private fun seekToNextSentence() {
+        playbackGraph.sentenceController.seekToNextSentence()
+      }
+
+      private fun seekToPreviousSentence() {
+        playbackGraph.sentenceController.seekToPreviousSentence()
       }
 
       override fun play() {
         if (!requestAudioFocusIfNeeded()) {
-          Log.i(TAG, "interceptingPlayer play() but requestAudioFocusIfNeeded false")
+          Log.i(TAG, "play ignored because audio focus was denied")
           return
         }
         super.play()
@@ -109,30 +116,67 @@ class PlaybackService : MediaSessionService() {
     }
 
     player = interceptingPlayer
-
-    // 3. 创建 Session (为了通知栏和系统媒体控制)
-    mediaSession = MediaSession
-      .Builder(this, interceptingPlayer)
+    playbackGraph.attachPlatformPlayer(interceptingPlayer)
+    mediaSession = MediaSession.Builder(this, interceptingPlayer)
       .setSessionActivity(getSingleTopActivityIntent())
       .setBitmapLoader(CoilBitmapLoader(this))
       .build()
 
-    // 4. 【核心】把 Player 实例上交给单例 Connection
-    // 这样 UI 层就能直接访问这个内存对象，零延迟
-    PlaybackCore.getInstance(this).initPlayer(interceptingPlayer)
-
-    // 5. 【修正】使用 Builder 构建 Provider，这是设置 BitmapLoader 的正确方式
     val notificationProvider = DefaultMediaNotificationProvider.Builder(this).build()
     notificationProvider.setSmallIcon(R.drawable.ic_launcher_foreground)
     setMediaNotificationProvider(notificationProvider)
 
-    //监听耳机拔出
-    val filter = IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY)
-    registerReceiver(becomingNoisyReceiver, filter)
+    registerReceiver(
+      becomingNoisyReceiver,
+      IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY)
+    )
+    serviceScope.launch {
+      playbackGraph.playbackListController.restore()
+    }
+    Log.i(TAG, "PlaybackService created, pid=${Process.myPid()}")
+  }
 
-    //监听其他声音播放
-    audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
-    Log.i(TAG, "PlaybackService onCreate, pid:${Process.myPid()}, currentThread:${Thread.currentThread().name}")
+  override fun onTaskRemoved(rootIntent: Intent?) {
+    // 尽早提交快照；进程仍存活时由应用级 IO scope 完成尽力保存。
+    val currentPlayer = player
+    if (currentPlayer != null) {
+      playbackGraph.progressController.saveCurrentPositionNow(currentPlayer.currentPosition.coerceAtLeast(0L))
+    }
+    super.onTaskRemoved(rootIntent)
+    Log.i(TAG, "PlaybackService onTaskRemoved, pid=${Process.myPid()}")
+  }
+
+  override fun onDestroy() {
+    Log.i(TAG, "PlaybackService onDestroy, pid=${Process.myPid()}")
+    unregisterReceiver(becomingNoisyReceiver)
+    abandonAudioFocus()
+
+    val currentPlayer = player
+    if (currentPlayer != null) {
+      // 直接读取平台 Player 的最终位置，避免状态流采样尚未追上销毁时刻。
+      playbackGraph.progressController.saveCurrentPositionNow(currentPlayer.currentPosition.coerceAtLeast(0L))
+      playbackGraph.detachPlatformPlayer(currentPlayer)
+    }
+
+    val currentSession = mediaSession
+    mediaSession = null
+    if (currentSession != null) {
+      currentSession.player.release()
+      currentSession.release()
+    } else {
+      currentPlayer?.release()
+    }
+    player = null
+    serviceScope.cancel()
+    super.onDestroy()
+  }
+
+  override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? {
+    return mediaSession
+  }
+
+  private fun pauseForAudioFocusLoss() {
+    playbackGraph.player.pause()
   }
 
   private fun requestAudioFocusIfNeeded(): Boolean {
@@ -140,7 +184,6 @@ class PlaybackService : MediaSessionService() {
       return true
     }
 
-    //audioManager.abandonAudioFocus(audioFocusListener)
     val result = audioManager.requestAudioFocus(
       audioFocusListener,
       AudioManager.STREAM_MUSIC,
@@ -151,42 +194,24 @@ class PlaybackService : MediaSessionService() {
   }
 
   private fun abandonAudioFocus() {
-    if (!hasAudioFocus) return
-
+    if (!hasAudioFocus) {
+      return
+    }
     audioManager.abandonAudioFocus(audioFocusListener)
     hasAudioFocus = false
   }
 
-  override fun onDestroy() {
-    // 服务销毁，断开连接
-    unregisterReceiver(becomingNoisyReceiver)
-    abandonAudioFocus()
-    PlaybackCore.getInstance(this).initPlayer(null)
-
-    mediaSession?.run {
-      player.release()
-      release()
-      mediaSession = null
-    }
-    super.onDestroy()
-  }
-
-  override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? {
-    return mediaSession
-  }
-
-  // 辅助方法：创建跳转到 MainActivity 的 PendingIntent
   private fun getSingleTopActivityIntent(): PendingIntent {
     val intent = Intent(this, MainActivity::class.java)
-    // 关键标志位：如果不加 FLAG_ACTIVITY_SINGLE_TOP，点击通知可能会重建 Activity，导致播放状态丢失
-    // 你的 MainActivity 应该在 Manifest 里设置 launchMode="singleTop" 或 "singleTask"
-
     val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
       PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
     } else {
       PendingIntent.FLAG_UPDATE_CURRENT
     }
-
     return PendingIntent.getActivity(this, 0, intent, flags)
+  }
+
+  private companion object {
+    const val TAG = "PlaybackService"
   }
 }

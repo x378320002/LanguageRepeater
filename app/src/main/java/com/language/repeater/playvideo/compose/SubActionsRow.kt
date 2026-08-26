@@ -45,6 +45,7 @@ fun SubActionsRow(
   onSpeedSelected: (Float) -> Unit,
   onTimerSelected: (Int) -> Unit,
   onTimerComplete: () -> Unit,
+  onSelectSubtitle: () -> Unit,
   onSplitSubtitle: () -> Unit,
   onToggleFullScreen: () -> Unit,
   modifier: Modifier = Modifier,
@@ -181,6 +182,18 @@ fun SubActionsRow(
         expanded = showMoreMenu,
         onDismissRequest = { showMoreMenu = false },
       ) {
+        DropdownMenuItem(
+          text = {
+            Text(
+              text = "选择字幕",
+              style = MaterialTheme.typography.bodyMedium,
+            )
+          },
+          onClick = {
+            onSelectSubtitle()
+            showMoreMenu = false
+          },
+        )
         DropdownMenuItem(
           text = {
             Text(

@@ -10,7 +10,6 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Upsert
-import com.language.repeater.foundation.BasePlaySheetFragment.Companion.TAG
 import com.language.repeater.playvideo.model.HistoryEntity
 import com.language.repeater.playvideo.model.HistoryWithInfo
 import com.language.repeater.playvideo.model.VideoEntity
@@ -18,6 +17,10 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface HistoryDao {
+
+  companion object {
+    private const val TAG = "wangzixu_HistoryDao"
+  }
 
   // --- 内部方法，不要直接调用 ---
   @Upsert

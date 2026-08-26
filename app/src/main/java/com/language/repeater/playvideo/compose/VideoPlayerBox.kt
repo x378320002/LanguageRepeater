@@ -1,54 +1,284 @@
 package com.language.repeater.playvideo.compose
 
+import android.app.Activity
+import android.content.Context
+import android.media.AudioManager
+import android.util.Log
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.awaitLongPressOrCancellation
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.util.VelocityTracker
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.media3.common.Player
 import androidx.media3.ui.PlayerView
+import com.language.repeater.app.MainApp
+import com.language.repeater.datastore.DsManager
+import com.language.repeater.player.media3.AndroidVideoOutput
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlin.math.abs
+
+const val TAG = "VideoPlayerBox"
 
 /**
- * 视频渲染区 — Android 平台实现
- *
- * 注意：这里 import media3 是平台差异点，属于 Android 特定实现。
- * 未来 KMP 时，这个文件会移到 androidMain，iOS 会有自己的实现。
+ * Android 视频输出。Composable 只绑定和解绑画面，不持有或释放底层播放器。
  */
 @Composable
 fun VideoPlayerBox(
-  modifier: Modifier = Modifier,
-  player: Player?,
+  videoOutput: AndroidVideoOutput,
+  modifier: Modifier = Modifier
 ) {
-  Card(
+  val scope = rememberCoroutineScope()
+  val context = LocalContext.current
+  val state = remember(videoOutput, scope) {
+    VideoPlayerBoxState(context, scope)
+  }
+
+  Box(
     modifier = modifier
       .fillMaxWidth()
-      .aspectRatio(16f / 9f),
-    shape = MaterialTheme.shapes.small,
-    colors = CardDefaults.cardColors(containerColor = Color.Black),
+      .aspectRatio(16f / 9f)
+      .clip(MaterialTheme.shapes.medium)
+      .background(Color.Black)
+      .detectHorizontalFling(onFlingLeft = {
+        scope.launch {
+          Log.i(TAG, "detectHorizontalFling onFlingLeft")
+          MainApp.instance.playbackGraph.sentenceController.seekToNextSentence()
+        }
+      }, onFlingRight = {
+        scope.launch {
+          Log.i(TAG, "detectHorizontalFling onFlingRight")
+          MainApp.instance.playbackGraph.sentenceController.seekToPreviousSentence()
+        }
+      })
+      .pointerInput(Unit) {
+        var isLeftDrag = true
+        detectVerticalDragGestures(
+          onDragStart = {
+            isLeftDrag = it.x < size.width / 2
+          },
+        ) { change, dragAmount ->
+          if (isLeftDrag) {
+            Log.i(TAG, "detectVerticalDragGestures leftDrag, dragAmount:${dragAmount}")
+            state.adjustBrightness(dragAmount)
+          } else {
+            Log.i(TAG, "detectVerticalDragGestures rightDrag, dragAmount:${dragAmount}")
+            state.adjustVolume(dragAmount)
+          }
+        }
+      }
+      .pointerInput(Unit) {
+        var oldSpeed: Float? = null
+        detectTapGestures(
+          onLongPress = {
+            Log.i(TAG, "detectTapGestures onLongPress")
+            oldSpeed = MainApp.instance.playbackGraph.player.state.value.speed
+            scope.launch {
+              val speed = oldSpeed ?: return@launch
+              val newSpeed = speed * DsManager.get(DsManager.KEY_LONG_PRESS_SPEED, 1.0f)
+              MainApp.instance.playbackGraph.player.setSpeed(newSpeed)
+              state.showFeedback("⏩ ${speed}X")
+            }
+          },
+          onDoubleTap = {
+            Log.i(TAG, "detectTapGestures onDoubleTap")
+            MainApp.instance.playbackGraph.sentenceController.backToSentenceHead()
+          },
+          onTap = {
+            Log.i(TAG, "detectTapGestures onTap")
+            val player = MainApp.instance.playbackGraph.player
+            if (player.state.value.isPlaying) {
+              player.pause()
+            } else {
+              player.play()
+            }
+          },
+          onPress = {
+            val press = tryAwaitRelease()
+            if (press && oldSpeed != null) {
+              MainApp.instance.playbackGraph.player.setSpeed(oldSpeed ?: 1.0f)
+            }
+            oldSpeed = null
+          }
+        )
+      }
   ) {
-    Box(modifier = Modifier.fillMaxSize()) {
-      AndroidView(
-        modifier = Modifier.fillMaxSize(),
-        factory = { context ->
-          PlayerView(context).apply {
-            useController = false
-          }
-        },
-        update = { playerView ->
-          if (playerView.player !== player) {
-            playerView.player = player
-          }
-        },
-        onRelease = { playerView ->
-          playerView.player = null
-        },
+    AndroidView(
+      modifier = Modifier.fillMaxSize(),
+      factory = { context ->
+        PlayerView(context).apply {
+          useController = false
+          videoOutput.attach(this)
+        }
+      },
+      update = { playerView ->
+        videoOutput.attach(playerView)
+      },
+      onRelease = { playerView ->
+        videoOutput.detach(playerView)
+      }
+    )
+
+    val text = state.tipText
+    if (text.isNotEmpty()) {
+      Text(
+        modifier = Modifier
+          .align(alignment = Alignment.TopCenter)
+          .padding(top = 10.dp)
+          .background(Color.Black.copy(alpha = 0.6f), shape = MaterialTheme.shapes.medium)
+          .padding(horizontal = 8.dp),
+        fontSize = 12.sp,
+        text = text
       )
     }
   }
 }
+
+fun Modifier.detectHorizontalFling(
+  minFlingVelocity: Float = 1000f,
+  onFlingLeft: () -> Unit,
+  onFlingRight: () -> Unit
+): Modifier = this.pointerInput(Unit) {
+  var velocityTracker: VelocityTracker? = null
+  detectHorizontalDragGestures(
+    onDragStart = {
+      velocityTracker = VelocityTracker()
+    },
+    onDragEnd = {
+      val velocityX = velocityTracker?.calculateVelocity()?.x ?: 0f
+      if (abs(velocityX) > minFlingVelocity) {
+        if (velocityX > 0) {
+          onFlingRight()
+        } else {
+          onFlingLeft()
+        }
+      }
+    }
+  ) { change, dragAmount ->
+    change.consume()
+    velocityTracker?.addPosition(change.uptimeMillis, change.position)
+  }
+}
+
+class VideoPlayerBoxState(val context: Context, val scope: CoroutineScope) {
+  var tipText by mutableStateOf("")
+    private set
+
+  private val window = (context as Activity).window
+  private var currentBrightness = (context as Activity).window.attributes?.screenBrightness ?: -1f
+  private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+  private var maxVolume: Int = 0
+  private var currentVolume: Int = 0
+
+  init {
+    initBrightness()
+    initAudioManager()
+  }
+
+  private fun initAudioManager() {
+    maxVolume = audioManager?.getStreamMaxVolume(AudioManager.STREAM_MUSIC) ?: run {
+      Log.w(TAG, "Using default max volume: 15")
+      15
+    }
+    currentVolume = audioManager?.getStreamVolume(AudioManager.STREAM_MUSIC) ?: 0
+  }
+
+  private fun initBrightness() {
+    currentBrightness = window?.attributes?.screenBrightness ?: -1f
+    if (currentBrightness < 0) {
+      currentBrightness = 0.5f
+    }
+  }
+
+  fun adjustBrightness(delta: Float) {
+    try {
+      if (currentBrightness !in 0.0..1.0) {
+        currentBrightness = window.attributes.screenBrightness
+        if (currentBrightness < 0) {
+          currentBrightness = 0.5f
+        }
+      }
+
+      //val change = delta * BRIGHTNESS_SENSITIVITY
+      val steps = if (delta < 0) {
+        0.01f
+      } else if (delta > 0) {
+        -0.01f
+      } else {
+        0f
+      }
+      currentBrightness = (currentBrightness + steps).coerceIn(0.01f, 1.0f)
+      val layoutParams = window.attributes
+      layoutParams.screenBrightness = currentBrightness
+      window.attributes = layoutParams
+      val percentage = (currentBrightness * 100).toInt()
+      showFeedback("☀️ $percentage%")
+    } catch (e: Exception) {
+      Log.e(TAG, "Error adjusting brightness", e)
+    }
+  }
+
+  fun adjustVolume(delta: Float) {
+    try {
+      val manager = audioManager ?: return
+      //val steps = (delta * VOLUME_SENSITIVITY).toInt().coerceAtLeast(1)
+      val steps = if (delta < 0) {
+        1
+      } else if (delta > 0) {
+        -1
+      } else {
+        0
+      }
+      Log.d(TAG, "adjustVolume steps:$steps delta:$delta")
+      if (steps == 0) return
+
+      currentVolume = manager.getStreamVolume(AudioManager.STREAM_MUSIC)
+      val newVolume = (currentVolume + steps).coerceAtLeast(0)
+      manager.setStreamVolume(AudioManager.STREAM_MUSIC, newVolume, 0)
+      currentVolume = newVolume
+      val percentage = (currentVolume * 100 / maxVolume)
+      showFeedback("🔊 $percentage%")
+    } catch (e: Exception) {
+      Log.e(TAG, "Error adjusting volume", e)
+    }
+  }
+
+  var job: Job? = null
+  fun showFeedback(text: String) {
+    tipText = text
+    job?.cancel()
+    job = scope.launch {
+      delay(2000)
+      tipText = ""
+    }
+  }
+}
+
+

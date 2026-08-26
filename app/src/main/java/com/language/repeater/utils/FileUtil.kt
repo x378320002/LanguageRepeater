@@ -7,9 +7,7 @@ import android.provider.OpenableColumns
 import android.util.Log
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
-import com.language.repeater.playvideo.PlayVideoFragment
 import com.language.repeater.playvideo.model.VideoEntity
-import com.language.repeater.playvideo.playlist.PlaylistManager
 import java.io.FileInputStream
 import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
@@ -179,17 +177,17 @@ object FileUtil {
 
     if (name.isNullOrEmpty()) {
       name = uri.lastPathSegment
-      Log.i(PlaylistManager.TAG, "getFileInfo, contentResolver null, use lastPathSegment:$name")
+      Log.i(TAG, "getFileInfo, contentResolver null, use lastPathSegment:$name")
     }
 
     if (name.isNullOrEmpty()) {
       name = uri.path
-      Log.i(PlaylistManager.TAG, "getFileInfo, contentResolver null, use path:$name")
+      Log.i(TAG, "getFileInfo, contentResolver null, use path:$name")
     }
 
     if (name.isNullOrEmpty()) {
       name = uri.toString()
-      Log.i(PlaylistManager.TAG, "getFileInfo, contentResolver null, use uri.toString:$name")
+      Log.i(TAG, "getFileInfo, contentResolver null, use uri.toString:$name")
     }
 
     var id = generateMediaKey(context, uri)
@@ -240,11 +238,11 @@ object FileUtil {
       contentResolver.takePersistableUriPermission(uri, takeFlags)
       // 成功后，你就可以把 uri.toString() 存入 Room 或 SharedPreferences 了
       // 下次直接用 Uri.parse(string) 就能播放
-      Log.d(PlayVideoFragment.TAG, "takePersistablePermission success, uri: $uri")
+      Log.d(TAG, "takePersistablePermission success, uri: $uri")
     } catch (e: SecurityException) {
       e.printStackTrace()
       // 某些特殊云端文件可能不支持持久权限，这里要做异常处理
-      Log.d(PlayVideoFragment.TAG, "takePersistablePermission failed:${e.message}, uri: $uri")
+      Log.d(TAG, "takePersistablePermission failed:${e.message}, uri: $uri")
     }
   }
 }

@@ -22,6 +22,7 @@ import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
+import com.language.repeater.PointerEventDemo
 import com.language.repeater.playvideo.PlayVideoScreen
 import com.language.repeater.setting.SettingScreen
 import com.language.repeater.theme.MyTheme
@@ -83,6 +84,8 @@ class MainActivity : AppCompatActivity() {
               SettingScreen(
                 backStack = backStack
               )
+
+//              PointerEventDemo()
             }
           }
         )

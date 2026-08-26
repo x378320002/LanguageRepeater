@@ -14,6 +14,11 @@ kotlin {
   }
 }
 
+ksp {
+  arg("room.schemaLocation", "$projectDir/schemas")
+  arg("room.incremental", "true")
+}
+
 android {
   namespace = "com.language.repeater"
   compileSdk = 37

@@ -14,7 +14,6 @@ import androidx.fragment.app.DialogFragment
 import com.dotlottie.dlplayer.Fit
 import com.language.repeater.R
 import com.language.repeater.databinding.DialogLoadingLayoutBinding
-import com.language.repeater.databinding.VideoPlayFragmentBinding
 import com.lottiefiles.dotlottie.core.model.Config
 import com.lottiefiles.dotlottie.core.util.DotLottieSource
 import com.lottiefiles.dotlottie.core.util.LayoutUtil

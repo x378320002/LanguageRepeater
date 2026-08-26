@@ -82,7 +82,7 @@ fun WaveformBox(
         }
       },
       update = { view ->
-        pcmLoader?.let { view.setPCMLoader(it) }
+        view.setPCMLoader(pcmLoader)
         view.setSentenceData(sentences)
         view.curABSentence = curAbSentence
         view.isEditMode = editMode
