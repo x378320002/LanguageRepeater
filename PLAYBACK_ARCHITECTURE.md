@@ -16,9 +16,14 @@ PlaybackListController
  ├─ DataStore currentMediaId
  └─ PlaybackPlayer
 
-PlaybackService
- └─ Media3PlaybackPlayer
+Media3PlaybackPlayer（应用级常驻）
+ ├─ ExoPlayer（自建，永不释放）
+ ├─ AudioFocusGatePlayer（音频焦点闸门，业务与视图都走这层）
+ └─ SentenceNavigationPlayer（仅供 MediaSession，上一句/下一句）
       └─ 单个 Media3 MediaItem
+
+PlaybackService
+ └─ MediaSession（借用 PlaybackGraph.sessionPlayer，不创建也不释放播放器）
 ```
 
 ## 核心原则
@@ -31,7 +36,7 @@ PlaybackService
 - 播放时间属于 `PlaybackPlayer`；当前列表媒体、相邻媒体和列表模式属于 `PlaybackListController`。
 - Compose 直接观察 Player 和 Controller，不通过 ViewModel 复制播放状态。
 - Compose 和业务层不获取 Media3、腾讯 SDK 或 AVPlayer 实例。
-- 只有平台播放宿主创建和释放底层播放器；页面销毁只解绑视频输出。
+- 底层播放器由应用层创建并常驻，与进程同生共死、不提供释放入口；页面销毁只解绑视频输出。
 - Player 不负责 Room、PlaybackList、字幕匹配、PCM、句子、AB 复读或历史。
 
 ## PlaybackPlayer
@@ -58,23 +63,22 @@ interface PlaybackPlayer {
 
 `PlaybackPlayerState` 只描述已确认的播放事实：
 
-- `status`
 - `currentMedia`
-- `isPlaying`
+- `isPlaying`（播放意图：出声或缓冲中都为 true，缓冲期间 UI 不回退为暂停态）
 - `positionMs`
 - `durationMs`
 - `speed`
 - `error`
 
-不包含缓冲位置、PlaybackList、列表索引或底层 SDK 状态码。
+不包含缓冲位置、PlaybackList、列表索引或底层 SDK 状态码。不额外维护状态机枚举，播放态只由 `isPlaying` 表达。
 
 `PlaybackPlayerEvent` 用于一次性事件：
 
 - `MediaChanged`
 - `MediaEnded`
-- `Failed`
+- `SeekCompleted`
 
-`MediaEnded` 必须按媒体和播放代次去重，避免重复切换下一项。
+`MediaEnded` 每次播放到结尾都如实发出，由消费方按当前媒体校验后决定切换行为。
 
 ## PlaybackMedia
 
@@ -106,7 +110,7 @@ data class PlaybackMedia(
 - Android 视频输出绑定器
 - Service 连接器
 
-Android 中只有 `PlaybackService` 创建和释放 ExoPlayer。Service 创建后将实例 attach 到 `Media3PlaybackPlayer`，销毁前 detach。ViewModel 和 Composable 不创建、不释放播放器实现。
+Android 中 ExoPlayer 由 `Media3PlaybackPlayer` 在应用层自行创建并常驻，与进程同生共死，不提供释放入口。`PlaybackService` 只借用 `PlaybackGraph.sessionPlayer` 创建 MediaSession 以提供系统通知栏卡片，销毁时只 release session、绝不 release 播放器。ViewModel 和 Composable 不创建、不释放播放器实现。
 
 ## PlaybackList
 
@@ -180,7 +184,7 @@ Controller 负责把 PlaybackList 与单媒体 Player 协调起来：
 - seek 完成。
 - 切换媒体前。
 - 播放结束或错误。
-- Service detach。
+- 任务卡移除或服务销毁。
 - 播放期间低频保存。
 
 当前媒体 ID 使用 DataStore 保存。恢复优先级：

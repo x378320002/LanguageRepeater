@@ -80,21 +80,6 @@ fun PlayVideoScreen(
         .fillMaxSize()
         .padding(innerPadding),
     ) {
-      // ---------- 视频标题 ----------
-      if (!playerState.currentMedia?.title.isNullOrEmpty()) {
-        Text(
-          text = playerState.currentMedia?.title.orEmpty(),
-          color = MaterialTheme.colorScheme.onBackground,
-          style = MaterialTheme.typography.bodyMedium,
-          maxLines = 1,
-          overflow = TextOverflow.MiddleEllipsis,
-          modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 15.dp)
-            .padding(bottom = 10.dp),
-        )
-      }
-
       // ---------- 视频播放区域 ----------
       VideoPlayerBox(
         videoOutput = viewModel.videoOutput,

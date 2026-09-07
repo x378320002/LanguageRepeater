@@ -165,10 +165,10 @@ private fun MainContent(
     val leftBrightnessGesture by viewModel.stateHolder.leftBrightnessGesture.collectAsState()
     val rightVolumeGesture by viewModel.stateHolder.rightVolumeGesture.collectAsState()
     Card {
-      SettingSwitchItem(title = "全屏手势", checked = fullGesture) {
-        viewModel.onAction(ActionFullGestureChange(it))
-      }
-      SettingDivider()
+//      SettingSwitchItem(title = "全屏手势", checked = fullGesture) {
+//        viewModel.onAction(ActionFullGestureChange(it))
+//      }
+//      SettingDivider()
       SettingSwitchItem(title = "左侧亮度手势", checked = leftBrightnessGesture) {
         viewModel.onAction(ActionLeftBrightnessGestureChange(it))
       }

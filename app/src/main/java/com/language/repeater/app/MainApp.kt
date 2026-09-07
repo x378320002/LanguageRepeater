@@ -18,9 +18,9 @@ import com.language.repeater.player.media3.PlaybackServiceConnection
  * Description:
  */
 class MainApp : Application(), SingletonImageLoader.Factory {
-  val playbackGraph: PlaybackGraph by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
-    PlaybackGraph(this)
-  }
+  /** 应用级播放依赖图，在 onCreate 中于主线程创建，随进程存活。 */
+  lateinit var playbackGraph: PlaybackGraph
+    private set
 
   /** Media3 平台连接，负责启动并维持 PlaybackService。 */
   private val serviceConnection: PlaybackServiceConnection by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
@@ -40,8 +40,16 @@ class MainApp : Application(), SingletonImageLoader.Factory {
   @OptIn(ExperimentalFoundationApi::class)
   override fun onCreate() {
     super.onCreate()
-    serviceConnection.connect()
+    // 必须早于 PlaybackService 与任何页面：ExoPlayer 需要在主线程创建，
+    // 且构造过程会顺带恢复上次播放的媒体
+    playbackGraph = PlaybackGraph(this)
+    connectPlaybackService()
     ComposeFoundationFlags.isInheritedTextStyleEnabled = true
+  }
+
+  /** 确保播放服务已连接，重复调用无副作用。 */
+  fun connectPlaybackService() {
+    serviceConnection.connect()
   }
 
   override fun newImageLoader(context: PlatformContext): ImageLoader {

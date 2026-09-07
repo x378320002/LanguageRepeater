@@ -60,11 +60,11 @@ class PlaybackProgressController(
     videoInfoDao.updatePosition(mediaId, state.positionMs)
   }
 
-  /** 非协程上下文的手动保存入口（如 Service.onDestroy），立即派发到 IO 线程。 */
-  fun saveCurrentPositionNow(positionMs: Long? = null) {
+  /** 非协程上下文的手动保存入口（如任务卡移除 / 服务销毁），立即派发到 IO 线程。 */
+  fun saveCurrentPositionNow() {
     val state = player.state.value
     val mediaId = state.currentMedia?.mediaId ?: return
-    val snapshotPositionMs = positionMs ?: state.positionMs
+    val snapshotPositionMs = state.positionMs
     scope.launch(Dispatchers.IO) {
       videoInfoDao.updatePosition(mediaId, snapshotPositionMs)
     }

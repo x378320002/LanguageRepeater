@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -65,8 +66,8 @@ fun VideoPlayerBox(
     modifier = modifier
       .fillMaxWidth()
       .aspectRatio(16f / 9f)
-      .clip(MaterialTheme.shapes.medium)
-      .background(Color.Black)
+      .clip(CardDefaults.shape)
+      .background(CardDefaults.cardColors().containerColor)
       .detectHorizontalFling(onFlingLeft = {
         scope.launch {
           Log.i(TAG, "detectHorizontalFling onFlingLeft")

@@ -64,7 +64,7 @@ class PlaybackListController(
     operationMutex.withLock {
       val currentMediaId = player.state.value.currentMedia?.mediaId
       if (currentMediaId != null) {
-        // Service 重建时播放器会自行重新挂载业务媒体，仅校正可能过期的持久化 ID。
+        // 播放器已有媒体（重复调用时），不打断播放，仅校正可能过期的持久化 ID。
         val savedMediaId = DsManager.get(DsManager.KEY_CURRENT_PLAY_ID, "")
         if (savedMediaId != currentMediaId) {
           saveCurrentMediaId(currentMediaId)

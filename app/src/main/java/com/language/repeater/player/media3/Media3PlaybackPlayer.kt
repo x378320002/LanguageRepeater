@@ -2,13 +2,17 @@ package com.language.repeater.player.media3
 
 import android.content.Context
 import android.os.Looper
+import androidx.annotation.OptIn
 import androidx.core.net.toUri
+import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import com.language.repeater.player.PlaybackError
 import com.language.repeater.player.PlaybackMedia
@@ -30,6 +34,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
+/**
+ * 应用级唯一播放器。自行创建并持有 ExoPlayer，与进程同生共死、不提供释放入口。
+ *
+ * PlaybackService 只是借用这里的播放器去建 MediaSession，因此播放器永远非空，
+ * 不存在「等平台组件投喂」的空窗期。
+ */
+@OptIn(UnstableApi::class)
 class Media3PlaybackPlayer(
   private val context: Context
 ) : PlaybackPlayer, AndroidVideoOutput {
@@ -38,12 +49,31 @@ class Media3PlaybackPlayer(
   private val _events = MutableSharedFlow<PlaybackEvent>(extraBufferCapacity = 8)
   private val attachedViews = mutableSetOf<PlayerView>()
 
-  private var player: Player? = null
-  private var positionJob: Job? = null
+  /**
+   * 全局唯一、与进程同生共死的播放器，同时供 PlaybackService 包装出 MediaSession。
+   *
+   * 显式指定主线程为 application looper，使本类即使被后台线程首次触达，
+   * 后续访问仍统一收敛到主线程。
+   *
+   * 类型收窄为 Player 而非 ExoPlayer：本播放器不提供释放入口，
+   * 不应让外部拿到 release() 之类的生命周期方法。
+   */
+  val exoPlayer: Player = ExoPlayer.Builder(context)
+    .setLooper(Looper.getMainLooper())
+    // 交由 ExoPlayer 内置管理音频焦点：起播自动申请，丢失自动暂停，重获自动续播。
+    // contentType 用 SPEECH，让被短暂抢音时暂停而不是降低音量，避免句子内容被盖住。
+    .setAudioAttributes(
+      AudioAttributes.Builder()
+        .setUsage(C.USAGE_MEDIA)
+        .setContentType(C.AUDIO_CONTENT_TYPE_SPEECH)
+        .build(),
+      /* handleAudioFocus = */ true
+    )
+    // 耳机拔出自动暂停，无需自行监听 ACTION_AUDIO_BECOMING_NOISY
+    .setHandleAudioBecomingNoisy(true)
+    .build()
 
-  // 播放器未挂载期间累积的播放意图，挂载后决定是否自动起播；
-  // 媒体与进度不在此保存，统一以 _state 为准
-  private var pendingPlayWhenReady = false
+  private var positionJob: Job? = null
 
   override val state: StateFlow<PlaybackState> = _state.asStateFlow()
   override val events: SharedFlow<PlaybackEvent> = _events.asSharedFlow()
@@ -63,6 +93,11 @@ class Media3PlaybackPlayer(
       updateState()
     }
 
+    // 音频焦点被抢等压制状态同样不改变 playWhenReady，需单独同步
+    override fun onPlaybackSuppressionReasonChanged(playbackSuppressionReason: Int) {
+      updateState()
+    }
+
     override fun onIsPlayingChanged(isPlaying: Boolean) {
       updateState()
       updatePositionTicker()
@@ -79,7 +114,7 @@ class Media3PlaybackPlayer(
     ) {
       updatePosition()
       if (reason == Player.DISCONTINUITY_REASON_SEEK) {
-        val mediaId = player?.currentMediaItem?.mediaId ?: return
+        val mediaId = exoPlayer.currentMediaItem?.mediaId ?: return
         if (_state.value.currentMedia?.mediaId != mediaId) {
           return
         }
@@ -108,63 +143,9 @@ class Media3PlaybackPlayer(
     }
   }
 
-  fun attachPlayer(newPlayer: Player) {
-    runOnPlayerThread {
-      attachPlayerInternal(newPlayer)
-    }
-  }
-
-  private fun attachPlayerInternal(newPlayer: Player) {
-    if (player === newPlayer) {
-      return
-    }
-
-    player?.removeListener(listener)
-    player = newPlayer
-    newPlayer.addListener(listener)
-    attachedViews.forEach { playerView ->
-      playerView.player = newPlayer
-    }
-    // 无媒体时挂载完监听即可，state 保持默认值（含已设置的倍速）
-    val currentMedia = _state.value.currentMedia ?: return
-
-    // 媒体与进度取自 state，无论是首次挂载还是 Service 重建后重新挂载
-    prepareOnPlayer(
-      currentPlayer = newPlayer,
-      media = currentMedia,
-      startPositionMs = _state.value.positionMs,
-      playWhenReady = pendingPlayWhenReady
-    )
-    pendingPlayWhenReady = false
-    updatePositionTicker()
-  }
-
-  fun detachPlayer(detachedPlayer: Player) {
-    runOnPlayerThread {
-      detachPlayerInternal(detachedPlayer)
-    }
-  }
-
-  private fun detachPlayerInternal(detachedPlayer: Player) {
-    if (player !== detachedPlayer) {
-      return
-    }
-
-    detachedPlayer.removeListener(listener)
-    attachedViews.forEach { playerView ->
-      if (playerView.player === detachedPlayer) {
-        playerView.player = null
-      }
-    }
-    player = null
-    // 记住被打断时的播放意图，Service 重建后据此续播
-    pendingPlayWhenReady = detachedPlayer.isPlaying || detachedPlayer.playWhenReady
-    positionJob?.cancel()
-    positionJob = null
-    _state.value = _state.value.copy(
-      isPlaying = false,
-      positionMs = detachedPlayer.currentPosition.coerceAtLeast(0L)
-    )
+  init {
+    // ExoPlayer 明确允许在任意线程注册监听，无需切主线程
+    exoPlayer.addListener(listener)
   }
 
   override fun prepare(
@@ -173,40 +154,20 @@ class Media3PlaybackPlayer(
     playWhenReady: Boolean
   ) {
     runOnPlayerThread {
-      prepareInternal(media, startPositionMs, playWhenReady)
+      val safePositionMs = startPositionMs.coerceAtLeast(0L)
+      resetStateForPrepare(media, safePositionMs, playWhenReady)
+      exoPlayer.setMediaItem(createMediaItem(media), safePositionMs)
+      // setMediaItem 不会清掉上一媒体遗留的 playWhenReady，
+      // 先置 false 避免上一首的播放意图被带到新媒体上
+      exoPlayer.playWhenReady = false
+      exoPlayer.prepare()
+      if (playWhenReady) {
+        exoPlayer.play()
+      }
+      // 回读真实状态，纠正 resetStateForPrepare 里的乐观预设
+      updateState()
+      _events.tryEmit(PlaybackEvent.MediaChanged(media))
     }
-  }
-
-  private fun prepareInternal(
-    media: PlaybackMedia,
-    startPositionMs: Long,
-    playWhenReady: Boolean
-  ) {
-    val currentPlayer = player
-    if (currentPlayer == null) {
-      // 播放器尚未挂载，只记录意图并落 state，挂载时再真正 prepare
-      pendingPlayWhenReady = playWhenReady
-      resetStateForPrepare(media, startPositionMs.coerceAtLeast(0L), playWhenReady)
-      return
-    }
-    prepareOnPlayer(currentPlayer, media, startPositionMs, playWhenReady)
-  }
-
-  private fun prepareOnPlayer(
-    currentPlayer: Player,
-    media: PlaybackMedia,
-    startPositionMs: Long,
-    playWhenReady: Boolean
-  ) {
-    val safePositionMs = startPositionMs.coerceAtLeast(0L)
-    resetStateForPrepare(media, safePositionMs, playWhenReady)
-    currentPlayer.setMediaItem(createMediaItem(media), safePositionMs)
-    currentPlayer.playWhenReady = false
-    currentPlayer.prepare()
-    if (playWhenReady) {
-      currentPlayer.play()
-    }
-    _events.tryEmit(PlaybackEvent.MediaChanged(media))
   }
 
   private fun resetStateForPrepare(
@@ -224,50 +185,55 @@ class Media3PlaybackPlayer(
 
   override fun play() {
     runOnPlayerThread {
-      val currentPlayer = player
-      if (currentPlayer != null) {
-        currentPlayer.play()
-      } else if (_state.value.currentMedia != null) {
-        // 播放器未挂载但已有待播媒体，先记下意图并让 UI 立即进入播放态
-        pendingPlayWhenReady = true
-        _state.value = _state.value.copy(isPlaying = true)
-      }
+      prepareIfIdle()
+      exoPlayer.play()
+      updateState()
     }
+  }
+
+  /**
+   * 播放器停在 IDLE 时重新准备，位置保留在中断处；非 IDLE 时无副作用。
+   *
+   * 应用长时间退到后台后，系统可能把稀缺的 MediaCodec 解码器回收给前台应用，
+   * ExoPlayer 随之报错并回落到 STATE_IDLE：画面变黑，而 play() 只是把
+   * playWhenReady 置为 true，不触发任何加载，表现为「点播放按钮没反应」。
+   * 官方的恢复方式就是重新 prepare()。
+   *
+   * 由 play() 和回到前台时各调一次：前者让播放起得来，后者让画面回得来。
+   * 恢复本身不接管播放意图，因此先把 playWhenReady 归零，避免切回应用时被突然出声；
+   * play() 路径紧跟其后的 play() 会重新置上。
+   */
+  fun prepareIfIdle() {
+    if (exoPlayer.playbackState != Player.STATE_IDLE) {
+      return
+    }
+    // 没有媒体可恢复（如刚 clear 过），交给正常的 prepare 流程处理
+    if (exoPlayer.currentMediaItem == null) {
+      return
+    }
+    exoPlayer.playWhenReady = false
+    exoPlayer.prepare()
+    _state.value = _state.value.copy(error = null)
   }
 
   override fun pause() {
     runOnPlayerThread {
-      val currentPlayer = player
-      if (currentPlayer != null) {
-        currentPlayer.pause()
-      } else {
-        pendingPlayWhenReady = false
-        _state.value = _state.value.copy(isPlaying = false)
-      }
+      exoPlayer.pause()
     }
   }
 
   override fun seekTo(positionMs: Long) {
     runOnPlayerThread {
-      val safePositionMs = positionMs.coerceAtLeast(0L)
-      val currentPlayer = player
-      if (currentPlayer != null) {
-        currentPlayer.seekTo(safePositionMs)
-        updatePosition()
-      } else {
-        // 进度写入 state 即可，挂载时会从 state 取起播位置
-        _state.value = _state.value.copy(positionMs = safePositionMs)
-      }
+      exoPlayer.seekTo(positionMs.coerceAtLeast(0L))
+      updatePosition()
     }
   }
 
   override fun setSpeed(speed: Float) {
     runOnPlayerThread {
-      player?.also {
-        val safeSpeed = speed.coerceIn(0.1f, 4f)
-        it.setPlaybackSpeed(safeSpeed)
-        _state.value = _state.value.copy(speed = safeSpeed)
-      }
+      val safeSpeed = speed.coerceIn(0.1f, 4f)
+      exoPlayer.setPlaybackSpeed(safeSpeed)
+      _state.value = _state.value.copy(speed = safeSpeed)
     }
   }
 
@@ -280,34 +246,29 @@ class Media3PlaybackPlayer(
   private fun setSubtitleInternal(subtitleUri: String?) {
     val currentMedia = _state.value.currentMedia ?: return
     val updatedMedia = currentMedia.copy(subtitleUri = subtitleUri)
-    val currentPlayer = player
-    if (currentPlayer == null) {
-      _state.value = _state.value.copy(currentMedia = updatedMedia)
-      return
-    }
 
-    val positionMs = currentPlayer.currentPosition.coerceAtLeast(0L)
-    val playWhenReady = currentPlayer.playWhenReady
-    val speed = currentPlayer.playbackParameters.speed
+    // 字幕只能随 MediaItem 在 prepare 阶段配置，因此需要原位重建并恢复现场
+    val positionMs = exoPlayer.currentPosition.coerceAtLeast(0L)
+    val playWhenReady = exoPlayer.playWhenReady
+    val speed = exoPlayer.playbackParameters.speed
 
-    currentPlayer.setMediaItem(createMediaItem(updatedMedia), positionMs)
-    currentPlayer.setPlaybackSpeed(speed)
-    currentPlayer.playWhenReady = false
-    currentPlayer.prepare()
+    exoPlayer.setMediaItem(createMediaItem(updatedMedia), positionMs)
+    exoPlayer.setPlaybackSpeed(speed)
+    exoPlayer.playWhenReady = false
+    exoPlayer.prepare()
     if (playWhenReady) {
-      currentPlayer.play()
+      exoPlayer.play()
     }
     _state.value = _state.value.copy(
       currentMedia = updatedMedia,
-      isPlaying = playWhenReady,
       error = null
     )
+    updateState()
   }
 
   override fun clear() {
     runOnPlayerThread {
-      pendingPlayWhenReady = false
-      player?.clearMediaItems()
+      exoPlayer.clearMediaItems()
       _state.value = PlaybackState(speed = _state.value.speed)
     }
   }
@@ -315,7 +276,7 @@ class Media3PlaybackPlayer(
   override fun attach(playerView: PlayerView) {
     runOnPlayerThread {
       attachedViews.add(playerView)
-      playerView.player = player
+      playerView.player = exoPlayer
     }
   }
 
@@ -323,6 +284,13 @@ class Media3PlaybackPlayer(
     runOnPlayerThread {
       attachedViews.remove(playerView)
       playerView.player = null
+    }
+  }
+
+  /** 立即从平台播放器回读一次位置，供进程退出前落盘精确快照。 */
+  fun refreshPosition() {
+    runOnPlayerThread {
+      updatePosition()
     }
   }
 
@@ -350,42 +318,48 @@ class Media3PlaybackPlayer(
   }
 
   private fun updateState() {
-    val currentPlayer = player
-    val duration = currentPlayer?.duration ?: 0L
-    val durationMs = if (duration == C.TIME_UNSET) {
-      0L
-    } else {
-      duration.coerceAtLeast(0L)
-    }
     _state.value = _state.value.copy(
-      isPlaying = currentPlayer?.isPlayIntended() ?: false,
-      positionMs = currentPlayer?.currentPosition?.coerceAtLeast(0L) ?: 0L,
-      durationMs = durationMs,
-      speed = currentPlayer?.playbackParameters?.speed ?: _state.value.speed
+      isPlaying = exoPlayer.isPlayIntended(),
+      positionMs = exoPlayer.currentPosition.coerceAtLeast(0L),
+      durationMs = exoPlayer.safeDurationMs(),
+      speed = exoPlayer.playbackParameters.speed
     )
   }
 
   /**
-   * 播放意图判定：只要用户想播且媒体没结束就算播放态。
+   * 播放意图判定：只要用户想播、媒体没结束、且没有被系统压制，就算播放态。
    *
    * 不能直接用 [Player.isPlaying]，它在 STATE_BUFFERING 期间返回 false，
    * 会导致缓冲瞬间 UI 闪回暂停图标、误导用户再点一次播放。
+   *
+   * 也必须排除 playbackSuppressionReason：音频焦点被抢时 playWhenReady 仍为 true，
+   * 但实际并没有出声，此时不应显示为播放中。
    */
   private fun Player.isPlayIntended(): Boolean {
     return playWhenReady &&
       playbackState != Player.STATE_IDLE &&
-      playbackState != Player.STATE_ENDED
+      playbackState != Player.STATE_ENDED &&
+      playbackSuppressionReason == Player.PLAYBACK_SUPPRESSION_REASON_NONE
+  }
+
+  private fun Player.safeDurationMs(): Long {
+    val rawDuration = duration
+    if (rawDuration == C.TIME_UNSET) {
+      return 0L
+    }
+    return rawDuration.coerceAtLeast(0L)
   }
 
   private fun updatePositionTicker() {
     positionJob?.cancel()
     positionJob = null
-    if (player?.isPlaying != true) {
+    // 缓冲期间进度不推进，只在真正出声时轮询
+    if (!exoPlayer.isPlaying) {
       return
     }
 
     positionJob = scope.launch {
-      while (isActive && player?.isPlaying == true) {
+      while (isActive && exoPlayer.isPlaying) {
         updatePosition()
         delay(POSITION_INTERVAL_MS)
       }
@@ -393,16 +367,9 @@ class Media3PlaybackPlayer(
   }
 
   private fun updatePosition() {
-    val currentPlayer = player ?: return
-    val duration = currentPlayer.duration
-    val durationMs = if (duration == C.TIME_UNSET) {
-      0L
-    } else {
-      duration.coerceAtLeast(0L)
-    }
     _state.value = _state.value.copy(
-      positionMs = currentPlayer.currentPosition.coerceAtLeast(0L),
-      durationMs = durationMs
+      positionMs = exoPlayer.currentPosition.coerceAtLeast(0L),
+      durationMs = exoPlayer.safeDurationMs()
     )
   }
 

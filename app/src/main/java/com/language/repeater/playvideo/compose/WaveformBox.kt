@@ -38,7 +38,7 @@ fun WaveformBox(
   Card(
     modifier = modifier
       .fillMaxWidth()
-      .height(110.dp),
+      .height(100.dp),
     shape = MaterialTheme.shapes.small,
   ) {
     AndroidView(

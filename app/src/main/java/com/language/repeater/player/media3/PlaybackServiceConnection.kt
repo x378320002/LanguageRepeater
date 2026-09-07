@@ -11,6 +11,15 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import com.language.repeater.playcore.PlaybackService
 
+/**
+ * 绑定并保活 PlaybackService。
+ *
+ * 该连接由 Application 持有、与进程同生共死，不提供断开能力：
+ * MediaController 只用于把 Service 绑定住，业务播放控制直接走同进程的 ExoPlayer。
+ * 因此这里只需处理「首次连接」和「服务进程崩溃后重连」两种情况。
+ *
+ * 所有方法都必须在主线程调用。
+ */
 class PlaybackServiceConnection(
   context: Context
 ) {
@@ -19,35 +28,10 @@ class PlaybackServiceConnection(
   private var controllerFuture: ListenableFuture<MediaController>? = null
   private var mediaController: MediaController? = null
   private var retryCount = 0
-  private var connectionGeneration = 0L
-  private var retryRunnable: Runnable? = null
 
   fun connect() {
+    // 已连接或正在连接时无需重复发起
     if (controllerFuture != null || mediaController != null) {
-      return
-    }
-
-    cancelPendingRetry()
-    retryCount = 0
-    connectionGeneration += 1
-    connectInternal(connectionGeneration)
-  }
-
-  fun disconnect() {
-    connectionGeneration += 1
-    cancelPendingRetry()
-    controllerFuture?.let(MediaController::releaseFuture)
-    controllerFuture = null
-    mediaController?.release()
-    mediaController = null
-    retryCount = 0
-  }
-
-  private fun connectInternal(generation: Long) {
-    if (generation != connectionGeneration ||
-      controllerFuture != null ||
-      mediaController != null
-    ) {
       return
     }
 
@@ -59,12 +43,13 @@ class PlaybackServiceConnection(
       .setListener(
         object : MediaController.Listener {
           override fun onDisconnected(controller: MediaController) {
-            if (mediaController !== controller || generation != connectionGeneration) {
+            if (mediaController !== controller) {
               return
             }
+            // 只有服务进程消亡才会走到这里，释放旧 controller 后重连
             controller.release()
             mediaController = null
-            scheduleRetry(generation, "播放服务连接断开")
+            scheduleRetry("播放服务连接断开")
           }
         }
       )
@@ -72,55 +57,38 @@ class PlaybackServiceConnection(
     controllerFuture = future
     future.addListener(
       {
+        // directExecutor 下回调运行在完成 future 的线程，即 Media3 的主线程
         runCatching {
           future.get()
         }.onSuccess { controller ->
-          if (controllerFuture === future && generation == connectionGeneration) {
-            controllerFuture = null
-            mediaController = controller
-            retryCount = 0
-          } else {
-            controller.release()
-          }
+          controllerFuture = null
+          mediaController = controller
+          retryCount = 0
         }.onFailure { throwable ->
-          if (controllerFuture === future) {
-            controllerFuture = null
-          }
+          controllerFuture = null
           Log.e(TAG, "连接播放服务失败", throwable)
-          scheduleRetry(generation, "播放服务连接失败")
+          scheduleRetry("播放服务连接失败")
         }
       },
       MoreExecutors.directExecutor()
     )
   }
 
-  private fun scheduleRetry(generation: Long, reason: String) {
-    if (generation != connectionGeneration || retryRunnable != null) {
-      return
-    }
+  private fun scheduleRetry(reason: String) {
     if (retryCount >= MAX_RETRY_COUNT) {
+      // 退避重试用尽，等待下一次前台交互触发 connect()
       Log.w(TAG, "$reason，已达到最大重试次数")
+      retryCount = 0
       return
     }
 
+    val delayMs = RETRY_DELAYS_MS[retryCount]
     retryCount += 1
-    val delayMs = RETRY_DELAYS_MS[retryCount - 1]
-    val runnable = Runnable {
-      retryRunnable = null
-      connectInternal(generation)
-    }
-    retryRunnable = runnable
-    mainHandler.postDelayed(runnable, delayMs)
-  }
-
-  private fun cancelPendingRetry() {
-    val runnable = retryRunnable ?: return
-    mainHandler.removeCallbacks(runnable)
-    retryRunnable = null
+    mainHandler.postDelayed({ connect() }, delayMs)
   }
 
   private companion object {
-    const val TAG = "PlaybackServiceConnection"
+    const val TAG = PlaybackService.TAG
     const val MAX_RETRY_COUNT = 3
     val RETRY_DELAYS_MS = longArrayOf(500L, 1_500L, 3_000L)
   }
