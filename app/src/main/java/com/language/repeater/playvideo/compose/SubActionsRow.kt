@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -130,7 +131,7 @@ fun SubActionsRow(
         onDismissRequest = { showSleepTimerMenu = false },
       ) {
         val timers = listOf(0, 10, 20, 30, 45, 60)
-        val timerLabels = listOf("关闭", "10 分钟", "20 分钟", "30 分钟", "45 分钟", "60 分钟")
+        val timerLabels = listOf("取消", "10 分钟", "20 分钟", "30 分钟", "45 分钟", "60 分钟")
         timers.forEachIndexed { index, minutes ->
           DropdownMenuItem(
             text = {
@@ -221,13 +222,9 @@ private fun SubActionIcon(
   tint: Color,
   onClick: () -> Unit,
 ) {
-  Box(
-    modifier = Modifier
-      .size(iconWrapperSize)
-      .clickable(
-        onClick = onClick,
-      ),
-    contentAlignment = Alignment.Center,
+  IconButton (
+    modifier = Modifier.size(iconWrapperSize),
+    onClick = onClick
   ) {
     Icon(
       modifier = Modifier.size(innerIconSize),
@@ -249,14 +246,9 @@ private fun SubActionIconWithText(
   tint: Color,
   onClick: () -> Unit,
 ) {
-  Box(
-    modifier = Modifier
-      .width(iconWrapperSize)
-      .fillMaxHeight()
-      .clickable(
-        onClick = onClick,
-      ),
-    contentAlignment = Alignment.Center,
+  IconButton(
+    modifier = Modifier.size(iconWrapperSize),
+    onClick = onClick
   ) {
     if (badgeText.isNotEmpty()) {
       Text(

@@ -1,18 +1,20 @@
 package com.language.repeater.playvideo.compose
 
-import android.R.attr.description
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -21,9 +23,14 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.painterResource
@@ -117,59 +124,125 @@ private fun PlaylistItemRow(
     modifier = Modifier
       .fillMaxWidth()
       .height(60.dp)
+      .drawBehind {
+        if (isCurrent) {
+          drawRoundRect(Color.Gray.copy(alpha = 0.1f))
+        }
+      }
+      .padding(horizontal = 10.dp)
       .clickable(
         onClick = onClick
       ),
     verticalAlignment = Alignment.CenterVertically
   ) {
+    CoverRegion(item, isCurrent, isPlaying)
+
+    Text(
+      text = item.title,
+      style = MaterialTheme.typography.bodySmall,
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+      maxLines = 2,
+      overflow = TextOverflow.Ellipsis,
+      modifier = Modifier
+        .weight(1f)
+        .padding(start = 8.dp)
+    )
+
+    MoreBtn(onMoveToFirst, onDelete)
+  }
+}
+
+@Composable
+private fun CoverRegion(
+  item: PlaybackListItem,
+  isCurrent: Boolean,
+  isPlaying: Boolean,
+) {
+  Box(
+    modifier = Modifier
+      .size(42.dp)
+      .clip(MaterialTheme.shapes.small)
+      .background(Color.Black)
+  ) {
     AsyncImage(
       model = item.uri,
-      modifier = Modifier.size(44.dp).background(Color.Black, shape = MaterialTheme.shapes.small),
+      modifier = Modifier.fillMaxSize(),
       contentDescription = null
     )
+
     if (isCurrent) {
       Icon(
         painter = painterResource(
           if (isPlaying) {
-            R.drawable.ic_pause
+            com.composables.icons.tabler.filled.R.drawable.tabler_ic_player_pause_filled
           } else {
-            R.drawable.ic_play
+            com.composables.icons.tabler.filled.R.drawable.tabler_ic_player_play_filled
           }
         ),
         contentDescription = null,
-        modifier = Modifier.size(20.dp),
-        tint = MaterialTheme.colorScheme.primary
+        modifier = Modifier
+          .padding(start = 4.dp, top = 4.dp)
+          .size(12.dp)
+          .background(Color.Black.copy(alpha = 0.5f), shape = CircleShape),
+        tint = MaterialTheme.colorScheme.onSurfaceVariant
       )
-    } else {
-      Spacer(modifier = Modifier.size(20.dp))
     }
+  }
+}
 
-    Spacer(modifier = Modifier.width(12.dp))
-    Text(
-      text = item.title,
-      style = MaterialTheme.typography.bodyMedium,
-      color = if (isCurrent) {
-        MaterialTheme.colorScheme.primary
-      } else {
-        MaterialTheme.colorScheme.onSurface
-      },
-      maxLines = 1,
-      overflow = TextOverflow.Ellipsis,
-      modifier = Modifier.weight(1f)
-    )
-
-    IconButton(onClick = onMoveToFirst) {
+@Composable
+private fun MoreBtn(
+  onMoveToFirst: () -> Unit,
+  onDelete: () -> Unit
+) {
+  var showPop by remember { mutableStateOf(false) }
+  Box {
+    IconButton(onClick = {
+      showPop = true
+    }) {
       Icon(
-        painter = painterResource(R.drawable.ic_more_vert),
+        painter = painterResource(com.composables.icons.tabler.outline.R.drawable.tabler_ic_dots_vertical_outline),
         contentDescription = "移到顶部",
         tint = MaterialTheme.colorScheme.onSurfaceVariant
       )
     }
-    IconButton(onClick = onDelete) {
-      Icon(
-        painter = painterResource(com.composables.icons.tabler.outline.R.drawable.tabler_ic_trash_outline),
-        contentDescription = "删除",
-        tint = MaterialTheme.colorScheme.onSurfaceVariant
+
+    DropdownMenu(
+      expanded = showPop,
+      onDismissRequest = {
+        showPop = false
+      }
+    ) {
+      DropdownMenuItem(
+        text = {
+          Text(
+            text = "移到首位",
+            style = MaterialTheme.typography.bodyMedium,
+          )
+        },
+        leadingIcon = {
+          Icon(
+            painter = painterResource(com.composables.icons.tabler.outline.R.drawable.tabler_ic_arrow_narrow_up_dashed_outline),
+            contentDescription = "移到顶部"
+          )
+        },
+        onClick = onMoveToFirst
+      )
+
+      DropdownMenuItem(
+        text = {
+          Text(
+            text = "删除",
+            style = MaterialTheme.typography.bodyMedium,
+          )
+        },
+        leadingIcon = {
+          Icon(
+            painter = painterResource(com.composables.icons.tabler.outline.R.drawable.tabler_ic_trash_outline),
+            contentDescription = "删除"
+          )
+        },
+        onClick = onDelete
       )
     }
   }

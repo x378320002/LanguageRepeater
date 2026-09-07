@@ -40,9 +40,6 @@ fun WaveformBox(
       .fillMaxWidth()
       .height(110.dp),
     shape = MaterialTheme.shapes.small,
-    colors = CardDefaults.cardColors(
-      containerColor = MaterialTheme.colorScheme.surfaceVariant
-    ),
   ) {
     AndroidView(
       modifier = Modifier.fillMaxSize(),

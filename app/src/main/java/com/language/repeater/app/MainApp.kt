@@ -2,6 +2,8 @@ package com.language.repeater.app
 
 import android.app.Application
 import android.content.Context
+import androidx.compose.foundation.ComposeFoundationFlags
+import androidx.compose.foundation.ExperimentalFoundationApi
 import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
@@ -35,9 +37,11 @@ class MainApp : Application(), SingletonImageLoader.Factory {
     instance = this
   }
 
+  @OptIn(ExperimentalFoundationApi::class)
   override fun onCreate() {
     super.onCreate()
     serviceConnection.connect()
+    ComposeFoundationFlags.isInheritedTextStyleEnabled = true
   }
 
   override fun newImageLoader(context: PlatformContext): ImageLoader {

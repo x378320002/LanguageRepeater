@@ -38,7 +38,7 @@ fun ProgressSeekBar(
       .padding(horizontal = 15.dp),
     track = { state ->
       val bgColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
-      val onBgColor = MaterialTheme.colorScheme.onBackground
+      val onBgColor = MaterialTheme.colorScheme.onSurfaceVariant
       Canvas(
         modifier = Modifier
           .fillMaxWidth()
