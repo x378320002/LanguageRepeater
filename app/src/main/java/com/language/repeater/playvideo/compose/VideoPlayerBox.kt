@@ -37,9 +37,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.ui.PlayerView
-import com.language.repeater.app.MainApp
 import com.language.repeater.datastore.DsManager
-import com.language.repeater.player.media3.AndroidVideoOutput
+import com.language.repeater.player.togglePlayPause
+import com.language.repeater.playvideo.PlayerViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -53,11 +53,14 @@ const val TAG = "VideoPlayerBox"
  */
 @Composable
 fun VideoPlayerBox(
-  videoOutput: AndroidVideoOutput,
+  viewModel: PlayerViewModel,
   modifier: Modifier = Modifier
 ) {
   val scope = rememberCoroutineScope()
   val context = LocalContext.current
+  val player = viewModel.player
+  val sentenceController = viewModel.sentenceController
+  val videoOutput = viewModel.videoOutput
   val state = remember(videoOutput, scope) {
     VideoPlayerBoxState(context, scope)
   }
@@ -71,12 +74,12 @@ fun VideoPlayerBox(
       .detectHorizontalFling(onFlingLeft = {
         scope.launch {
           Log.i(TAG, "detectHorizontalFling onFlingLeft")
-          MainApp.instance.playbackGraph.sentenceController.seekToNextSentence()
+          sentenceController.seekToNextSentence()
         }
       }, onFlingRight = {
         scope.launch {
           Log.i(TAG, "detectHorizontalFling onFlingRight")
-          MainApp.instance.playbackGraph.sentenceController.seekToPreviousSentence()
+          sentenceController.seekToPreviousSentence()
         }
       })
       .pointerInput(Unit) {
@@ -100,31 +103,26 @@ fun VideoPlayerBox(
         detectTapGestures(
           onLongPress = {
             Log.i(TAG, "detectTapGestures onLongPress")
-            oldSpeed = MainApp.instance.playbackGraph.player.state.value.speed
+            oldSpeed = player.state.value.speed
             scope.launch {
               val speed = oldSpeed ?: return@launch
               val newSpeed = speed * DsManager.get(DsManager.KEY_LONG_PRESS_SPEED, 1.0f)
-              MainApp.instance.playbackGraph.player.setSpeed(newSpeed)
+              player.setSpeed(newSpeed)
               state.showFeedback("⏩ ${speed}X")
             }
           },
           onDoubleTap = {
             Log.i(TAG, "detectTapGestures onDoubleTap")
-            MainApp.instance.playbackGraph.sentenceController.backToSentenceHead()
+            sentenceController.backToSentenceHead()
           },
           onTap = {
             Log.i(TAG, "detectTapGestures onTap")
-            val player = MainApp.instance.playbackGraph.player
-            if (player.state.value.isPlaying) {
-              player.pause()
-            } else {
-              player.play()
-            }
+            player.togglePlayPause()
           },
           onPress = {
             val press = tryAwaitRelease()
             if (press && oldSpeed != null) {
-              MainApp.instance.playbackGraph.player.setSpeed(oldSpeed ?: 1.0f)
+              player.setSpeed(oldSpeed ?: 1.0f)
             }
             oldSpeed = null
           }

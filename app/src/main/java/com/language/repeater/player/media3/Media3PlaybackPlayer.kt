@@ -155,7 +155,20 @@ class Media3PlaybackPlayer(
   ) {
     runOnPlayerThread {
       val safePositionMs = startPositionMs.coerceAtLeast(0L)
-      resetStateForPrepare(media, safePositionMs, playWhenReady)
+      // 必须在重置 state 之前取，重置后读到的已经是新媒体
+      val mediaChanged = _state.value.currentMedia?.mediaId != media.mediaId
+
+      // 状态整体重置，必须发生在操作 exoPlayer 之前：下面的调用会同步触发
+      // Player.Listener，而 updateState() 是在当前 state 上做 copy 且不涉及
+      // currentMedia，若这里还没换掉，回调就会发出「上一个媒体配新状态」的组合。
+      // 位置和播放态按本次请求填入，避免进度条闪回 0、播放图标闪回暂停。
+      _state.value = PlaybackState(
+        currentMedia = media,
+        isPlaying = playWhenReady,
+        positionMs = safePositionMs,
+        speed = _state.value.speed
+      )
+
       exoPlayer.setMediaItem(createMediaItem(media), safePositionMs)
       // setMediaItem 不会清掉上一媒体遗留的 playWhenReady，
       // 先置 false 避免上一首的播放意图被带到新媒体上
@@ -164,23 +177,13 @@ class Media3PlaybackPlayer(
       if (playWhenReady) {
         exoPlayer.play()
       }
-      // 回读真实状态，纠正 resetStateForPrepare 里的乐观预设
-      updateState()
-      _events.tryEmit(PlaybackEvent.MediaChanged(media))
-    }
-  }
 
-  private fun resetStateForPrepare(
-    media: PlaybackMedia,
-    startPositionMs: Long,
-    playWhenReady: Boolean
-  ) {
-    _state.value = PlaybackState(
-      currentMedia = media,
-      isPlaying = playWhenReady,
-      positionMs = startPositionMs,
-      speed = _state.value.speed
-    )
+      // prepare() 会触发 onPlaybackStateChanged → updateState()，用真实状态覆盖上面
+      // 的乐观预设，末尾无需再读一次。
+      if (mediaChanged) {
+        _events.tryEmit(PlaybackEvent.MediaChanged(media, safePositionMs))
+      }
+    }
   }
 
   override fun play() {
@@ -268,8 +271,12 @@ class Media3PlaybackPlayer(
 
   override fun clear() {
     runOnPlayerThread {
+      val mediaChanged = _state.value.currentMedia != null
       exoPlayer.clearMediaItems()
       _state.value = PlaybackState(speed = _state.value.speed)
+      if (mediaChanged) {
+        _events.tryEmit(PlaybackEvent.MediaChanged(media = null, positionMs = 0L))
+      }
     }
   }
 
@@ -284,13 +291,6 @@ class Media3PlaybackPlayer(
     runOnPlayerThread {
       attachedViews.remove(playerView)
       playerView.player = null
-    }
-  }
-
-  /** 立即从平台播放器回读一次位置，供进程退出前落盘精确快照。 */
-  fun refreshPosition() {
-    runOnPlayerThread {
-      updatePosition()
     }
   }
 

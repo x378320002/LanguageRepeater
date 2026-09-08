@@ -4,6 +4,11 @@ package com.language.repeater.playvideo
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
@@ -29,8 +34,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavKey
 import com.language.repeater.app.SettingPageKey
+import com.language.repeater.player.togglePlayPause
 import com.language.repeater.playvideo.compose.EditActionsRow
-import com.language.repeater.playvideo.compose.HistorySheet
 import com.language.repeater.playvideo.compose.PlayTopBar
 import com.language.repeater.playvideo.compose.PlaybackControlRow
 import com.language.repeater.playvideo.compose.PlaylistSheet
@@ -39,21 +44,22 @@ import com.language.repeater.playvideo.compose.SubActionsRow
 import com.language.repeater.playvideo.compose.VideoPlayerBox
 import com.language.repeater.playvideo.compose.WaveformBox
 import com.language.repeater.utils.FileUtil
+import java.lang.System.exit
 
 @Composable
 fun PlayVideoScreen(
   backStack: NavBackStack<NavKey>? = null,
   viewModel: PlayerViewModel = viewModel()
 ) {
-  // 播放事实与列表直接观察应用级 Player/Controller。
+  // 播放事实、列表、句子分析都直接观察应用级对象，不经 ViewModel 转发。
   val playerState by viewModel.player.state.collectAsState()
   val playbackList by viewModel.playbackListController.items.collectAsState()
-  val playbackMode by viewModel.playbackMode.collectAsState()
-  val repeatable by viewModel.repeatable.collectAsState()
+  val playbackMode by viewModel.playbackListController.playbackMode.collectAsState()
+  val repeatable by viewModel.sentenceController.repeatAb.collectAsState()
   val editMode by viewModel.editMode.collectAsState()
-  val sentences by viewModel.sentencesFlow.collectAsState()
-  val curAbSentence by viewModel.curAbSentenceFlow.collectAsState()
-  val pcmLoader by viewModel.pcmLoaderStateFlow.collectAsState()
+  val sentences by viewModel.sentenceController.sentences.collectAsState()
+  val curAbSentence by viewModel.sentenceController.currentSentence.collectAsState()
+  val pcmLoader by viewModel.sentenceController.pcmLoader.collectAsState()
   val sleepTimerRemaining by viewModel.sleepTimerRemaining.collectAsState()
 
   val context = LocalContext.current
@@ -64,7 +70,7 @@ fun PlayVideoScreen(
   ) { uri ->
     if (uri != null) {
       FileUtil.takePersistablePermission(context, uri)
-      viewModel.onSubtitleSelected(uri)
+      viewModel.subtitleController.updateSubtitle(uri)
     }
   }
 
@@ -82,7 +88,7 @@ fun PlayVideoScreen(
     ) {
       // ---------- 视频播放区域 ----------
       VideoPlayerBox(
-        videoOutput = viewModel.videoOutput,
+        viewModel = viewModel,
         modifier = Modifier.padding(horizontal = 15.dp)
       )
 
@@ -108,41 +114,47 @@ fun PlayVideoScreen(
         repeatable = repeatable,
         pcmLoader = pcmLoader,
         currentPositionSec = playerState.positionMs / 1000f,
-        onCustomClick = { viewModel.togglePlayPause() },
+        onCustomClick = { viewModel.player.togglePlayPause() },
         onSeekBegin = {
           val wasPlaying = playerState.isPlaying
-          viewModel.pause()
+          viewModel.player.pause()
           wasPlaying
         },
-        onSeeking = { pos -> viewModel.updatePosition(pos) },
+        onSeeking = { pos ->
+          viewModel.sentenceController.previewPosition((pos * 1000f).toLong())
+        },
         onSeekEnd = { pos, wasPlaying ->
           viewModel.player.seekTo((pos * 1000).toLong())
           if (wasPlaying) {
-            viewModel.play()
+            viewModel.player.play()
           }
         },
         onAbDragBegin = {
           val wasPlaying = playerState.isPlaying
-          viewModel.pause()
+          viewModel.player.pause()
           wasPlaying
         },
         onAbDragEnd = { wasPlaying ->
           if (wasPlaying) {
-            viewModel.play()
+            viewModel.player.play()
           }
-          viewModel.saveSentenceData()
+          viewModel.sentenceController.mergeAndSaveSentences()
         },
         modifier = Modifier.padding(horizontal = 15.dp),
       )
 
       // ---------- 编辑栏 ----------
-      if (editMode) {
+      AnimatedVisibility(
+        visible = editMode,
+        enter = expandVertically() + fadeIn(),
+        exit = fadeOut() + shrinkVertically()
+      ) {
         EditActionsRow(
-          onMergePre = { viewModel.mergePreSentence() },
-          onMergeNext = { viewModel.mergeNextSentence() },
-          onSplitSentence = { viewModel.splitCurrentSentence() },
-          onDeleteSentence = { viewModel.deleteCurrentSentence() },
-          onInsertSentence = { viewModel.insertSentence() },
+          onMergePre = { viewModel.sentenceController.mergePreviousSentence() },
+          onMergeNext = { viewModel.sentenceController.mergeNextSentence() },
+          onSplitSentence = { viewModel.sentenceController.splitCurrentSentence() },
+          onDeleteSentence = { viewModel.sentenceController.deleteCurrentSentence() },
+          onInsertSentence = { viewModel.sentenceController.insertSentence() },
         )
       }
 
@@ -158,7 +170,7 @@ fun PlayVideoScreen(
         repeatEnabled = repeatable,
         showFullScreenBtn = false,
         onToggleAbDrag = { viewModel.editMode(!editMode) },
-        onToggleRepeat = { viewModel.toggleRepeat() },
+        onToggleRepeat = { viewModel.sentenceController.toggleRepeat() },
         onSpeedSelected = { speed -> viewModel.player.setSpeed(speed) },
         onTimerSelected = { minutes -> viewModel.startSleepTimer(minutes) },
         onTimerComplete = { viewModel.startSleepTimerByCurrentItem() },
@@ -172,7 +184,7 @@ fun PlayVideoScreen(
             )
           )
         },
-        onSplitSubtitle = { viewModel.loadSentenceData(false) },
+        onSplitSubtitle = { viewModel.sentenceController.reloadSentences() },
         onToggleFullScreen = {
           val activity = context as? android.app.Activity
           activity?.let {
@@ -190,10 +202,10 @@ fun PlayVideoScreen(
       // ---------- 播放控制栏 ----------
       PlaybackControlRow(
         isPlaying = playerState.isPlaying,
-        onSeekPrevSentence = { viewModel.seekToPreviousSentence() },
-        onBackSentenceHead = { viewModel.backToSentenceHead() },
-        onTogglePlayPause = { viewModel.togglePlayPause() },
-        onSeekNextSentence = { viewModel.seekToNextSentence() },
+        onSeekPrevSentence = { viewModel.sentenceController.seekToPreviousSentence() },
+        onBackSentenceHead = { viewModel.sentenceController.backToSentenceHead() },
+        onTogglePlayPause = { viewModel.player.togglePlayPause() },
+        onSeekNextSentence = { viewModel.sentenceController.seekToNextSentence() },
         onOpenPlaylist = { showPlaylistSheet = true },
       )
 
@@ -210,7 +222,7 @@ fun PlayVideoScreen(
       isPlaying = playerState.isPlaying,
       playbackMode = playbackMode,
       onPlaybackModeClick = {
-        viewModel.cyclePlaybackMode()
+        viewModel.playbackListController.cyclePlaybackMode()
       },
       onItemClick = { mediaId ->
         viewModel.selectItem(mediaId)
@@ -224,21 +236,4 @@ fun PlayVideoScreen(
       onDismiss = { showPlaylistSheet = false },
     )
   }
-
-  // ---------- 历史记录 BottomSheet ----------
-//  var showHistorySheet = true
-//  if (showHistorySheet) {
-//    val historyList by viewModel.getHistoryFlow().collectAsState(emptyList())
-//    HistorySheet(
-//      historyList = historyList.map { it.videoInfo },
-//      onItemClick = { item ->
-//        viewModel.playHistoryItem(item)
-//        showHistorySheet = false
-//      },
-//      onDelete = { item ->
-//        viewModel.deleteHistory(item)
-//      },
-//      onDismiss = { showHistorySheet = false },
-//    )
-//  }
 }

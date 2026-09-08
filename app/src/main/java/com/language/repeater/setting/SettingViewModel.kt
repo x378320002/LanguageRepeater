@@ -1,6 +1,7 @@
 package com.language.repeater.setting
 
 import android.annotation.SuppressLint
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.language.repeater.app.MainApp
@@ -85,8 +86,15 @@ class SettingViewModel : ViewModel() {
     }
   }
 
-  /** 保存夜间模式并通知系统切换 AppCompatDelegate */
+  /** 保存夜间模式并立即切换，下次启动由 MainApp 读取该值恢复 */
   private fun saveNightMode(enabled: Boolean) {
+    AppCompatDelegate.setDefaultNightMode(
+      if (enabled) {
+        AppCompatDelegate.MODE_NIGHT_YES
+      } else {
+        AppCompatDelegate.MODE_NIGHT_NO
+      }
+    )
     viewModelScope.launch {
       DsManager.set(DsManager.KEY_NIGHT_MODE, enabled)
     }

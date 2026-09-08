@@ -1,6 +1,7 @@
 package com.language.repeater.playback
 
-import com.language.repeater.db.VideoInfoDao
+import com.language.repeater.datastore.DsManager
+import com.language.repeater.datastore.PlayProgress
 import com.language.repeater.player.PlaybackPlayer
 import com.language.repeater.player.PlaybackEvent
 import kotlinx.coroutines.CoroutineScope
@@ -9,12 +10,17 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * 位置持久化协调器。监听播放器状态和事件，在暂停、seek 完成、播放失败
- * 以及周期性时机将当前播放位置写入 VideoInfoDao；同时提供手动保存入口。
+ * 播放进度持久化。全应用只有这里写 [PlayProgress]。
+ *
+ * 落盘时机：媒体切换、暂停、seek 完成、每 5 秒周期，另提供非协程环境下的手动入口。
+ * 播放器被清空时抹掉记录。
+ *
+ * 位置放在 DataStore 而非数据库，因为它是秒级高频写入，会让读同一张表的
+ * 播放列表 Flow 不断失效重查。全局只保留当前条目的一份进度，
+ * 切换条目一律从头播放。
  */
 class PlaybackProgressController(
   private val player: PlaybackPlayer,
-  private val videoInfoDao: VideoInfoDao,
   private val scope: CoroutineScope
 ) {
   init {
@@ -33,6 +39,15 @@ class PlaybackProgressController(
     scope.launch {
       player.events.collect { event ->
         when (event) {
+          is PlaybackEvent.MediaChanged -> {
+            val media = event.media
+            if (media == null) {
+              DsManager.setPlayProgress(PlayProgress.EMPTY)
+            } else {
+              savePosition(media.mediaId, event.positionMs)
+            }
+          }
+
           is PlaybackEvent.SeekCompleted -> {
             savePositionIfCurrent(event.mediaId, event.positionMs)
           }
@@ -57,7 +72,7 @@ class PlaybackProgressController(
   suspend fun saveCurrentPosition() {
     val state = player.state.value
     val mediaId = state.currentMedia?.mediaId ?: return
-    videoInfoDao.updatePosition(mediaId, state.positionMs)
+    savePosition(mediaId, state.positionMs)
   }
 
   /** 非协程上下文的手动保存入口（如任务卡移除 / 服务销毁），立即派发到 IO 线程。 */
@@ -66,7 +81,7 @@ class PlaybackProgressController(
     val mediaId = state.currentMedia?.mediaId ?: return
     val snapshotPositionMs = state.positionMs
     scope.launch(Dispatchers.IO) {
-      videoInfoDao.updatePosition(mediaId, snapshotPositionMs)
+      savePosition(mediaId, snapshotPositionMs)
     }
   }
 
@@ -74,7 +89,12 @@ class PlaybackProgressController(
     if (player.state.value.currentMedia?.mediaId != mediaId) {
       return
     }
-    videoInfoDao.updatePosition(mediaId, positionMs)
+    savePosition(mediaId, positionMs)
+  }
+
+  /** 位置连同它所属的 mediaId 一起写，避免切歌瞬间的延迟写入挂到新条目上。 */
+  private suspend fun savePosition(mediaId: String, positionMs: Long) {
+    DsManager.setPlayProgress(PlayProgress(mediaId, positionMs))
   }
 
   private companion object {

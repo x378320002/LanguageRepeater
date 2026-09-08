@@ -1,91 +1,52 @@
 package com.language.repeater.playvideo
 
 import android.net.Uri
-import androidx.core.net.toUri
-import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.language.repeater.app.MainApp
 import com.language.repeater.datastore.DsManager
-import com.language.repeater.datastore.subtitleStore
+import com.language.repeater.playcore.SleepTimerManager
 import com.language.repeater.playvideo.model.VideoEntity
 import com.language.repeater.utils.FileUtil
-import com.language.repeater.utils.SubtitleFolderScanner
-import com.language.repeater.utils.UriAccessUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+/**
+ * 播放页 ViewModel。
+ *
+ * 播放器、播放列表、句子分析都是应用级单例，这里直接外露供 UI 使用，
+ * 不再逐方法转发——转发层既不加工数据也不承载状态，只会让调用链多一跳。
+ * 本类只保留三类真正属于自己的东西：页面级 UI 状态、需要 viewModelScope 的挂起编排、
+ * 以及跨组件的业务流程（文件导入、定时关闭）。
+ */
 class PlayerViewModel : ViewModel() {
+  private val playbackGraph = MainApp.instance.playbackGraph
+
+  val player = playbackGraph.player
+  val videoOutput = playbackGraph.videoOutput
+  val playbackListController = playbackGraph.playbackListController
+  val sentenceController = playbackGraph.sentenceController
+  val subtitleController = playbackGraph.subtitleController
+
+  /** 句子编辑模式，仅本页面使用，持久化在 DataStore 以便重建后恢复。 */
   val editMode = DsManager.observe(DsManager.KEY_EDIT_SEN_MODE, false)
     .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
-  private val playbackGraph = MainApp.instance.playbackGraph
-  private val mediaAnalysisController = playbackGraph.sentenceController
-
-  // 播放事实、列表和当前媒体分析均来自应用级对象，ViewModel 只转发 UI 意图。
-  val player = playbackGraph.player
-  val playbackListController = playbackGraph.playbackListController
-  val videoOutput = playbackGraph.videoOutput
-
-  val playbackMode = playbackListController.playbackMode
-
-  private val progressController = playbackGraph.progressController
-
-  val pcmLoaderStateFlow = mediaAnalysisController.pcmLoader
-  val sentencesFlow = mediaAnalysisController.sentences
-  val repeatable = mediaAnalysisController.repeatAb
-  val curAbSentenceFlow = mediaAnalysisController.currentSentence
-
-  // 复读与句子控制由独立协调器处理，只通过 PlaybackPlayer 执行 seek。
-  val sleepTimerRemaining = com.language.repeater.playcore.SleepTimerManager.remainingSeconds
-
-  fun startSleepTimer(minutes: Int) {
-    if (minutes <= 0) {
-      com.language.repeater.playcore.SleepTimerManager.stopTimer()
-    } else {
-      com.language.repeater.playcore.SleepTimerManager.startTimerMinutes(minutes)
-    }
-  }
-
-  fun startSleepTimerByCurrentItem() {
-    val state = player.state.value
-    val remainingMs = state.durationMs - state.positionMs
-    if (state.durationMs > 0L && remainingMs > 0L) {
-      com.language.repeater.playcore.SleepTimerManager.startTimer(
-        seconds = remainingMs / 1000L + 1L
-      )
-    }
-  }
-
-  fun togglePlayPause() {
-    if (player.state.value.isPlaying) {
-      player.pause()
-    } else {
-      player.play()
-    }
-  }
-
-  fun play() {
-    player.play()
-  }
-
-  fun pause() {
-    player.pause()
-  }
-
-  fun saveCurrentPos() {
+  fun editMode(edit: Boolean) {
     viewModelScope.launch {
-      progressController.saveCurrentPosition()
+      DsManager.set(DsManager.KEY_EDIT_SEN_MODE, edit)
     }
   }
 
-  fun cyclePlaybackMode() {
-    playbackListController.cyclePlaybackMode()
+  // ---------- 播放列表：controller 侧是 suspend，需要 scope 承接 ----------
+
+  fun selectItem(mediaId: String) {
+    viewModelScope.launch {
+      playbackListController.select(mediaId)
+    }
   }
 
   fun deleteItem(mediaId: String) {
@@ -100,76 +61,28 @@ class PlayerViewModel : ViewModel() {
     }
   }
 
-  fun selectItem(mediaId: String) {
-    viewModelScope.launch {
-      playbackListController.select(mediaId)
+  // ---------- 定时关闭 ----------
+
+  val sleepTimerRemaining = SleepTimerManager.remainingSeconds
+
+  fun startSleepTimer(minutes: Int) {
+    if (minutes <= 0) {
+      SleepTimerManager.stopTimer()
+    } else {
+      SleepTimerManager.startTimerMinutes(minutes)
     }
   }
 
-  // 复读与句子控制由独立协调器处理，只通过 PlaybackPlayer 执行 seek。
-  fun toggleRepeat() = mediaAnalysisController.toggleRepeat()
-  fun seekToNextSentence() = mediaAnalysisController.seekToNextSentence()
-  fun seekToPreviousSentence() = mediaAnalysisController.seekToPreviousSentence()
-  fun backToSentenceHead() = mediaAnalysisController.backToSentenceHead()
-
-  fun onSubtitleSelected(uri: Uri) {
-    mediaAnalysisController.updateSubtitle(uri)
-  }
-
-  fun updatePosition(position: Float) {
-    mediaAnalysisController.previewPosition((position * 1000f).toLong())
-  }
-
-  fun updatePosition(position: Long) {
-    mediaAnalysisController.previewPosition(position)
-  }
-
-  fun loadSentenceData(forceUseVad: Boolean = false) {
-    mediaAnalysisController.reloadSentences(forceUseVad)
-  }
-
-  fun splitCurrentSentence() {
-    mediaAnalysisController.splitCurrentSentence()
-  }
-
-  fun saveSentenceData() {
-    mediaAnalysisController.mergeAndSaveSentences()
-  }
-
-  fun deleteCurrentSentence() {
-    mediaAnalysisController.deleteCurrentSentence()
-  }
-
-  fun getHistoryFlow() = mediaAnalysisController.history
-
-  fun addPlayList(
-    list: List<VideoEntity>,
-    isReplace: Boolean
-  ) {
-    viewModelScope.launch {
-      if (isReplace) {
-        playbackListController.replace(list)
-      } else {
-        playbackListController.addToFront(list)
-      }
+  /** 播完当前条目即停：按剩余时长设定倒计时，多给 1 秒避免临界提前掐断。 */
+  fun startSleepTimerByCurrentItem() {
+    val state = player.state.value
+    val remainingMs = state.durationMs - state.positionMs
+    if (state.durationMs > 0L && remainingMs > 0L) {
+      SleepTimerManager.startTimer(seconds = remainingMs / 1000L + 1L)
     }
   }
 
-  // 历史项加入列表后按稳定 mediaId 选择播放。
-  fun playHistoryItem(item: VideoEntity) {
-    viewModelScope.launch {
-      playbackListController.addToFront(listOf(item))
-      playbackListController.select(item.id)
-    }
-  }
-
-  fun playItem(mediaId: String) {
-    selectItem(mediaId)
-  }
-
-  fun deleteHistory(item: VideoEntity) {
-    mediaAnalysisController.deleteHistory(item.id)
-  }
+  // ---------- 文件导入 ----------
 
   /**
    * 处理选择的视频文件
@@ -182,80 +95,25 @@ class PlayerViewModel : ViewModel() {
 
     viewModelScope.launch(Dispatchers.IO) {
       val context = MainApp.instance
-      val preferences = context.subtitleStore.data.firstOrNull()
-
-      // 转成 VideoEntity 列表
-      var needToCheckSubFolder = false
       val infos = uris.map { uri ->
         FileUtil.takePersistablePermission(context, uri)
-        val info = FileUtil.getFileInfo(context, uri)
-
-        // 检查是否有保存的字幕映射
-        val prefKey = stringPreferencesKey(info.id)
-        val sub = preferences?.get(prefKey)
-        if (!sub.isNullOrEmpty()) {
-          val subUri = sub.toUri()
-          if (UriAccessUtil.canRead(context, subUri)) {
-            info.subUri = sub
-          } else {
-            // 字幕链接已失效，清除映射
-            context.subtitleStore.edit { sp -> sp.remove(prefKey) }
-            info.subUri = null
-            needToCheckSubFolder = true
-          }
-        } else {
-          needToCheckSubFolder = true
-        }
-        info
+        FileUtil.getFileInfo(context, uri)
       }
-
       if (infos.isEmpty()) {
         return@launch
       }
 
-      // 去文件夹寻找字幕
-      if (needToCheckSubFolder) {
-        val folder = DsManager.get(DsManager.KEY_SUBTITLE_FOLDER, "")
-          .takeIf { it.isNotEmpty() }
-          ?.toUri()
-        val map = SubtitleFolderScanner.scan(context, folder)
-        if (map.isNotEmpty()) {
-          infos.forEach { info ->
-            if (info.subUri == null) {
-              val key = info.name.substringBeforeLast(".")
-              val tempUri = map[key]
-              if (tempUri != null) {
-                info.subUri = tempUri.toString()
-                val prefKey = stringPreferencesKey(info.id)
-                context.subtitleStore.edit { sp -> sp[prefKey] = tempUri.toString() }
-              }
-            }
-          }
-        }
-      }
+      subtitleController.resolveSubtitles(infos)
 
-      // 添加到播放列表
       withContext(Dispatchers.Main) {
-        addPlayList(infos, false)
+        addPlayList(infos)
       }
     }
   }
 
-  fun mergePreSentence() {
-    mediaAnalysisController.mergePreviousSentence()
-  }
-
-  fun mergeNextSentence() {
-    mediaAnalysisController.mergeNextSentence()
-  }
-
-  fun insertSentence() {
-    mediaAnalysisController.insertSentence()
-  }
-
-  fun editMode(edit: Boolean) {
+  private fun addPlayList(list: List<VideoEntity>) {
     viewModelScope.launch {
-      DsManager.set(DsManager.KEY_EDIT_SEN_MODE, edit)
+      playbackListController.addToFront(list)
     }
   }
 }

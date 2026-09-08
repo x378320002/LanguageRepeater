@@ -25,3 +25,17 @@ interface PlaybackPlayer {
 
   fun clear()
 }
+
+/**
+ * 在播放与暂停之间切换。
+ *
+ * 判定依据是 [PlaybackState.isPlaying]（含缓冲态），与 UI 上显示的图标保持一致，
+ * 避免出现「图标是播放中、点一下却又调 play()」的错位。
+ */
+fun PlaybackPlayer.togglePlayPause() {
+  if (state.value.isPlaying) {
+    pause()
+  } else {
+    play()
+  }
+}

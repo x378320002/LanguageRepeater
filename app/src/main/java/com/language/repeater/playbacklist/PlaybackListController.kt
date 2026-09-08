@@ -5,6 +5,7 @@ import com.language.repeater.player.PlaybackMedia
 import com.language.repeater.player.PlaybackPlayer
 import com.language.repeater.player.PlaybackEvent
 import com.language.repeater.playvideo.model.VideoEntity
+import com.language.repeater.playvideo.model.toPlaybackMedia
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,9 +25,10 @@ class PlaybackListController(
   private val operationMutex = Mutex()
   private val _playbackMode = MutableStateFlow(PlaybackMode.RepeatOne)
 
-  /** 历史默认值为 Media3 REPEAT_MODE_ONE，因此初始值保持单曲循环语义。 */
+  /** 当前播放模式，初始值与 Media3 的默认值 REPEAT_MODE_ONE 对齐。 */
   val playbackMode: StateFlow<PlaybackMode> = _playbackMode.asStateFlow()
 
+  /** 完整列表，随数据库变化自动更新。取相邻条目、判断顺序都基于它。 */
   val items: StateFlow<List<PlaybackListItem>> = repository.items.stateIn(
     scope,
     SharingStarted.Eagerly,
@@ -60,58 +62,59 @@ class PlaybackListController(
     }
   }
 
+  /**
+   * 按 DataStore 里的进度加载上次播放的条目，加载后保持暂停。
+   *
+   * 只在进程启动时调用一次，此时 [items] 尚未加载，因此按 id 直接查库。
+   * 记录的条目已不在列表时退化到首条，并从头开始播。
+   */
   suspend fun restore() {
     operationMutex.withLock {
-      val currentMediaId = player.state.value.currentMedia?.mediaId
-      if (currentMediaId != null) {
-        // 播放器已有媒体（重复调用时），不打断播放，仅校正可能过期的持久化 ID。
-        val savedMediaId = DsManager.get(DsManager.KEY_CURRENT_PLAY_ID, "")
-        if (savedMediaId != currentMediaId) {
-          saveCurrentMediaId(currentMediaId)
-        }
-        return
-      }
-
-      val savedMediaId = DsManager.get(DsManager.KEY_CURRENT_PLAY_ID, "")
-      val savedItem = savedMediaId.takeIf { mediaId -> mediaId.isNotEmpty() }
+      val progress = DsManager.getPlayProgress()
+      val savedItem = progress.mediaId
+        .takeIf { mediaId -> mediaId.isNotEmpty() }
         ?.let { mediaId -> repository.get(mediaId) }
-      val item = savedItem ?: repository.first()
-      if (item == null) {
-        if (savedMediaId.isNotEmpty()) {
-          clearCurrentMediaId()
-        }
+      val item = savedItem ?: repository.first() ?: return
+      // 记录的位置只属于 savedItem，退化到首条时从 0 开始
+      val startPositionMs = if (savedItem == null) {
+        0L
+      } else {
+        progress.positionMs
+      }
+      player.prepare(
+        media = item.toPlaybackMedia(),
+        startPositionMs = startPositionMs,
+        playWhenReady = false
+      )
+    }
+  }
+
+  suspend fun addToFront(videos: List<VideoEntity>) {
+    operationMutex.withLock {
+      val uniqueVideos = videos.distinctBy { video -> video.id }
+      if (uniqueVideos.isEmpty()) {
         return
       }
-      // 仅恢复时使用上次保存的播放位置
-      prepare(item, playWhenReady = false, startPositionMs = item.savedPositionMs)
-    }
-  }
 
-  suspend fun replace(
-    items: List<VideoEntity>,
-    selectedMediaId: String? = null
-  ) {
-    operationMutex.withLock {
-      val uniqueItems = items.distinctBy { item -> item.id }
-      val resolvedSelectedMediaId = selectedMediaId ?: uniqueItems.firstOrNull()?.id
-      val shouldPlay = player.state.value.isPlaying
-      repository.replace(uniqueItems)
-      val item = resolvedSelectedMediaId?.let { mediaId -> repository.get(mediaId) }
-        ?: repository.first()
-      if (item == null) {
-        clearCurrentMediaId()
-        player.clear()
-      } else {
-        prepare(item, shouldPlay)
-      }
-    }
-  }
+      // 已在列表里的保持原位，只把没见过的排到队首
+      val currentOrder = items.value.map { item -> item.mediaId }
+      val newMediaIds = uniqueVideos
+        .map { video -> video.id }
+        .filterNot { mediaId -> mediaId in currentOrder }
+      repository.saveOrder(
+        order = if (newMediaIds.isEmpty()) {
+          emptyList()
+        } else {
+          newMediaIds + currentOrder
+        },
+        videos = uniqueVideos
+      )
 
-  suspend fun addToFront(items: List<VideoEntity>) {
-    operationMutex.withLock {
-      repository.addToFront(items)
       if (player.state.value.currentMedia == null) {
-        repository.first()?.let { item -> prepare(item, true) }
+        // 播放器空闲时自动起播队首，也就是这批视频里的第一个
+        uniqueVideos.firstOrNull()?.let { video ->
+          player.prepare(video.toPlaybackMedia(), playWhenReady = true)
+        }
       }
     }
   }
@@ -126,25 +129,9 @@ class PlaybackListController(
         }
         return
       }
-      repository.get(mediaId)?.let { item -> prepare(item, true) }
-    }
-  }
-
-  suspend fun playNext() {
-    operationMutex.withLock {
-      val mediaId = player.state.value.currentMedia?.mediaId ?: return
-      val next = repository.nextOf(mediaId) ?: repository.first()
-      if (next != null && next.mediaId != mediaId) {
-        prepare(next, true)
+      items.value.itemOf(mediaId)?.let { item ->
+        player.prepare(item.toPlaybackMedia(), playWhenReady = true)
       }
-    }
-  }
-
-  suspend fun playPrevious() {
-    operationMutex.withLock {
-      val mediaId = player.state.value.currentMedia?.mediaId ?: return
-      val previous = repository.previousOf(mediaId) ?: return
-      prepare(previous, true)
     }
   }
 
@@ -152,8 +139,10 @@ class PlaybackListController(
     operationMutex.withLock {
       val wasPlaying = player.state.value.isPlaying
       val isCurrent = player.state.value.currentMedia?.mediaId == mediaId
+      // 顶替者必须在删除之前算好，删掉之后就找不到相邻关系了
       val replacement = if (isCurrent) {
-        repository.nextOf(mediaId) ?: repository.previousOf(mediaId)
+        val list = items.value
+        list.nextOf(mediaId) ?: list.previousOf(mediaId)
       } else {
         null
       }
@@ -162,20 +151,23 @@ class PlaybackListController(
         return
       }
       if (replacement == null) {
-        clearCurrentMediaId()
         player.clear()
       } else {
-        prepare(replacement, wasPlaying)
+        player.prepare(replacement.toPlaybackMedia(), playWhenReady = wasPlaying)
       }
     }
   }
 
   suspend fun moveToFirst(mediaId: String) {
-    repository.moveToFirst(mediaId)
-  }
-
-  suspend fun moveBefore(mediaId: String, targetMediaId: String) {
-    repository.moveBefore(mediaId, targetMediaId)
+    operationMutex.withLock {
+      val currentOrder = items.value.map { item -> item.mediaId }
+      if (currentOrder.firstOrNull() == mediaId || mediaId !in currentOrder) {
+        return
+      }
+      repository.saveOrder(
+        listOf(mediaId) + currentOrder.filterNot { item -> item == mediaId }
+      )
+    }
   }
 
   suspend fun handleMediaEnded(mediaId: String) {
@@ -185,17 +177,18 @@ class PlaybackListController(
       }
       when (_playbackMode.value) {
         PlaybackMode.Sequential -> {
-          val next = repository.nextOf(mediaId)
+          val next = items.value.nextOf(mediaId)
           if (next == null) {
             player.seekTo(0L)
             player.pause()
           } else {
-            prepare(next, true)
+            player.prepare(next.toPlaybackMedia(), playWhenReady = true)
           }
         }
 
         PlaybackMode.RepeatAll -> {
-          val next = repository.nextOf(mediaId) ?: repository.first()
+          val list = items.value
+          val next = list.nextOf(mediaId) ?: list.firstOrNull()
           if (next == null) {
             player.seekTo(0L)
             player.pause()
@@ -203,7 +196,7 @@ class PlaybackListController(
             player.seekTo(0L)
             player.play()
           } else {
-            prepare(next, true)
+            player.prepare(next.toPlaybackMedia(), playWhenReady = true)
           }
         }
 
@@ -215,29 +208,30 @@ class PlaybackListController(
     }
   }
 
-  private suspend fun clearCurrentMediaId() {
-    saveCurrentMediaId("")
-  }
+}
 
-  private suspend fun saveCurrentMediaId(mediaId: String) {
-    DsManager.set(DsManager.KEY_CURRENT_PLAY_ID, mediaId)
+/** 按 id 定位一条，id 为空或不在列表里都返回 null。 */
+private fun List<PlaybackListItem>.itemOf(mediaId: String?): PlaybackListItem? {
+  if (mediaId.isNullOrEmpty()) {
+    return null
   }
+  return firstOrNull { item -> item.mediaId == mediaId }
+}
 
-  private suspend fun prepare(
-    item: PlaybackListItem,
-    playWhenReady: Boolean,
-    startPositionMs: Long = 0L
-  ) {
-    saveCurrentMediaId(item.mediaId)
-    player.prepare(
-      media = PlaybackMedia(
-        mediaId = item.mediaId,
-        uri = item.uri,
-        title = item.title,
-        subtitleUri = item.subtitleUri
-      ),
-      startPositionMs = startPositionMs,
-      playWhenReady = playWhenReady
-    )
+/** 后一条，已是末尾或不在列表里都返回 null。 */
+private fun List<PlaybackListItem>.nextOf(mediaId: String): PlaybackListItem? {
+  val index = indexOfFirst { item -> item.mediaId == mediaId }
+  if (index < 0) {
+    return null
   }
+  return getOrNull(index + 1)
+}
+
+/** 前一条，已是首条或不在列表里都返回 null。 */
+private fun List<PlaybackListItem>.previousOf(mediaId: String): PlaybackListItem? {
+  val index = indexOfFirst { item -> item.mediaId == mediaId }
+  if (index <= 0) {
+    return null
+  }
+  return get(index - 1)
 }

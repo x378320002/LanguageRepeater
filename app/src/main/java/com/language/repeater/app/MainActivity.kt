@@ -1,10 +1,10 @@
 package com.language.repeater.app
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
@@ -15,6 +15,7 @@ import androidx.compose.runtime.retain.RetainedValuesStoreRegistry
 import androidx.compose.runtime.retain.retainRetainedValuesStoreRegistry
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
+import com.language.repeater.datastore.DsManager
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.NavEntryDecorator
 import androidx.navigation3.runtime.NavKey
@@ -101,18 +102,13 @@ class MainActivity : AppCompatActivity() {
       }
     }
 
+    // 系统栏图标明暗跟随当前配色
     val controller = WindowInsetsControllerCompat(window, window.decorView)
     lifecycleScope.launch {
-      GlobalState.nightMode.collect {
-        if (it) {
-          AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
-          controller.isAppearanceLightStatusBars = false
-          controller.isAppearanceLightNavigationBars = false
-        } else {
-          AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
-          controller.isAppearanceLightStatusBars = true
-          controller.isAppearanceLightNavigationBars = true
-        }
+      DsManager.observe(DsManager.KEY_NIGHT_MODE, true).collect { nightMode ->
+        Log.i("MainActivity", "nightMode is $nightMode")
+        controller.isAppearanceLightStatusBars = !nightMode
+        controller.isAppearanceLightNavigationBars = !nightMode
       }
     }
   }

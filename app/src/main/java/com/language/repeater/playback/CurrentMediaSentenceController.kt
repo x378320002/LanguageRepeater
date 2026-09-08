@@ -3,16 +3,10 @@ package com.language.repeater.playback
 import android.content.Context
 import android.net.Uri
 import android.util.Log
-import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.stringPreferencesKey
 import com.language.repeater.R
 import com.language.repeater.datastore.DsManager
-import com.language.repeater.datastore.subtitleStore
-import com.language.repeater.db.HistoryDao
-import com.language.repeater.db.VideoInfoDao
 import com.language.repeater.pcm.FFmpegUtil
 import com.language.repeater.pcm.PCMSegmentLoader
-import com.language.repeater.pcm.WaveformPoint
 import com.language.repeater.player.PlaybackMedia
 import com.language.repeater.player.PlaybackPlayer
 import com.language.repeater.sentence.LocalVoiceSentenceDetector
@@ -30,27 +24,28 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import androidx.core.net.toUri
+import com.language.repeater.player.PlaybackEvent
 
 /**
- * 当前媒体的分析与句子播放协调器。
+ * 当前媒体的句子协调器。
  *
- * 该对象只依赖业务播放器接口，不持有 Media3 Player。它负责 PCM、句子、AB 复读、
- * 句子编辑、字幕持久化和历史记录，并以 mediaId 隔离媒体切换期间的异步结果。
+ * 该对象只依赖业务播放器接口，不持有 Media3 Player。围绕「当前媒体的句子列表」这一份数据，
+ * 负责生成（PCM 波形 + 静音检测或字幕时间轴）、播控（AB 复读、句子导航）和编辑，
+ * 并以 mediaId 隔离媒体切换期间的异步结果。
+ *
+ * 句子有两个来源：当前媒体带字幕就解析字幕的时间轴，没有就对 PCM 做静音检测。
+ * 「为媒体选定哪个字幕」不属于这里，由 SubtitleController 负责。
  */
 class CurrentMediaSentenceController(
   context: Context,
   private val player: PlaybackPlayer,
-  private val historyDao: HistoryDao,
-  private val videoInfoDao: VideoInfoDao,
   private val scope: CoroutineScope
 ) {
   private val applicationContext = context.applicationContext
 
   private val _pcmLoader = MutableStateFlow<PCMSegmentLoader?>(null)
   val pcmLoader = _pcmLoader.asStateFlow()
-
-  private val _allWaveData = MutableStateFlow<List<WaveformPoint>>(emptyList())
-  val allWaveData = _allWaveData.asStateFlow()
 
   private val _sentences = MutableStateFlow<List<Sentence>>(emptyList())
   val sentences = _sentences.asStateFlow()
@@ -60,7 +55,6 @@ class CurrentMediaSentenceController(
 
   private val _currentSentence = MutableStateFlow<Sentence?>(null)
   val currentSentence = _currentSentence.asStateFlow()
-  val history = historyDao.getAllHistory()
 
   private var activeMediaId: String? = null
   private var analysisJob: Job? = null
@@ -72,15 +66,16 @@ class CurrentMediaSentenceController(
     }
 
     scope.launch {
-      var previousMediaId: String? = null
       player.state.collectLatest { state ->
-        val media = state.currentMedia
-        val mediaId = media?.mediaId
-        if (mediaId != previousMediaId) {
-          previousMediaId = mediaId
-          onMediaChanged(media)
-        }
         updatePosition(state.positionMs, checkRepeat = true)
+      }
+    }
+
+    scope.launch(Dispatchers.IO) {
+      player.events.collect { event ->
+        if (event is PlaybackEvent.MediaChanged) {
+          onMediaChanged(event.media)
+        }
       }
     }
   }
@@ -94,9 +89,6 @@ class CurrentMediaSentenceController(
       return
     }
 
-    scope.launch(Dispatchers.IO) {
-      saveHistory(media)
-    }
     analysisJob = scope.launch(Dispatchers.IO) {
       analyzeMedia(media)
     }
@@ -104,7 +96,6 @@ class CurrentMediaSentenceController(
 
   private fun clearAnalysis() {
     _pcmLoader.value = null
-    _allWaveData.value = emptyList()
     _sentences.value = emptyList()
     _currentSentence.value = null
   }
@@ -141,7 +132,7 @@ class CurrentMediaSentenceController(
   private suspend fun extractPcm(media: PlaybackMedia): File {
     val path = FFmpegUtil.extractWavFileByFFmpeg(
       context = applicationContext,
-      input = Uri.parse(media.uri),
+      input = media.uri.toUri(),
       key = media.mediaId
     )
     return File(path)
@@ -159,7 +150,7 @@ class CurrentMediaSentenceController(
       }
       LocalVoiceSentenceDetector().detectSentences(pcmFile)
     } else {
-      val parsedSubtitles = SrtParser.parse(applicationContext, Uri.parse(media.subtitleUri))
+      val parsedSubtitles = SrtParser.parse(applicationContext, media.subtitleUri.toUri())
       if (!isCurrent(mediaId)) {
         return
       }
@@ -182,26 +173,9 @@ class CurrentMediaSentenceController(
     if (!isCurrent(mediaId)) {
       return
     }
+    _currentSentence.value = null
     _sentences.value = newSentences
     updatePosition(player.state.value.positionMs, checkRepeat = false)
-  }
-
-  private suspend fun saveHistory(media: PlaybackMedia) {
-    historyDao.saveHistory(
-      com.language.repeater.playvideo.model.VideoEntity(
-        id = media.mediaId,
-        uri = media.uri,
-        name = media.title,
-        subUri = media.subtitleUri,
-        position = player.state.value.positionMs
-      )
-    )
-  }
-
-  fun deleteHistory(mediaId: String) {
-    scope.launch(Dispatchers.IO) {
-      historyDao.deleteByVideoId(mediaId)
-    }
   }
 
   fun toggleRepeat() {
@@ -274,7 +248,7 @@ class CurrentMediaSentenceController(
     val current = _currentSentence.value
     if (checkRepeat && _repeatAb.value && current != null && player.state.value.isPlaying) {
       if (currentSeconds >= current.end) {
-        player.seekTo((current.start * 1000f).toLong())
+        player.seekTo(current.startMilSecond())
         return
       }
     }
@@ -292,7 +266,7 @@ class CurrentMediaSentenceController(
 
   private fun seekToSentence(sentence: Sentence) {
     _currentSentence.value = sentence
-    player.seekTo((sentence.start * 1000f).toLong())
+    player.seekTo(sentence.startMilSecond())
   }
 
   fun reloadSentences(forceUseVad: Boolean = false) {
@@ -311,41 +285,6 @@ class CurrentMediaSentenceController(
         Log.e(TAG, "Failed to reload sentences: ${media.mediaId}", throwable)
         withContext(Dispatchers.Main) {
           ToastUtil.toast("加载句子失败")
-        }
-      }
-    }
-  }
-
-  fun updateSubtitle(subtitleUri: Uri) {
-    val media = player.state.value.currentMedia ?: return
-    val mediaId = media.mediaId
-    val subtitle = subtitleUri.toString()
-    sentenceJob?.cancel()
-    sentenceJob = scope.launch(Dispatchers.IO) {
-      try {
-        val preferenceKey = stringPreferencesKey(mediaId)
-        applicationContext.subtitleStore.edit { preferences ->
-          preferences[preferenceKey] = subtitle
-        }
-        videoInfoDao.updateSubUri(mediaId, subtitle)
-        if (!isCurrent(mediaId)) {
-          return@launch
-        }
-
-        withContext(Dispatchers.Main) {
-          player.setSubtitle(subtitle)
-        }
-        loadSentences(media.copy(subtitleUri = subtitle), forceUseVad = false)
-      } catch (throwable: Throwable) {
-        if (throwable is CancellationException) {
-          throw throwable
-        }
-        if (!isCurrent(mediaId)) {
-          return@launch
-        }
-        Log.e(TAG, "Failed to update subtitle: $mediaId", throwable)
-        withContext(Dispatchers.Main) {
-          ToastUtil.toast("加载字幕失败")
         }
       }
     }

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <!-- 夜间窗口底色，与 Compose MyTheme 的 darkColorScheme() 默认背景一致 -->
+  <color name="color_background">#1C1B1F</color>
+</resources>

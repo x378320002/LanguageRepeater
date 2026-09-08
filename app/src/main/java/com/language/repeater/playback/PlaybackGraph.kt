@@ -17,21 +17,33 @@ import kotlinx.coroutines.launch
 /**
  * 应用级播放依赖图。只负责构造和暴露实例，不包含业务逻辑。
  *
- * ExoPlayer 由 Media3PlaybackPlayer 在此常驻创建，与进程同生共死；
- * PlaybackService 只借用 exoPlayer 去建自己的 MediaSession。
+ * 播放器在此常驻创建，与进程同生共死，PlaybackService 借用它的 exoPlayer 建 MediaSession。
  *
  * - PlaybackListController：列表管理、切歌、播放模式
- * - PlaybackProgressController：位置持久化（暂停保存 / seek 保存 / 定时保存）
- * - CurrentMediaSentenceController：PCM、句子、AB、字幕、历史
+ * - PlaybackProgressController：播放位置持久化
+ * - CurrentMediaSentenceController：PCM 波形、句子切分、AB 循环
+ * - SubtitleController：媒体与字幕的对应关系
+ * - PlaybackHistoryController：播放历史
  */
 class PlaybackGraph(context: Context) {
   private val applicationContext = context.applicationContext
   private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
   private val database = AppDb.instance(applicationContext)
-  val media3Player = Media3PlaybackPlayer(applicationContext)
 
+  /**
+   * 全应用唯一的播放器实例。
+   *
+   * 下面三个字段指向同一个对象，区别只在于把类型窄化成各调用方真正需要的能力，
+   * 避免它们拿到用不着的方法：
+   * - [player]：业务播放控制，UI 与各 controller 使用
+   * - [videoOutput]：PlayerView 绑定与解绑，只有视频画面组件使用
+   * - [media3Player]：Media3 平台细节（借 exoPlayer 建 MediaSession、IDLE 自愈），
+   *   只有 Activity 与 Service 这类平台组件使用
+   */
+  val media3Player = Media3PlaybackPlayer(applicationContext)
   val player: PlaybackPlayer = media3Player
   val videoOutput: AndroidVideoOutput = media3Player
+
   val playbackListRepository: PlaybackListRepository =
     RoomPlaybackListRepository(database)
   val playbackListController = PlaybackListController(
@@ -41,19 +53,34 @@ class PlaybackGraph(context: Context) {
   )
   val progressController = PlaybackProgressController(
     player = player,
-    videoInfoDao = database.videoInfoDao(),
     scope = scope
   )
   val sentenceController = CurrentMediaSentenceController(
     context = applicationContext,
     player = player,
-    historyDao = database.historyDao(),
+    scope = scope
+  )
+  val subtitleController = SubtitleController(
+    context = applicationContext,
+    player = player,
     videoInfoDao = database.videoInfoDao(),
     scope = scope
   )
 
-  init {
-    // 与 PlaybackService 解耦：应用启动即恢复上次播放的媒体
+  // 构造即开始监听媒体切换并落库，无需外部驱动
+  private val historyController = PlaybackHistoryController(
+    player = player,
+    historyDao = database.historyDao(),
+    scope = scope
+  )
+
+  /**
+   * 加载上次播放的媒体，加载后保持暂停。
+   *
+   * 必须由外部在本对象构造完成后调用（见 MainApp.onCreate），不能移进 init：
+   * 那样协程会在对象尚未构造完成时就拿到 this。
+   */
+  fun restoreLastMedia() {
     scope.launch {
       playbackListController.restore()
     }

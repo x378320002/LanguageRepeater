@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.language.repeater.app.MainApp
@@ -18,11 +19,32 @@ import kotlinx.coroutines.flow.map
 val Context.subtitleStore: DataStore<Preferences> by preferencesDataStore(name = "video_subtitle_map")
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "app_config")
 
+/**
+ * 当前播放的条目及其位置，全局只有这一份。
+ *
+ * 两个字段必须同时更新：只改其中一个会留下「新条目配旧位置」的状态，
+ * 下次启动就会从错误的位置续播。因此底层的两个键是私有的，
+ * 只能经 [DsManager.getPlayProgress] 和 [DsManager.setPlayProgress] 成对读写。
+ */
+data class PlayProgress(
+  val mediaId: String = "",
+  val positionMs: Long = 0L
+) {
+  val isEmpty: Boolean
+    get() = mediaId.isEmpty()
+
+  companion object {
+    val EMPTY = PlayProgress()
+  }
+}
+
 object DsManager {
   //当前的subtitle备用寻找文件夹
   val KEY_SUBTITLE_FOLDER = stringPreferencesKey("subtitle_folder_uri")
-  //当前播放的视频ID
-  val KEY_CURRENT_PLAY_ID = stringPreferencesKey("key_current_play_id")
+  //当前播放的视频ID。与播放位置成对读写，见 PlayProgress
+  private val KEY_CURRENT_PLAY_ID = stringPreferencesKey("key_current_play_id")
+  //当前播放视频的播放位置。与视频ID成对读写，见 PlayProgress
+  private val KEY_CURRENT_PLAY_POSITION = longPreferencesKey("key_current_play_position")
   //当前是否开启了AB句子模式
   val KEY_AB_REPEATED = booleanPreferencesKey("key_is_repeated")
   //当前的播放模式
@@ -66,6 +88,24 @@ object DsManager {
   suspend fun <T> set(key: Preferences.Key<T>, value: T) {
     MainApp.instance.dataStore.edit { preferences ->
       preferences[key] = value
+    }
+  }
+
+  /** 一次读出成对的进度，保证两个字段来自同一个快照。 */
+  suspend fun getPlayProgress(): PlayProgress {
+    return MainApp.instance.dataStore.data.map { preferences ->
+      PlayProgress(
+        mediaId = preferences[KEY_CURRENT_PLAY_ID] ?: "",
+        positionMs = preferences[KEY_CURRENT_PLAY_POSITION] ?: 0L
+      )
+    }.first()
+  }
+
+  /** 两个键在同一次 edit 内更新，DataStore 保证原子，不会出现只改一半的中间态。 */
+  suspend fun setPlayProgress(progress: PlayProgress) {
+    MainApp.instance.dataStore.edit { preferences ->
+      preferences[KEY_CURRENT_PLAY_ID] = progress.mediaId
+      preferences[KEY_CURRENT_PLAY_POSITION] = progress.positionMs
     }
   }
 }
