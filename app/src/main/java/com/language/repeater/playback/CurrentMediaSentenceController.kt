@@ -66,8 +66,8 @@ class CurrentMediaSentenceController(
     }
 
     scope.launch {
-      player.state.collectLatest { state ->
-        updatePosition(state.positionMs, checkRepeat = true)
+      player.progress.collectLatest { progress ->
+        updatePosition(progress.positionMs, checkRepeat = true)
       }
     }
 
@@ -113,7 +113,7 @@ class CurrentMediaSentenceController(
       if (!cachedSentences.isNullOrEmpty()) {
         publishSentences(mediaId, cachedSentences)
       } else {
-        loadSentences(media, forceUseVad = false)
+        loadSentences(media, false)
       }
     } catch (throwable: Throwable) {
       if (throwable is CancellationException) {
@@ -140,17 +140,23 @@ class CurrentMediaSentenceController(
 
   private suspend fun loadSentences(
     media: PlaybackMedia,
-    forceUseVad: Boolean
+    useSrt: Boolean
   ) {
     val mediaId = media.mediaId
-    val newSentences = if (media.subtitleUri.isNullOrEmpty() || forceUseVad) {
+    if (useSrt && media.subtitleUri.isNullOrEmpty()) {
+      withContext(Dispatchers.Main) {
+        ToastUtil.toast("当前没有字幕文件")
+      }
+      return
+    }
+    val newSentences = if (!useSrt) {
       val pcmFile = extractPcm(media)
       if (!isCurrent(mediaId)) {
         return
       }
       LocalVoiceSentenceDetector().detectSentences(pcmFile)
     } else {
-      val parsedSubtitles = SrtParser.parse(applicationContext, media.subtitleUri.toUri())
+      val parsedSubtitles = SrtParser.parse(applicationContext, media.subtitleUri?.toUri())
       if (!isCurrent(mediaId)) {
         return
       }
@@ -175,7 +181,7 @@ class CurrentMediaSentenceController(
     }
     _currentSentence.value = null
     _sentences.value = newSentences
-    updatePosition(player.state.value.positionMs, checkRepeat = false)
+    updatePosition(player.progress.value.positionMs, checkRepeat = false)
   }
 
   fun toggleRepeat() {
@@ -192,7 +198,7 @@ class CurrentMediaSentenceController(
       return
     }
     val current = _currentSentence.value
-    val currentSeconds = player.state.value.positionMs / 1000f
+    val currentSeconds = player.progress.value.positionMs / 1000f
     val target = if (current == null) {
       sentenceAround(currentSeconds, list)
     } else if (currentSeconds < current.start) {
@@ -210,7 +216,7 @@ class CurrentMediaSentenceController(
       return
     }
     val current = _currentSentence.value
-    val currentSeconds = player.state.value.positionMs / 1000f
+    val currentSeconds = player.progress.value.positionMs / 1000f
     val target = if (current == null) {
       sentenceAround(currentSeconds, list)
     } else {
@@ -269,12 +275,12 @@ class CurrentMediaSentenceController(
     player.seekTo(sentence.startMilSecond())
   }
 
-  fun reloadSentences(forceUseVad: Boolean = false) {
+  fun reloadSentences(useSrt: Boolean = false) {
     val media = player.state.value.currentMedia ?: return
     sentenceJob?.cancel()
     sentenceJob = scope.launch(Dispatchers.IO) {
       try {
-        loadSentences(media, forceUseVad)
+        loadSentences(media, useSrt)
       } catch (throwable: Throwable) {
         if (throwable is CancellationException) {
           throw throwable
@@ -291,7 +297,7 @@ class CurrentMediaSentenceController(
   }
 
   fun splitCurrentSentence() {
-    val positionSeconds = player.state.value.positionMs / 1000f
+    val positionSeconds = player.progress.value.positionMs / 1000f
     val sentence = _currentSentence.value
     if (sentence == null || sentence.start > positionSeconds || sentence.end < positionSeconds) {
       ToastUtil.toast(R.string.current_no_sentence)
@@ -365,7 +371,7 @@ class CurrentMediaSentenceController(
 
     val next = updated[index + 1]
     var mergedEnd = maxOf(sentence.end, next.end)
-    val durationSeconds = player.state.value.durationMs / 1000f
+    val durationSeconds = player.progress.value.durationMs / 1000f
     if (durationSeconds > 0f) {
       mergedEnd = mergedEnd.coerceAtMost(durationSeconds)
     }
@@ -381,11 +387,11 @@ class CurrentMediaSentenceController(
   }
 
   fun insertSentence() {
-    val durationSeconds = player.state.value.durationMs / 1000f
+    val durationSeconds = player.progress.value.durationMs / 1000f
     if (durationSeconds < 1f) {
       return
     }
-    val positionSeconds = player.state.value.positionMs / 1000f
+    val positionSeconds = player.progress.value.positionMs / 1000f
     val current = _currentSentence.value
     val updated = _sentences.value.toMutableList()
     val start = (positionSeconds - 0.5f).coerceAtLeast(0f)
@@ -431,12 +437,12 @@ class CurrentMediaSentenceController(
     } else {
       val reset = Sentence(
         start = 0f,
-        end = player.state.value.durationMs / 1000f
+        end = player.progress.value.durationMs / 1000f
       )
       updated[0] = reset
     }
     _sentences.value = updated
-    _currentSentence.value = findSentenceByTime(player.state.value.positionMs / 1000f)
+    _currentSentence.value = findSentenceByTime(player.progress.value.positionMs / 1000f)
     saveSentences(updated)
   }
 

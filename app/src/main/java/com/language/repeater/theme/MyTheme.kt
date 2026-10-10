@@ -26,3 +26,16 @@ fun MyTheme(content: @Composable () -> Unit) {
     content()
   }
 }
+
+/**
+ * 叠在视频画面之上的浮层主题。
+ *
+ * 浮层底色恒为黑色半透明，与系统明暗无关，因此这里锁定暗色配色，
+ * 保证图标和文字在任何系统主题下都可读。
+ */
+@Composable
+fun VideoOverlayTheme(content: @Composable () -> Unit) {
+  MaterialTheme(colorScheme = darkColor) {
+    content()
+  }
+}

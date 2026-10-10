@@ -1,11 +1,13 @@
 package com.language.repeater.playbacklist
 
+import androidx.core.net.toUri
 import com.language.repeater.datastore.DsManager
 import com.language.repeater.player.PlaybackMedia
 import com.language.repeater.player.PlaybackPlayer
 import com.language.repeater.player.PlaybackEvent
 import com.language.repeater.playvideo.model.VideoEntity
 import com.language.repeater.playvideo.model.toPlaybackMedia
+import com.language.repeater.utils.FileUtil
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -91,14 +93,13 @@ class PlaybackListController(
 
   suspend fun addToFront(videos: List<VideoEntity>) {
     operationMutex.withLock {
-      val uniqueVideos = videos.distinctBy { video -> video.id }
-      if (uniqueVideos.isEmpty()) {
+      if (videos.isEmpty()) {
         return
       }
 
       // 已在列表里的保持原位，只把没见过的排到队首
       val currentOrder = items.value.map { item -> item.mediaId }
-      val newMediaIds = uniqueVideos
+      val newMediaIds = videos
         .map { video -> video.id }
         .filterNot { mediaId -> mediaId in currentOrder }
       repository.saveOrder(
@@ -107,12 +108,12 @@ class PlaybackListController(
         } else {
           newMediaIds + currentOrder
         },
-        videos = uniqueVideos
+        videos = videos
       )
 
-      if (player.state.value.currentMedia == null) {
-        // 播放器空闲时自动起播队首，也就是这批视频里的第一个
-        uniqueVideos.firstOrNull()?.let { video ->
+      // 播放器空闲时自动起播队首，也就是这批视频里的第一个
+      videos.firstOrNull()?.let { video ->
+        if (player.state.value.currentMedia?.mediaId != video.id) {
           player.prepare(video.toPlaybackMedia(), playWhenReady = true)
         }
       }
@@ -145,6 +146,10 @@ class PlaybackListController(
         list.nextOf(mediaId) ?: list.previousOf(mediaId)
       } else {
         null
+      }
+      val item = items.value.find { it.mediaId == mediaId }
+      if (item != null) {
+        FileUtil.releasePersistablePermission(item.uri.toUri())
       }
       repository.remove(mediaId)
       if (!isCurrent) {

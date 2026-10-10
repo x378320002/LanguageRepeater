@@ -1,239 +1,109 @@
-@file:OptIn(ExperimentalMaterial3Api::class)
-
 package com.language.repeater.playvideo
 
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
+import android.annotation.SuppressLint
+import android.app.Activity
+import android.content.pm.ActivityInfo
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.LocalActivity
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavKey
-import com.language.repeater.app.SettingPageKey
-import com.language.repeater.player.togglePlayPause
-import com.language.repeater.playvideo.compose.EditActionsRow
-import com.language.repeater.playvideo.compose.PlayTopBar
-import com.language.repeater.playvideo.compose.PlaybackControlRow
-import com.language.repeater.playvideo.compose.PlaylistSheet
-import com.language.repeater.playvideo.compose.ProgressSeekBar
-import com.language.repeater.playvideo.compose.SubActionsRow
-import com.language.repeater.playvideo.compose.VideoPlayerBox
-import com.language.repeater.playvideo.compose.WaveformBox
-import com.language.repeater.utils.FileUtil
-import java.lang.System.exit
 
+/**
+ * 播放页入口。
+ *
+ * 本身不摆放任何控件，只做两件事：
+ * 1. 按「是否全屏」与窗口实际方向选择一套布局；
+ * 2. 把全屏状态落到 Activity 上——请求屏幕方向、控制系统栏可见性、接管返回键。
+ *
+ * 方向与系统栏是 Activity 级别的副作用，集中在这里做，各套布局只关心自己的排布。
+ */
+@SuppressLint("SourceLockedOrientationActivity")
 @Composable
 fun PlayVideoScreen(
   backStack: NavBackStack<NavKey>? = null,
   viewModel: PlayerViewModel = viewModel()
 ) {
-  // 播放事实、列表、句子分析都直接观察应用级对象，不经 ViewModel 转发。
-  val playerState by viewModel.player.state.collectAsState()
-  val playbackList by viewModel.playbackListController.items.collectAsState()
-  val playbackMode by viewModel.playbackListController.playbackMode.collectAsState()
-  val repeatable by viewModel.sentenceController.repeatAb.collectAsState()
-  val editMode by viewModel.editMode.collectAsState()
-  val sentences by viewModel.sentenceController.sentences.collectAsState()
-  val curAbSentence by viewModel.sentenceController.currentSentence.collectAsState()
-  val pcmLoader by viewModel.sentenceController.pcmLoader.collectAsState()
-  val sleepTimerRemaining by viewModel.sleepTimerRemaining.collectAsState()
+  val fullScreen = viewModel.isFullScreen
+  val activity = LocalActivity.current
 
-  val context = LocalContext.current
-  var showPlaylistSheet by remember { mutableStateOf(false) }
+  // 用真实窗口尺寸判方向：分屏、多窗口下也准确，且请求旋转后会自动跟上。
+  val containerSize = LocalWindowInfo.current.containerSize
+  val landscape = containerSize.width > containerSize.height
 
-  val subtitlePicker = rememberLauncherForActivityResult(
-    ActivityResultContracts.OpenDocument()
-  ) { uri ->
-    if (uri != null) {
-      FileUtil.takePersistablePermission(context, uri)
-      viewModel.subtitleController.updateSubtitle(uri)
-    }
-  }
+  // 全屏朝向跟着画面走：横向视频转横屏、竖向视频留竖屏，避免铺满后两侧留大黑边。
+  val videoAspectRatio by viewModel.videoAspectRatio.collectAsState()
 
-  Scaffold(
-    topBar = {
-      PlayTopBar(viewModel, onGoSetting = {
-        backStack?.add(SettingPageKey)
-      })
-    }
-  ) { innerPadding: PaddingValues ->
-    Column(
-      modifier = Modifier
-        .fillMaxSize()
-        .padding(innerPadding),
-    ) {
-      // ---------- 视频播放区域 ----------
-      VideoPlayerBox(
-        viewModel = viewModel,
-        modifier = Modifier.padding(horizontal = 15.dp)
-      )
-
-      // ---------- 播放进度 SeekBar ----------
-      val durationSec = playerState.durationMs
-      val positionSec = playerState.positionMs
-      ProgressSeekBar(
-        value = if (durationSec == 0L) {
-          0f
-        } else {
-          positionSec.toFloat() / durationSec
-        },
-        onSeek = { newPositionSec ->
-          viewModel.player.seekTo((newPositionSec * durationSec).toLong())
-        }
-      )
-
-      // ---------- 波形区 ----------
-      WaveformBox(
-        sentences = sentences,
-        curAbSentence = curAbSentence,
-        editMode = editMode,
-        repeatable = repeatable,
-        pcmLoader = pcmLoader,
-        currentPositionSec = playerState.positionMs / 1000f,
-        onCustomClick = { viewModel.player.togglePlayPause() },
-        onSeekBegin = {
-          val wasPlaying = playerState.isPlaying
-          viewModel.player.pause()
-          wasPlaying
-        },
-        onSeeking = { pos ->
-          viewModel.sentenceController.previewPosition((pos * 1000f).toLong())
-        },
-        onSeekEnd = { pos, wasPlaying ->
-          viewModel.player.seekTo((pos * 1000).toLong())
-          if (wasPlaying) {
-            viewModel.player.play()
-          }
-        },
-        onAbDragBegin = {
-          val wasPlaying = playerState.isPlaying
-          viewModel.player.pause()
-          wasPlaying
-        },
-        onAbDragEnd = { wasPlaying ->
-          if (wasPlaying) {
-            viewModel.player.play()
-          }
-          viewModel.sentenceController.mergeAndSaveSentences()
-        },
-        modifier = Modifier.padding(horizontal = 15.dp),
-      )
-
-      // ---------- 编辑栏 ----------
-      AnimatedVisibility(
-        visible = editMode,
-        enter = expandVertically() + fadeIn(),
-        exit = fadeOut() + shrinkVertically()
-      ) {
-        EditActionsRow(
-          onMergePre = { viewModel.sentenceController.mergePreviousSentence() },
-          onMergeNext = { viewModel.sentenceController.mergeNextSentence() },
-          onSplitSentence = { viewModel.sentenceController.splitCurrentSentence() },
-          onDeleteSentence = { viewModel.sentenceController.deleteCurrentSentence() },
-          onInsertSentence = { viewModel.sentenceController.insertSentence() },
-        )
+  LaunchedEffect(fullScreen, videoAspectRatio, activity) {
+    val window = activity?.window ?: return@LaunchedEffect
+    val controller = WindowInsetsControllerCompat(window, window.decorView)
+    if (fullScreen) {
+      activity.requestedOrientation = fullScreenOrientation(videoAspectRatio)
+      if (landscape) {
+        controller.systemBarsBehavior =
+          WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        controller.hide(WindowInsetsCompat.Type.systemBars())
       }
-
-      // ---------- 副操作栏 ----------
-      SubActionsRow(
-        playSpeedText = "${playerState.speed}x",
-        sleepTimerText = if (sleepTimerRemaining > 0) {
-          com.language.repeater.playcore.SleepTimerManager.formatTime(sleepTimerRemaining)
-        } else {
-          ""
-        },
-        abDragEnabled = editMode,
-        repeatEnabled = repeatable,
-        showFullScreenBtn = false,
-        onToggleAbDrag = { viewModel.editMode(!editMode) },
-        onToggleRepeat = { viewModel.sentenceController.toggleRepeat() },
-        onSpeedSelected = { speed -> viewModel.player.setSpeed(speed) },
-        onTimerSelected = { minutes -> viewModel.startSleepTimer(minutes) },
-        onTimerComplete = { viewModel.startSleepTimerByCurrentItem() },
-        onSelectSubtitle = {
-          subtitlePicker.launch(
-            arrayOf(
-              "application/x-subrip",
-              "text/vtt",
-              "text/plain",
-              "application/octet-stream"
-            )
-          )
-        },
-        onSplitSubtitle = { viewModel.sentenceController.reloadSentences() },
-        onToggleFullScreen = {
-          val activity = context as? android.app.Activity
-          activity?.let {
-            val orientation = it.resources.configuration.orientation
-            it.requestedOrientation =
-              if (orientation == android.content.res.Configuration.ORIENTATION_PORTRAIT) {
-                android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-              } else {
-                android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-              }
-          }
-        },
-      )
-
-      // ---------- 播放控制栏 ----------
-      PlaybackControlRow(
-        isPlaying = playerState.isPlaying,
-        onSeekPrevSentence = { viewModel.sentenceController.seekToPreviousSentence() },
-        onBackSentenceHead = { viewModel.sentenceController.backToSentenceHead() },
-        onTogglePlayPause = { viewModel.player.togglePlayPause() },
-        onSeekNextSentence = { viewModel.sentenceController.seekToNextSentence() },
-        onOpenPlaylist = { showPlaylistSheet = true },
-      )
-
-      // 底部安全间距
-      Spacer(modifier = Modifier.height(20.dp))
+    } else {
+      activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+      controller.show(WindowInsetsCompat.Type.systemBars())
     }
   }
 
-  // ---------- 播放列表 BottomSheet ----------
-  if (showPlaylistSheet) {
-    PlaylistSheet(
-      playlist = playbackList,
-      currentMediaId = playerState.currentMedia?.mediaId,
-      isPlaying = playerState.isPlaying,
-      playbackMode = playbackMode,
-      onPlaybackModeClick = {
-        viewModel.playbackListController.cyclePlaybackMode()
-      },
-      onItemClick = { mediaId ->
-        viewModel.selectItem(mediaId)
-      },
-      onMoveToFirst = { mediaId ->
-        viewModel.moveItemToFirst(mediaId)
-      },
-      onDelete = { mediaId ->
-        viewModel.deleteItem(mediaId)
-      },
-      onDismiss = { showPlaylistSheet = false },
-    )
+  // 离开播放页时把方向与系统栏交还系统，避免设置页等页面继承全屏状态。
+  DisposableEffect(activity) {
+    onDispose {
+      val window = activity?.window ?: return@onDispose
+      WindowInsetsControllerCompat(window, window.decorView)
+        .show(WindowInsetsCompat.Type.systemBars())
+      activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+    }
+  }
+
+  // 全屏下返回键先退回默认布局，不直接退出页面。
+  BackHandler(enabled = fullScreen) {
+    viewModel.changeScreenMode(false)
+  }
+
+  // 布局跟随窗口实际方向：既覆盖竖向视频的常态，也承接刚进全屏、屏幕还没转过来的过渡期。
+  when {
+    fullScreen && landscape -> {
+      HorizontalFullPlayVideoScreen(viewModel = viewModel)
+    }
+
+    fullScreen -> {
+      VerticalFullPlayVideoScreen(viewModel = viewModel)
+    }
+
+    else -> {
+      DefaultPlayVideoScreen(
+        backStack = backStack,
+        viewModel = viewModel
+      )
+    }
+  }
+}
+
+/**
+ * 全屏时该请求的屏幕朝向。
+ *
+ * 宽高比为 0 表示画面未就绪或是纯音频，此时按横屏处理——这是绝大多数学习素材的形态，
+ * 真实比例解析出来后会再触发一次修正。
+ * 用 SENSOR 变体是为了让用户仍能翻转设备换正反面。
+ */
+private fun fullScreenOrientation(videoAspectRatio: Float): Int {
+  val portraitVideo = videoAspectRatio > 0f && videoAspectRatio < 1f
+  return if (portraitVideo) {
+    ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
+  } else {
+    ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
   }
 }

@@ -11,6 +11,7 @@ import androidx.media3.common.MediaMetadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
+import androidx.media3.common.VideoSize
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
@@ -18,6 +19,7 @@ import com.language.repeater.player.PlaybackError
 import com.language.repeater.player.PlaybackMedia
 import com.language.repeater.player.PlaybackPlayer
 import com.language.repeater.player.PlaybackEvent
+import com.language.repeater.player.PlaybackProgress
 import com.language.repeater.player.PlaybackState
 import com.language.repeater.utils.SubtitleUtils
 import kotlinx.coroutines.CoroutineScope
@@ -46,6 +48,7 @@ class Media3PlaybackPlayer(
 ) : PlaybackPlayer, AndroidVideoOutput {
   private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
   private val _state = MutableStateFlow(PlaybackState())
+  private val _progress = MutableStateFlow(PlaybackProgress())
   private val _events = MutableSharedFlow<PlaybackEvent>(extraBufferCapacity = 8)
   private val attachedViews = mutableSetOf<PlayerView>()
 
@@ -76,6 +79,7 @@ class Media3PlaybackPlayer(
   private var positionJob: Job? = null
 
   override val state: StateFlow<PlaybackState> = _state.asStateFlow()
+  override val progress: StateFlow<PlaybackProgress> = _progress.asStateFlow()
   override val events: SharedFlow<PlaybackEvent> = _events.asSharedFlow()
 
   private val listener = object : Player.Listener {
@@ -105,6 +109,10 @@ class Media3PlaybackPlayer(
 
     override fun onPlaybackParametersChanged(playbackParameters: PlaybackParameters) {
       _state.value = _state.value.copy(speed = playbackParameters.speed)
+    }
+
+    override fun onVideoSizeChanged(videoSize: VideoSize) {
+      _state.value = _state.value.copy(videoAspectRatio = videoSize.toAspectRatio())
     }
 
     override fun onPositionDiscontinuity(
@@ -165,9 +173,9 @@ class Media3PlaybackPlayer(
       _state.value = PlaybackState(
         currentMedia = media,
         isPlaying = playWhenReady,
-        positionMs = safePositionMs,
         speed = _state.value.speed
       )
+      _progress.value = PlaybackProgress(positionMs = safePositionMs)
 
       exoPlayer.setMediaItem(createMediaItem(media), safePositionMs)
       // setMediaItem 不会清掉上一媒体遗留的 playWhenReady，
@@ -274,6 +282,7 @@ class Media3PlaybackPlayer(
       val mediaChanged = _state.value.currentMedia != null
       exoPlayer.clearMediaItems()
       _state.value = PlaybackState(speed = _state.value.speed)
+      _progress.value = PlaybackProgress()
       if (mediaChanged) {
         _events.tryEmit(PlaybackEvent.MediaChanged(media = null, positionMs = 0L))
       }
@@ -320,10 +329,9 @@ class Media3PlaybackPlayer(
   private fun updateState() {
     _state.value = _state.value.copy(
       isPlaying = exoPlayer.isPlayIntended(),
-      positionMs = exoPlayer.currentPosition.coerceAtLeast(0L),
-      durationMs = exoPlayer.safeDurationMs(),
       speed = exoPlayer.playbackParameters.speed
     )
+    updatePosition()
   }
 
   /**
@@ -350,6 +358,20 @@ class Media3PlaybackPlayer(
     return rawDuration.coerceAtLeast(0L)
   }
 
+  /**
+   * 换算出用于布局的宽高比。
+   *
+   * [VideoSize.width] / [VideoSize.height] 是解码后的像素尺寸，已计入旋转元数据；
+   * 再乘 [VideoSize.pixelWidthHeightRatio] 才是非方形像素（部分老设备录制）下的显示比例。
+   * 纯音频与尚未出画面时尺寸为 0，统一返回 0 表示未知。
+   */
+  private fun VideoSize.toAspectRatio(): Float {
+    if (width <= 0 || height <= 0) {
+      return 0f
+    }
+    return width * pixelWidthHeightRatio / height
+  }
+
   private fun updatePositionTicker() {
     positionJob?.cancel()
     positionJob = null
@@ -367,7 +389,7 @@ class Media3PlaybackPlayer(
   }
 
   private fun updatePosition() {
-    _state.value = _state.value.copy(
+    _progress.value = PlaybackProgress(
       positionMs = exoPlayer.currentPosition.coerceAtLeast(0L),
       durationMs = exoPlayer.safeDurationMs()
     )

@@ -1,6 +1,9 @@
 package com.language.repeater.playvideo
 
 import android.net.Uri
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.language.repeater.app.MainApp
@@ -10,6 +13,9 @@ import com.language.repeater.playvideo.model.VideoEntity
 import com.language.repeater.utils.FileUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -31,9 +37,31 @@ class PlayerViewModel : ViewModel() {
   val sentenceController = playbackGraph.sentenceController
   val subtitleController = playbackGraph.subtitleController
 
-  /** 句子编辑模式，仅本页面使用，持久化在 DataStore 以便重建后恢复。 */
-  val editMode = DsManager.observe(DsManager.KEY_EDIT_SEN_MODE, false)
-    .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+  /**
+   * 播放页全屏状态：true = 全屏、false = 默认布局。
+   *
+   * 只表达「要不要铺满」这一业务意图，真正用哪套布局（横向全屏 / 竖向全屏）
+   * 由 UI 层读实际窗口方向判定，避免方向转过来之前出现中间态畸形帧。
+   *
+   * 屏幕方向请求与系统栏隐藏由 UI 层观察此状态后执行，ViewModel 不持有 Activity。
+   */
+  var isFullScreen by mutableStateOf(false)
+    private set
+
+  /** 在默认布局与全屏之间切换。全屏朝向由 UI 层按画面宽高比决定。 */
+  fun changeScreenMode(toFull: Boolean) {
+    isFullScreen = toFull
+  }
+
+  /**
+   * 画面宽高比。单独拉出一条流，让只关心朝向的 UI 不跟着播放态、倍速重组。
+   *
+   * 值为 0 表示画面尚未就绪或是纯音频。
+   */
+  val videoAspectRatio: StateFlow<Float> = player.state
+    .map { it.videoAspectRatio }
+    .distinctUntilChanged()
+    .stateIn(viewModelScope, SharingStarted.Eagerly, 0f)
 
   fun editMode(edit: Boolean) {
     viewModelScope.launch {
@@ -75,9 +103,9 @@ class PlayerViewModel : ViewModel() {
 
   /** 播完当前条目即停：按剩余时长设定倒计时，多给 1 秒避免临界提前掐断。 */
   fun startSleepTimerByCurrentItem() {
-    val state = player.state.value
-    val remainingMs = state.durationMs - state.positionMs
-    if (state.durationMs > 0L && remainingMs > 0L) {
+    val progress = player.progress.value
+    val remainingMs = progress.durationMs - progress.positionMs
+    if (progress.durationMs > 0L && remainingMs > 0L) {
       SleepTimerManager.startTimer(seconds = remainingMs / 1000L + 1L)
     }
   }

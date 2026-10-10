@@ -70,16 +70,14 @@ class PlaybackProgressController(
 
   /** 读取播放器当前状态并保存位置，适用于协程上下文。 */
   suspend fun saveCurrentPosition() {
-    val state = player.state.value
-    val mediaId = state.currentMedia?.mediaId ?: return
-    savePosition(mediaId, state.positionMs)
+    val mediaId = player.state.value.currentMedia?.mediaId ?: return
+    savePosition(mediaId, player.progress.value.positionMs)
   }
 
   /** 非协程上下文的手动保存入口（如任务卡移除 / 服务销毁），立即派发到 IO 线程。 */
   fun saveCurrentPositionNow() {
-    val state = player.state.value
-    val mediaId = state.currentMedia?.mediaId ?: return
-    val snapshotPositionMs = state.positionMs
+    val mediaId = player.state.value.currentMedia?.mediaId ?: return
+    val snapshotPositionMs = player.progress.value.positionMs
     scope.launch(Dispatchers.IO) {
       savePosition(mediaId, snapshotPositionMs)
     }

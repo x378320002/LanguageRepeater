@@ -33,6 +33,7 @@ fun PlaybackControlRow(
   onSeekNextSentence: () -> Unit,
   onOpenPlaylist: () -> Unit,
   modifier: Modifier = Modifier,
+  isFull: Boolean = false
 ) {
 
   val iconSize = 50.dp
@@ -81,7 +82,14 @@ fun PlaybackControlRow(
       onClick = onTogglePlayPause,
       modifier = Modifier
         .size(centerIconSize)
-        .background(MaterialTheme.colorScheme.surfaceVariant, shape = CircleShape),
+        .background(
+          color = if (isFull) {
+            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+          } else {
+            MaterialTheme.colorScheme.surfaceVariant
+          },
+          shape = CircleShape
+        ),
     ) {
       Icon(
         painter = painterResource(id = playPauseIconRes),

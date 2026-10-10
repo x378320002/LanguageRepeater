@@ -40,16 +40,16 @@ fun SubActionsRow(
   sleepTimerText: String,
   abDragEnabled: Boolean,
   repeatEnabled: Boolean,
-  showFullScreenBtn: Boolean,
   onToggleAbDrag: () -> Unit,
   onToggleRepeat: () -> Unit,
   onSpeedSelected: (Float) -> Unit,
   onTimerSelected: (Int) -> Unit,
   onTimerComplete: () -> Unit,
   onSelectSubtitle: () -> Unit,
-  onSplitSubtitle: () -> Unit,
+  onSplitSubtitle: (Boolean) -> Unit,
   onToggleFullScreen: () -> Unit,
   modifier: Modifier = Modifier,
+  fullScreenEntered: Boolean = false,
 ) {
   val iconTint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
   val activeTint = MaterialTheme.colorScheme.primary
@@ -161,15 +161,17 @@ fun SubActionsRow(
       }
     }
 
-    // 全屏切换（只在横屏显示）
-    if (showFullScreenBtn) {
-      SubActionIcon(
-        iconRes = R.drawable.ic_fullscreen_enter,
-        contentDescription = "全屏切换",
-        tint = iconTint,
-        onClick = onToggleFullScreen,
-      )
-    }
+    // 全屏切换
+    SubActionIcon(
+      iconRes = if (fullScreenEntered) {
+        com.composables.icons.tabler.outline.R.drawable.tabler_ic_minimize_outline
+      } else {
+        com.composables.icons.tabler.outline.R.drawable.tabler_ic_maximize_outline
+      },
+      contentDescription = "全屏切换",
+      tint = iconTint,
+      onClick = onToggleFullScreen,
+    )
 
     // 更多（带菜单）
     Box {
@@ -198,12 +200,24 @@ fun SubActionsRow(
         DropdownMenuItem(
           text = {
             Text(
-              text = "分割字幕",
+              text = "字幕分句",
               style = MaterialTheme.typography.bodyMedium,
             )
           },
           onClick = {
-            onSplitSubtitle()
+            onSplitSubtitle(true)
+            showMoreMenu = false
+          },
+        )
+        DropdownMenuItem(
+          text = {
+            Text(
+              text = "音频分句",
+              style = MaterialTheme.typography.bodyMedium,
+            )
+          },
+          onClick = {
+            onSplitSubtitle(false)
             showMoreMenu = false
           },
         )

@@ -25,7 +25,10 @@ object SrtParser {
    * 新增：直接通过 Uri 解析字幕
    * 自动处理流的打开和关闭
    */
-  fun parse(context: Context, uri: Uri): List<SubtitleItem> {
+  fun parse(context: Context, uri: Uri?): List<SubtitleItem> {
+    if (uri == null) {
+      return emptyList()
+    }
     return try {
       context.contentResolver.openInputStream(uri)?.use { inputStream ->
         parse(inputStream)

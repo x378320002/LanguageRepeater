@@ -27,7 +27,7 @@ class SettingViewModel : ViewModel() {
   // -----------------------------------------------------------------------
   // State Holder：集中管理所有状态
   // -----------------------------------------------------------------------
-  val stateHolder = SettingStateHolder(viewModelScope)
+  val stateHolder = SettingStateHolder()
 
   init {
     viewModelScope.launch {

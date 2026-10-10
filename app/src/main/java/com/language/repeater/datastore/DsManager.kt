@@ -11,10 +11,16 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.language.repeater.app.MainApp
-import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import java.util.concurrent.ConcurrentHashMap
 
 val Context.subtitleStore: DataStore<Preferences> by preferencesDataStore(name = "video_subtitle_map")
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "app_config")
@@ -39,6 +45,12 @@ data class PlayProgress(
 }
 
 object DsManager {
+  /** 配置流常驻进程，与应用同生共死，不需要取消入口。 */
+  private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+  /** key → 已建立的订阅流。配置项数量固定，缓存不会无限增长。 */
+  private val cache = ConcurrentHashMap<Preferences.Key<*>, StateFlow<*>>()
+
   //当前的subtitle备用寻找文件夹
   val KEY_SUBTITLE_FOLDER = stringPreferencesKey("subtitle_folder_uri")
   //当前播放的视频ID。与播放位置成对读写，见 PlayProgress
@@ -66,14 +78,28 @@ object DsManager {
   //是否开启暗色模式
   val KEY_NIGHT_MODE = booleanPreferencesKey("key_night_mode")
 
+  /**
+   * 订阅某个配置项。同一个 key 全局只建一条流，值常驻内存。
+   *
+   * 返回 StateFlow 是为了让调用方能同步拿到当前值：DataStore 的读是异步的，
+   * 若每次组合都从 default 起步，真实值到达时会被 UI 当成一次真正的变化，
+   * 表现为进场动画、主题闪烁。缓存后只有进程冷启动的第一帧是 default。
+   *
+   * 同一个 key 首次订阅时的 default 会被后续订阅复用，因此同一 key 必须始终传相同的 default。
+   */
+  @Suppress("UNCHECKED_CAST")
   fun <T> observe(
     key: Preferences.Key<T>,
     default: T
-  ): Flow<T> {
-    return MainApp.instance.dataStore.data.map { preferences ->
-        preferences[key] ?: default
-      }
-      .distinctUntilChanged() // 统一在这里加，永远不会忘！
+  ): StateFlow<T> {
+    return cache.getOrPut(key) {
+      MainApp.instance.dataStore.data
+        .map { preferences ->
+          preferences[key] ?: default
+        }
+        .distinctUntilChanged() // 统一在这里加，永远不会忘！
+        .stateIn(scope, SharingStarted.Eagerly, default)
+    } as StateFlow<T>
   }
 
   suspend fun <T> get(

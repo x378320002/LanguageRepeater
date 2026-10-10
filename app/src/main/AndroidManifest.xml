@@ -26,9 +26,11 @@
     android:label="@string/app_name"
     android:roundIcon="@mipmap/ic_launcher_round"
     android:theme="@style/MyTheme">
+    <!-- 自行处理尺寸/方向变化：全屏切换靠旋转屏幕完成，重建 Activity 会打断播放画面 -->
     <activity
       android:name=".app.MainActivity"
       android:launchMode="singleTask"
+      android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
       android:exported="true">
       <intent-filter>
         <action android:name="android.intent.action.MAIN" />

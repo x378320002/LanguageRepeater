@@ -18,9 +18,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonColors
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -33,10 +39,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.ui.PlayerView
+import com.language.repeater.R
 import com.language.repeater.datastore.DsManager
 import com.language.repeater.player.togglePlayPause
 import com.language.repeater.playvideo.PlayerViewModel
@@ -50,11 +58,17 @@ const val TAG = "VideoPlayerBox"
 
 /**
  * Android 视频输出。Composable 只绑定和解绑画面，不持有或释放底层播放器。
+ *
+ * @param fullScreen true 时画面铺满父容器、纯黑底、不显示进入全屏按钮；
+ *   false 时按 16:9 卡片样式摆放，右下角带进入全屏按钮。
+ * @param onTap 单击画面的行为。默认播放/暂停；全屏布局可改为切换控制面板显隐。
  */
 @Composable
 fun VideoPlayerBox(
   viewModel: PlayerViewModel,
-  modifier: Modifier = Modifier
+  modifier: Modifier = Modifier,
+  fullScreen: Boolean = false,
+  onTap: (() -> Unit)? = null
 ) {
   val scope = rememberCoroutineScope()
   val context = LocalContext.current
@@ -65,12 +79,24 @@ fun VideoPlayerBox(
     VideoPlayerBoxState(context, scope)
   }
 
-  Box(
-    modifier = modifier
+  val supportLeft by DsManager.observe(DsManager.KEY_LEFT_BRIGHTNESS_GESTURE, true).collectAsState()
+  val supportRight by DsManager.observe(DsManager.KEY_RIGHT_VOLUME_GESTURE, true).collectAsState()
+
+  val surfaceModifier = if (fullScreen) {
+    Modifier
+      .fillMaxSize()
+      .background(Color.Black)
+  } else {
+    Modifier
       .fillMaxWidth()
       .aspectRatio(16f / 9f)
       .clip(CardDefaults.shape)
       .background(CardDefaults.cardColors().containerColor)
+  }
+
+  Box(
+    modifier = modifier
+      .then(surfaceModifier)
       .detectHorizontalFling(onFlingLeft = {
         scope.launch {
           Log.i(TAG, "detectHorizontalFling onFlingLeft")
@@ -89,16 +115,16 @@ fun VideoPlayerBox(
             isLeftDrag = it.x < size.width / 2
           },
         ) { change, dragAmount ->
-          if (isLeftDrag) {
+          if (isLeftDrag && supportLeft) {
             Log.i(TAG, "detectVerticalDragGestures leftDrag, dragAmount:${dragAmount}")
             state.adjustBrightness(dragAmount)
-          } else {
+          } else if (!isLeftDrag && supportRight) {
             Log.i(TAG, "detectVerticalDragGestures rightDrag, dragAmount:${dragAmount}")
             state.adjustVolume(dragAmount)
           }
         }
       }
-      .pointerInput(Unit) {
+      .pointerInput(onTap) {
         var oldSpeed: Float? = null
         detectTapGestures(
           onLongPress = {
@@ -108,7 +134,7 @@ fun VideoPlayerBox(
               val speed = oldSpeed ?: return@launch
               val newSpeed = speed * DsManager.get(DsManager.KEY_LONG_PRESS_SPEED, 1.0f)
               player.setSpeed(newSpeed)
-              state.showFeedback("⏩ ${speed}X")
+              state.showFeedback("⏩ ${newSpeed}X")
             }
           },
           onDoubleTap = {
@@ -117,7 +143,11 @@ fun VideoPlayerBox(
           },
           onTap = {
             Log.i(TAG, "detectTapGestures onTap")
-            player.togglePlayPause()
+            if (onTap != null) {
+              onTap()
+            } else {
+              player.togglePlayPause()
+            }
           },
           onPress = {
             val press = tryAwaitRelease()
@@ -144,6 +174,21 @@ fun VideoPlayerBox(
         videoOutput.detach(playerView)
       }
     )
+
+//    if (!fullScreen) {
+//      IconButton(
+//        onClick = {
+//          viewModel.changeScreenMode(true)
+//        },
+//        colors = IconButtonDefaults.iconButtonColors(contentColor = LocalContentColor.current.copy(alpha = 0.6f)),
+//        modifier = Modifier.align(Alignment.BottomEnd)
+//      ) {
+//        Icon(
+//          painter = painterResource(com.composables.icons.tabler.outline.R.drawable.tabler_ic_maximize_outline),
+//          contentDescription = null
+//        )
+//      }
+//    }
 
     val text = state.tipText
     if (text.isNotEmpty()) {

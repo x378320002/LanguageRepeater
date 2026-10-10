@@ -5,6 +5,10 @@ import kotlinx.coroutines.flow.StateFlow
 
 interface PlaybackPlayer {
   val state: StateFlow<PlaybackState>
+
+  /** 播放位置，播放中每 50ms 推进一次。只关心播放态的观察者请用 [state]。 */
+  val progress: StateFlow<PlaybackProgress>
+
   val events: SharedFlow<PlaybackEvent>
 
   fun prepare(

@@ -28,14 +28,14 @@ import androidx.compose.ui.unit.dp
 fun ProgressSeekBar(
   value: Float,
   onSeek: (Float) -> Unit,
+  modifier: Modifier = Modifier,
 ) {
   Slider(
     value = value,
     onValueChange = onSeek,
-    modifier = Modifier
+    modifier = modifier
       .fillMaxWidth()
-      .height(SliderH)
-      .padding(horizontal = 15.dp),
+      .height(SliderH),
     track = { state ->
       val bgColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
       val onBgColor = MaterialTheme.colorScheme.onSurfaceVariant

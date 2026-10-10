@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavKey
+import com.language.repeater.datastore.DsManager
 import com.language.repeater.setting.action.ActionClearCache
 import com.language.repeater.setting.action.ActionFullGestureChange
 import com.language.repeater.setting.action.ActionLeftBrightnessGestureChange
@@ -162,8 +163,8 @@ private fun MainContent(
       .verticalScroll(rememberScrollState())
   ) {
     val fullGesture by viewModel.stateHolder.fullGesture.collectAsState()
-    val leftBrightnessGesture by viewModel.stateHolder.leftBrightnessGesture.collectAsState()
-    val rightVolumeGesture by viewModel.stateHolder.rightVolumeGesture.collectAsState()
+    val leftBrightnessGesture by DsManager.observe(DsManager.KEY_LEFT_BRIGHTNESS_GESTURE, true).collectAsState()
+    val rightVolumeGesture by DsManager.observe(DsManager.KEY_RIGHT_VOLUME_GESTURE, true).collectAsState()
     Card {
 //      SettingSwitchItem(title = "全屏手势", checked = fullGesture) {
 //        viewModel.onAction(ActionFullGestureChange(it))
