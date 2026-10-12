@@ -1,8 +1,8 @@
 {
   "formatVersion": 1,
   "database": {
-    "version": 4,
-    "identityHash": "771bbaa1f4c42d4a350921650978903f",
+    "version": 1,
+    "identityHash": "c4a9b66d2c0ce20e62da2762256a7453",
     "entities": [
       {
         "tableName": "video_info_table",
@@ -44,60 +44,6 @@
             "id"
           ]
         }
-      },
-      {
-        "tableName": "history_table",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`historyId` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `videoId` TEXT NOT NULL, `lastPlayedTime` INTEGER NOT NULL, FOREIGN KEY(`videoId`) REFERENCES `video_info_table`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
-        "fields": [
-          {
-            "fieldPath": "historyId",
-            "columnName": "historyId",
-            "affinity": "INTEGER",
-            "notNull": true
-          },
-          {
-            "fieldPath": "videoId",
-            "columnName": "videoId",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "lastPlayedTime",
-            "columnName": "lastPlayedTime",
-            "affinity": "INTEGER",
-            "notNull": true
-          }
-        ],
-        "primaryKey": {
-          "autoGenerate": true,
-          "columnNames": [
-            "historyId"
-          ]
-        },
-        "indices": [
-          {
-            "name": "index_history_table_videoId",
-            "unique": true,
-            "columnNames": [
-              "videoId"
-            ],
-            "orders": [],
-            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_history_table_videoId` ON `${TABLE_NAME}` (`videoId`)"
-          }
-        ],
-        "foreignKeys": [
-          {
-            "table": "video_info_table",
-            "onDelete": "CASCADE",
-            "onUpdate": "NO ACTION",
-            "columns": [
-              "videoId"
-            ],
-            "referencedColumns": [
-              "id"
-            ]
-          }
-        ]
       },
       {
         "tableName": "playback_list_table",
@@ -150,7 +96,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '771bbaa1f4c42d4a350921650978903f')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'c4a9b66d2c0ce20e62da2762256a7453')"
     ]
   }
 }

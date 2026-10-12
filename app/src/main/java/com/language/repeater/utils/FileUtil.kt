@@ -7,13 +7,8 @@ import android.provider.OpenableColumns
 import android.util.Log
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
-import com.language.repeater.app.MainActivity
 import com.language.repeater.app.MainApp
-import com.language.repeater.playvideo.model.VideoEntity
-import java.io.FileInputStream
-import java.nio.ByteBuffer
-import java.nio.channels.FileChannel
-import java.security.MessageDigest
+import com.language.repeater.db.VideoEntity
 
 /**
  * Date: 2026-01-13

@@ -1,4 +1,4 @@
-package com.language.repeater.playvideo.model
+package com.language.repeater.db
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey

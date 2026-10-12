@@ -44,8 +44,7 @@ class PlaybackGraph(context: Context) {
   val player: PlaybackPlayer = media3Player
   val videoOutput: AndroidVideoOutput = media3Player
 
-  val playbackListRepository: PlaybackListRepository =
-    RoomPlaybackListRepository(database)
+  val playbackListRepository: PlaybackListRepository = RoomPlaybackListRepository(database)
   val playbackListController = PlaybackListController(
     repository = playbackListRepository,
     player = player,
@@ -64,13 +63,6 @@ class PlaybackGraph(context: Context) {
     context = applicationContext,
     player = player,
     videoInfoDao = database.videoInfoDao(),
-    scope = scope
-  )
-
-  // 构造即开始监听媒体切换并落库，无需外部驱动
-  private val historyController = PlaybackHistoryController(
-    player = player,
-    historyDao = database.historyDao(),
     scope = scope
   )
 

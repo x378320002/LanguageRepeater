@@ -1,6 +1,6 @@
 package com.language.repeater.playbacklist
 
-import com.language.repeater.playvideo.model.VideoEntity
+import com.language.repeater.db.VideoEntity
 import kotlinx.coroutines.flow.Flow
 
 /**

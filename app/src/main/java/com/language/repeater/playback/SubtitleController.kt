@@ -10,7 +10,7 @@ import com.language.repeater.datastore.DsManager
 import com.language.repeater.datastore.subtitleStore
 import com.language.repeater.db.VideoInfoDao
 import com.language.repeater.player.PlaybackPlayer
-import com.language.repeater.playvideo.model.VideoEntity
+import com.language.repeater.db.VideoEntity
 import com.language.repeater.utils.SubtitleFolderScanner
 import com.language.repeater.utils.ToastUtil
 import com.language.repeater.utils.UriAccessUtil

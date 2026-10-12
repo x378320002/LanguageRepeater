@@ -3,7 +3,7 @@ package com.language.repeater.db
 import androidx.room.Dao
 import androidx.room.Query
 import androidx.room.Upsert
-import com.language.repeater.playbacklist.PlaybackListEntity
+import com.language.repeater.db.PlaybackListEntity
 import com.language.repeater.playbacklist.PlaybackListItem
 import kotlinx.coroutines.flow.Flow
 

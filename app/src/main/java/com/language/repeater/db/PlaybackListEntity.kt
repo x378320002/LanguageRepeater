@@ -1,10 +1,9 @@
-package com.language.repeater.playbacklist
+package com.language.repeater.db
 
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
-import com.language.repeater.playvideo.model.VideoEntity
 
 @Entity(
   tableName = "playback_list_table",
@@ -13,7 +12,7 @@ import com.language.repeater.playvideo.model.VideoEntity
       entity = VideoEntity::class,
       parentColumns = ["id"],
       childColumns = ["mediaId"],
-      onDelete = ForeignKey.CASCADE
+      onDelete = ForeignKey.Companion.CASCADE
     )
   ],
   indices = [Index(value = ["sortOrder"])]

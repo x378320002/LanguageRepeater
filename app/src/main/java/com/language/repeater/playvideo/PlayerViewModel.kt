@@ -9,7 +9,7 @@ import androidx.lifecycle.viewModelScope
 import com.language.repeater.app.MainApp
 import com.language.repeater.datastore.DsManager
 import com.language.repeater.playcore.SleepTimerManager
-import com.language.repeater.playvideo.model.VideoEntity
+import com.language.repeater.db.VideoEntity
 import com.language.repeater.utils.FileUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted

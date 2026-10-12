@@ -2,11 +2,10 @@ package com.language.repeater.playbacklist
 
 import androidx.core.net.toUri
 import com.language.repeater.datastore.DsManager
-import com.language.repeater.player.PlaybackMedia
 import com.language.repeater.player.PlaybackPlayer
 import com.language.repeater.player.PlaybackEvent
-import com.language.repeater.playvideo.model.VideoEntity
-import com.language.repeater.playvideo.model.toPlaybackMedia
+import com.language.repeater.db.VideoEntity
+import com.language.repeater.db.toPlaybackMedia
 import com.language.repeater.utils.FileUtil
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

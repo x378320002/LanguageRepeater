@@ -25,7 +25,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
-import com.language.repeater.playvideo.model.VideoEntity
+import com.language.repeater.db.VideoEntity
 
 /**
  * 历史记录 BottomSheet — 纯 Compose 实现

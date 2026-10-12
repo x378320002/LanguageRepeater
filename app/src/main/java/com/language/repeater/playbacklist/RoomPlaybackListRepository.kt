@@ -2,7 +2,8 @@ package com.language.repeater.playbacklist
 
 import androidx.room.withTransaction
 import com.language.repeater.db.AppDb
-import com.language.repeater.playvideo.model.VideoEntity
+import com.language.repeater.db.PlaybackListEntity
+import com.language.repeater.db.VideoEntity
 import kotlinx.coroutines.flow.Flow
 
 class RoomPlaybackListRepository(
