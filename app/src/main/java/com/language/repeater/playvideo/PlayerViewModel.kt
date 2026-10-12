@@ -29,7 +29,7 @@ import kotlinx.coroutines.withContext
  * 以及跨组件的业务流程（文件导入、定时关闭）。
  */
 class PlayerViewModel : ViewModel() {
-  private val playbackGraph = MainApp.instance.playbackGraph
+  private val playbackGraph = MainApp.playbackGraph
 
   val player = playbackGraph.player
   val videoOutput = playbackGraph.videoOutput
@@ -50,6 +50,9 @@ class PlayerViewModel : ViewModel() {
 
   /** 在默认布局与全屏之间切换。全屏朝向由 UI 层按画面宽高比决定。 */
   fun changeScreenMode(toFull: Boolean) {
+    if (playbackListController.items.value.isEmpty()) {
+      return
+    }
     isFullScreen = toFull
   }
 

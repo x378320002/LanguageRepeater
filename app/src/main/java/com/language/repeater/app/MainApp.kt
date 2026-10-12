@@ -21,9 +21,6 @@ import kotlinx.coroutines.runBlocking
  * Description:
  */
 class MainApp : Application(), SingletonImageLoader.Factory {
-  /** 应用级播放依赖图，在 onCreate 中于主线程创建，随进程存活。 */
-  lateinit var playbackGraph: PlaybackGraph
-    private set
 
   /** Media3 平台连接，负责启动并维持 PlaybackService。 */
   private val serviceConnection: PlaybackServiceConnection by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
@@ -32,6 +29,10 @@ class MainApp : Application(), SingletonImageLoader.Factory {
 
   companion object {
     lateinit var instance: MainApp
+      private set
+
+    /** 应用级播放依赖图，在 onCreate 中于主线程创建，随进程存活。 */
+    lateinit var playbackGraph: PlaybackGraph
       private set
   }
 

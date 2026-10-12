@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.language.repeater.app.MainApp
 import com.language.repeater.datastore.DsManager
 import com.language.repeater.playcore.SleepTimerManager
 import com.language.repeater.player.PlaybackPlayer
@@ -176,6 +177,9 @@ fun PlayerSubActionsSection(
     onTimerSelected = { minutes -> viewModel.startSleepTimer(minutes) },
     onTimerComplete = { viewModel.startSleepTimerByCurrentItem() },
     onSelectSubtitle = {
+      if (MainApp.playbackGraph.playbackListController.items.value.isEmpty()) {
+        return@SubActionsRow
+      }
       subtitlePicker.launch(
         arrayOf(
           "application/x-subrip",
@@ -222,15 +226,19 @@ fun PlayerPlaylistSheet(
   val playbackList by viewModel.playbackListController.items.collectAsState()
   val playbackMode by viewModel.playbackListController.playbackMode.collectAsState()
 
-  PlaylistSheet(
-    playlist = playbackList,
-    currentMediaId = playerState.currentMedia?.mediaId,
-    isPlaying = playerState.isPlaying,
-    playbackMode = playbackMode,
-    onPlaybackModeClick = { viewModel.playbackListController.cyclePlaybackMode() },
-    onItemClick = { mediaId -> viewModel.selectItem(mediaId) },
-    onMoveToFirst = { mediaId -> viewModel.moveItemToFirst(mediaId) },
-    onDelete = { mediaId -> viewModel.deleteItem(mediaId) },
-    onDismiss = onDismiss,
-  )
+  if (playbackList.isEmpty()) {
+    onDismiss()
+  } else {
+    PlaylistSheet(
+      playlist = playbackList,
+      currentMediaId = playerState.currentMedia?.mediaId,
+      isPlaying = playerState.isPlaying,
+      playbackMode = playbackMode,
+      onPlaybackModeClick = { viewModel.playbackListController.cyclePlaybackMode() },
+      onItemClick = { mediaId -> viewModel.selectItem(mediaId) },
+      onMoveToFirst = { mediaId -> viewModel.moveItemToFirst(mediaId) },
+      onDelete = { mediaId -> viewModel.deleteItem(mediaId) },
+      onDismiss = onDismiss,
+    )
+  }
 }

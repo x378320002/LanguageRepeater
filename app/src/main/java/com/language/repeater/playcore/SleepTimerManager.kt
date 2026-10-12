@@ -42,7 +42,7 @@ object SleepTimerManager {
       }
       if (_remainingSeconds.value == 0L) {
         onTimeout?.invoke()
-        MainApp.instance.playbackGraph.player.pause()
+        MainApp.playbackGraph.player.pause()
       }
       _remainingSeconds.value = -1
     }

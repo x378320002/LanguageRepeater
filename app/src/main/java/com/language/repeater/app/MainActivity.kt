@@ -44,7 +44,7 @@ class MainActivity : AppCompatActivity() {
     // 幂等调用：仅在连接确实缺失（如重试耗尽）时才真正发起，兜住服务连不上导致无法播放的情况
     app.connectPlaybackService()
     // 长时间后台可能被系统收走解码器资源，播放器停在 IDLE、画面全黑，这里把首帧找回来
-    app.playbackGraph.media3Player.prepareIfIdle()
+    MainApp.playbackGraph.media3Player.prepareIfIdle()
   }
 
   override fun onCreate(savedInstanceState: Bundle?) {

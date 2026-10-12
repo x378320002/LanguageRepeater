@@ -26,7 +26,7 @@ class PlaybackService : MediaSessionService() {
   private var mediaSession: MediaSession? = null
 
   private val playbackGraph
-    get() = (application as MainApp).playbackGraph
+    get() = MainApp.playbackGraph
 
   @OptIn(UnstableApi::class)
   override fun onCreate() {

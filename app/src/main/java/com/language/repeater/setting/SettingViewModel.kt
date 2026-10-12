@@ -111,7 +111,7 @@ class SettingViewModel : ViewModel() {
   private fun clearCache() {
     viewModelScope.launch {
       stateHolder.cacheSizeFlow.value = "..."
-      val currentMediaId = MainApp.instance.playbackGraph.player.state.value.currentMedia?.mediaId
+      val currentMediaId = MainApp.playbackGraph.player.state.value.currentMedia?.mediaId
       val mediaIdsToKeep = listOfNotNull(currentMediaId)
       // clearTempData 的 except 参数表示按文件名匹配并保留这些 mediaId 的缓存。
       FFmpegUtil.clearTempData(MainApp.instance, mediaIdsToKeep)

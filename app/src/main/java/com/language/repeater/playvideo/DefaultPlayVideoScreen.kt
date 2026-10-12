@@ -2,14 +2,21 @@
 
 package com.language.repeater.playvideo
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -29,6 +36,9 @@ import com.language.repeater.playvideo.compose.PlayerProgressSection
 import com.language.repeater.playvideo.compose.PlayerSubActionsSection
 import com.language.repeater.playvideo.compose.PlayerWaveformSection
 import com.language.repeater.playvideo.compose.VideoPlayerBox
+import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
 
 /**
  * 竖屏默认布局：顶栏 + 16:9 视频画面 + 自上而下依次排开的各功能区。
@@ -52,10 +62,27 @@ fun DefaultPlayVideoScreen(
         .fillMaxSize()
         .padding(innerPadding),
     ) {
-      VideoPlayerBox(
-        viewModel = viewModel,
-        modifier = Modifier.padding(horizontal = HorizontalPadding)
-      )
+      if (viewModel.playbackListController.items.collectAsState().value.isEmpty()) {
+        Box(
+          modifier = Modifier
+            .padding(horizontal = HorizontalPadding)
+            .fillMaxWidth()
+            .aspectRatio(16f / 9f)
+            .clip(CardDefaults.shape)
+            .background(CardDefaults.cardColors().containerColor),
+          contentAlignment = Alignment.Center
+        ) {
+          Text(
+            text = "点击+号选择音视频",
+            color = LocalContentColor.current.copy(alpha = 0.7f)
+          )
+        }
+      } else {
+        VideoPlayerBox(
+          viewModel = viewModel,
+          modifier = Modifier.padding(horizontal = HorizontalPadding)
+        )
+      }
 
       PlayerProgressSection(
         viewModel = viewModel,

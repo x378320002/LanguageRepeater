@@ -143,7 +143,7 @@ object FileUtil {
       }
     } catch (e: SecurityException) {
       e.printStackTrace()
-      Log.d(TAG, "releasePersistablePermission failed:${e.message}, uri: $uri")
+      Log.d(TAG, "releasePersistablePermission failed:${e.message}")
     }
   }
 }
