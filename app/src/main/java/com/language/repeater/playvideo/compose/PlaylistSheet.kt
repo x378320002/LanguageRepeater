@@ -3,7 +3,9 @@ package com.language.repeater.playvideo.compose
 import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,6 +21,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
@@ -33,15 +36,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
-import com.language.repeater.BuildConfig
 import com.language.repeater.R
-import com.language.repeater.playbacklist.PlaybackListItem
+import com.language.repeater.db.VideoEntity
 import com.language.repeater.playbacklist.PlaybackMode
+import com.language.repeater.utils.TimeFormatUtil.formatDuration
 
 /**
  * Room PlaybackList 的 Compose 列表，所有交互都使用稳定 mediaId。
@@ -49,15 +53,14 @@ import com.language.repeater.playbacklist.PlaybackMode
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PlaylistSheet(
-  playlist: List<PlaybackListItem>,
-  currentMediaId: String?,
+  playlist: List<VideoEntity>,
+  currentMediaId: Long?,
   isPlaying: Boolean,
   playbackMode: PlaybackMode,
   onPlaybackModeClick: () -> Unit,
-  onItemClick: (String) -> Unit,
-  onMoveToFirst: (String) -> Unit,
-  onDelete: (String) -> Unit,
-  onRemovePermission: (String) -> Unit,
+  onItemClick: (Long) -> Unit,
+  onMoveToFirst: (Long) -> Unit,
+  onDelete: (Long) -> Unit,
   onDismiss: () -> Unit
 ) {
   val sheetState = rememberModalBottomSheetState()
@@ -66,7 +69,8 @@ fun PlaylistSheet(
 
   ModalBottomSheet(
     onDismissRequest = onDismiss,
-    sheetState = sheetState
+    sheetState = sheetState,
+    containerColor = MaterialTheme.colorScheme.surface
   ) {
     Row(
       modifier = Modifier
@@ -98,17 +102,16 @@ fun PlaylistSheet(
     LazyColumn(modifier = Modifier.height(sheetHeight)) {
       items(
         items = playlist,
-        key = { item -> item.mediaId }
+        key = { item -> item.id }
       ) { item ->
-        val mediaId = item.mediaId
+        val mediaId = item.id
         PlaylistItemRow(
           item = item,
           isCurrent = mediaId == currentMediaId,
           isPlaying = isPlaying && mediaId == currentMediaId,
           onClick = { onItemClick(mediaId) },
           onMoveToFirst = { onMoveToFirst(mediaId) },
-          onDelete = { onDelete(mediaId) },
-          onRemovePermission = { onRemovePermission(mediaId) }
+          onDelete = { onDelete(mediaId) }
         )
       }
     }
@@ -117,13 +120,12 @@ fun PlaylistSheet(
 
 @Composable
 private fun PlaylistItemRow(
-  item: PlaybackListItem,
+  item: VideoEntity,
   isCurrent: Boolean,
   isPlaying: Boolean,
   onClick: () -> Unit,
   onMoveToFirst: () -> Unit,
-  onDelete: () -> Unit,
-  onRemovePermission: () -> Unit
+  onDelete: () -> Unit
 ) {
   Row(
     modifier = Modifier
@@ -142,24 +144,34 @@ private fun PlaylistItemRow(
   ) {
     CoverRegion(item, isCurrent, isPlaying)
 
-    Text(
-      text = item.title,
-      style = MaterialTheme.typography.bodySmall,
-      color = MaterialTheme.colorScheme.onSurfaceVariant,
-      maxLines = 2,
-      overflow = TextOverflow.Ellipsis,
+    Column(
       modifier = Modifier
         .weight(1f)
-        .padding(start = 8.dp)
-    )
+        .padding(horizontal = 10.dp),
+      verticalArrangement = Arrangement.Center
+    ) {
+      Text(
+        text = item.name,
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        maxLines = 1,
+        overflow = TextOverflow.MiddleEllipsis
+      )
+      Spacer(Modifier.height(3.dp))
+      Text(
+        text = formatDuration(item.durationMs),
+        style = MaterialTheme.typography.labelSmall,
+        color = LocalContentColor.current.copy(alpha = 0.6f)
+      )
+    }
 
-    MoreBtn(onMoveToFirst, onDelete, onRemovePermission)
+    MoreBtn(onMoveToFirst, onDelete)
   }
 }
 
 @Composable
 private fun CoverRegion(
-  item: PlaybackListItem,
+  item: VideoEntity,
   isCurrent: Boolean,
   isPlaying: Boolean,
 ) {
@@ -167,11 +179,23 @@ private fun CoverRegion(
     modifier = Modifier
       .size(42.dp)
       .clip(MaterialTheme.shapes.small)
-      .background(Color.Black)
+      .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
+    contentAlignment = Alignment.Center
   ) {
+    // 音频没有封面，垫一个音符图标；视频在封面上层加载缩略图
+    if (!item.isVideo) {
+      Icon(
+        painter = painterResource(com.composables.icons.tabler.outline.R.drawable.tabler_ic_music_outline),
+        contentDescription = null,
+        modifier = Modifier.size(20.dp),
+        tint = MaterialTheme.colorScheme.primary
+      )
+    }
+
     AsyncImage(
       model = item.uri,
       modifier = Modifier.fillMaxSize(),
+      contentScale = ContentScale.Crop,
       contentDescription = null
     )
 
@@ -186,10 +210,12 @@ private fun CoverRegion(
         ),
         contentDescription = null,
         modifier = Modifier
-          .padding(start = 4.dp, top = 4.dp)
-          .size(12.dp)
-          .background(Color.Black.copy(alpha = 0.5f), shape = CircleShape),
-        tint = MaterialTheme.colorScheme.onSurfaceVariant
+          .align(Alignment.BottomStart)
+          .padding(start = 2.dp, bottom = 2.dp)
+          .size(16.dp)
+          .background(Color.Black.copy(alpha = 0.5f), shape = CircleShape)
+          .padding(3.dp),
+        tint = Color.White
       )
     }
   }
@@ -198,8 +224,7 @@ private fun CoverRegion(
 @Composable
 private fun MoreBtn(
   onMoveToFirst: () -> Unit,
-  onDelete: () -> Unit,
-  onRemovePermission: ()->Unit
+  onDelete: () -> Unit
 ) {
   var showPop by remember { mutableStateOf(false) }
   Box {
@@ -250,25 +275,6 @@ private fun MoreBtn(
         },
         onClick = onDelete
       )
-
-      // 调试入口：构造「授权已失效」的条目，用来验证失效后的提示与恢复流程
-      if (BuildConfig.DEBUG) {
-        DropdownMenuItem(
-          text = {
-            Text(
-              text = "释放授权（测试）",
-              style = MaterialTheme.typography.bodyMedium,
-            )
-          },
-          leadingIcon = {
-            Icon(
-              painter = painterResource(com.composables.icons.tabler.outline.R.drawable.tabler_ic_lock_off_outline),
-              contentDescription = "释放授权"
-            )
-          },
-          onClick = onRemovePermission
-        )
-      }
     }
   }
 }

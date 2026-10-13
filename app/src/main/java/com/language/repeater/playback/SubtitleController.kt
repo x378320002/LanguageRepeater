@@ -4,30 +4,18 @@ import android.content.Context
 import android.net.Uri
 import android.util.Log
 import androidx.core.net.toUri
-import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.stringPreferencesKey
 import com.language.repeater.datastore.DsManager
-import com.language.repeater.datastore.subtitleStore
+import com.language.repeater.db.VideoEntity
 import com.language.repeater.db.VideoInfoDao
 import com.language.repeater.player.PlaybackPlayer
-import com.language.repeater.db.VideoEntity
 import com.language.repeater.utils.SubtitleFolderScanner
 import com.language.repeater.utils.ToastUtil
-import com.language.repeater.utils.UriAccessUtil
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/**
- * 字幕协调器。
- *
- * 负责「哪个媒体用哪个字幕」这件事的全部：用户主动换字幕、导入新文件时自动配字幕、
- * 以及选择的持久化。句子怎么来（解析字幕还是跑静音检测）不归这里管，
- * 由 CurrentMediaSentenceController 决定。
- */
 class SubtitleController(
   context: Context,
   private val player: PlaybackPlayer,
@@ -41,8 +29,7 @@ class SubtitleController(
     val subtitle = subtitleUri.toString()
     scope.launch(Dispatchers.IO) {
       try {
-        saveSubtitle(mediaId, subtitle)
-        // 保存期间用户可能已经切歌，此时不该把字幕挂到新媒体上
+        videoInfoDao.updateSubUri(mediaId, subtitle)
         if (player.state.value.currentMedia?.mediaId != mediaId) {
           return@launch
         }
@@ -63,24 +50,23 @@ class SubtitleController(
   }
 
   /**
-   * 为刚导入的媒体配字幕：先沿用上次为它选过的字幕，失效或从未选过就去字幕文件夹按文件名找。
-   *
-   * 直接写入传入条目的 subUri，调用方随后把它们存库即可。
+   * 为即将入库的媒体解析字幕。字幕跟着 VideoEntity.subUri 走：
+   * uri 已在库中的条目沿用库里已保存的字幕；未入库的新文件按文件名去字幕文件夹找。
+   * 结果直接写回 item.subUri，由仓库入库时一并落盘。
    */
   suspend fun resolveSubtitles(items: List<VideoEntity>) {
-    val preferences = applicationContext.subtitleStore.data.firstOrNull()
+    if (items.isEmpty()) {
+      return
+    }
+    val existingByUri = videoInfoDao.getVideosByUris(items.map { item -> item.uri })
+      .associateBy({ entry -> entry.uri })
     var needScanFolder = false
     items.forEach { item ->
-      val saved = preferences?.get(stringPreferencesKey(item.id))
-      if (saved.isNullOrEmpty()) {
+      val existing = existingByUri[item.uri]
+      if (existing == null) {
         needScanFolder = true
-      } else if (UriAccessUtil.canRead(applicationContext, saved.toUri())) {
-        item.subUri = saved
       } else {
-        // 授权已失效，清掉映射，改去文件夹里重新找一份
-        clearSubtitle(item.id)
-        item.subUri = null
-        needScanFolder = true
+        item.subUri = existing.subUri
       }
     }
 
@@ -90,7 +76,6 @@ class SubtitleController(
     scanFolderForSubtitles(items)
   }
 
-  /** 按「与媒体同名」的约定在用户指定的字幕文件夹里匹配。 */
   private suspend fun scanFolderForSubtitles(items: List<VideoEntity>) {
     val folder = DsManager.get(DsManager.KEY_SUBTITLE_FOLDER, "")
       .takeIf { path -> path.isNotEmpty() }
@@ -107,27 +92,6 @@ class SubtitleController(
       val key = item.name.substringBeforeLast(".")
       val subtitleUri = found[key] ?: return@forEach
       item.subUri = subtitleUri.toString()
-      saveSubtitle(item.id, subtitleUri.toString())
-    }
-  }
-
-  /**
-   * 选择要记在两处：DataStore 供重新导入同一文件时查表复用，
-   * VideoInfoDao 供播放列表恢复时随条目一起带出。
-   *
-   * 导入场景下媒体可能尚未入库，此时 updateSubUri 是空操作，
-   * subUri 会随后续入库的条目一起写进去。
-   */
-  private suspend fun saveSubtitle(mediaId: String, subtitleUri: String) {
-    applicationContext.subtitleStore.edit { preferences ->
-      preferences[stringPreferencesKey(mediaId)] = subtitleUri
-    }
-    videoInfoDao.updateSubUri(mediaId, subtitleUri)
-  }
-
-  private suspend fun clearSubtitle(mediaId: String) {
-    applicationContext.subtitleStore.edit { preferences ->
-      preferences.remove(stringPreferencesKey(mediaId))
     }
   }
 

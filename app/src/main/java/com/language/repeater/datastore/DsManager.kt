@@ -22,7 +22,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import java.util.concurrent.ConcurrentHashMap
 
-val Context.subtitleStore: DataStore<Preferences> by preferencesDataStore(name = "video_subtitle_map")
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "app_config")
 
 /**
@@ -33,11 +32,11 @@ val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "ap
  * 只能经 [DsManager.getPlayProgress] 和 [DsManager.setPlayProgress] 成对读写。
  */
 data class PlayProgress(
-  val mediaId: String = "",
+  val mediaId: Long = 0L,
   val positionMs: Long = 0L
 ) {
   val isEmpty: Boolean
-    get() = mediaId.isEmpty()
+    get() = mediaId == 0L
 
   companion object {
     val EMPTY = PlayProgress()
@@ -54,7 +53,7 @@ object DsManager {
   //当前的subtitle备用寻找文件夹
   val KEY_SUBTITLE_FOLDER = stringPreferencesKey("subtitle_folder_uri")
   //当前播放的视频ID。与播放位置成对读写，见 PlayProgress
-  private val KEY_CURRENT_PLAY_ID = stringPreferencesKey("key_current_play_id")
+  private val KEY_CURRENT_PLAY_ID = longPreferencesKey("key_current_play_id_v2")
   //当前播放视频的播放位置。与视频ID成对读写，见 PlayProgress
   private val KEY_CURRENT_PLAY_POSITION = longPreferencesKey("key_current_play_position")
   //当前是否开启了AB句子模式
@@ -97,7 +96,7 @@ object DsManager {
         .map { preferences ->
           preferences[key] ?: default
         }
-        .distinctUntilChanged() // 统一在这里加，永远不会忘！
+        .distinctUntilChanged()
         .stateIn(scope, SharingStarted.Eagerly, default)
     } as StateFlow<T>
   }
@@ -121,7 +120,7 @@ object DsManager {
   suspend fun getPlayProgress(): PlayProgress {
     return MainApp.instance.dataStore.data.map { preferences ->
       PlayProgress(
-        mediaId = preferences[KEY_CURRENT_PLAY_ID] ?: "",
+        mediaId = preferences[KEY_CURRENT_PLAY_ID] ?: 0L,
         positionMs = preferences[KEY_CURRENT_PLAY_POSITION] ?: 0L
       )
     }.first()

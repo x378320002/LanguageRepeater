@@ -32,16 +32,15 @@ object SentenceStoreUtil {
 
 
   suspend fun clearTempData(
-    context: Context, except: List<String>
+    context: Context, except: List<Long>
   ) = withContext(Dispatchers.IO) {
     val dir = context.getExternalFilesDir(SENTENCE_DIR)
     if (dir != null && dir.exists() && dir.isDirectory) {
       dir.listFiles()?.forEach { file->
         val fileName = file.name
         Log.i("wangzixu_clearTempData","SentenceStoreUtil fileName:$fileName")
-        // 如果文件名包含 except 中任意一个字符串，则跳过
         val shouldKeep = except.any { exceptKey ->
-          fileName.contains(exceptKey)
+          fileName.contains(exceptKey.toString())
         }
 
         if (!shouldKeep) {

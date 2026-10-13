@@ -122,7 +122,8 @@ class Media3PlaybackPlayer(
     ) {
       updatePosition()
       if (reason == Player.DISCONTINUITY_REASON_SEEK) {
-        val mediaId = exoPlayer.currentMediaItem?.mediaId ?: return
+        val mediaIdStr = exoPlayer.currentMediaItem?.mediaId ?: return
+        val mediaId = mediaIdStr.toLongOrNull() ?: return
         if (_state.value.currentMedia?.mediaId != mediaId) {
           return
         }
@@ -305,7 +306,7 @@ class Media3PlaybackPlayer(
 
   private fun createMediaItem(media: PlaybackMedia): MediaItem {
     val builder = MediaItem.Builder()
-      .setMediaId(media.mediaId)
+      .setMediaId(media.mediaId.toString())
       .setUri(media.uri)
       .setMediaMetadata(
         MediaMetadata.Builder()

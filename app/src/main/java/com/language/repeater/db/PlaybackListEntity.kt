@@ -19,6 +19,6 @@ import androidx.room.PrimaryKey
 )
 data class PlaybackListEntity(
   @PrimaryKey
-  val mediaId: String,
+  val mediaId: Long,
   val sortOrder: Long
 )

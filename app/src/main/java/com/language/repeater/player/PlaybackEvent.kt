@@ -15,11 +15,11 @@ sealed interface PlaybackEvent {
   ) : PlaybackEvent
 
   data class MediaEnded(
-    val mediaId: String
+    val mediaId: Long
   ) : PlaybackEvent
 
   data class SeekCompleted(
-    val mediaId: String,
+    val mediaId: Long,
     val positionMs: Long
   ) : PlaybackEvent
 }

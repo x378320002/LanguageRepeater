@@ -12,41 +12,59 @@ class RoomPlaybackListRepository(
   private val playbackListDao = database.playbackListDao()
   private val videoInfoDao = database.videoInfoDao()
 
-  override val items: Flow<List<PlaybackListItem>> = playbackListDao.observeItems()
+  override val items: Flow<List<VideoEntity>> = playbackListDao.observeItems()
 
-  override suspend fun get(mediaId: String): PlaybackListItem? {
+  override suspend fun get(mediaId: Long): VideoEntity? {
     return playbackListDao.get(mediaId)
   }
 
-  override suspend fun first(): PlaybackListItem? {
+  override suspend fun first(): VideoEntity? {
     return playbackListDao.first()
   }
 
-  /**
-   * sortOrder 取条目在 [order] 中的下标，每次整体重写。
-   *
-   * 删除条目会在序号中留下空洞，不影响排序结果，下次重写时自动消除。
-   */
-  override suspend fun saveOrder(order: List<String>, videos: List<VideoEntity>) {
-    if (order.isEmpty() && videos.isEmpty()) {
+  override suspend fun insertAndResolveIds(videos: List<VideoEntity>): List<VideoEntity> {
+    if (videos.isEmpty()) {
+      return emptyList()
+    }
+
+    return database.withTransaction {
+      val resolved = mutableListOf<VideoEntity>()
+      val seenUris = mutableSetOf<String>()
+      videos.forEach { video ->
+        // 同一批里的重复 uri 只保留第一条
+        if (!seenUris.add(video.uri)) {
+          return@forEach
+        }
+        val saved = videoInfoDao.getVideoByUri(video.uri)
+        val entity = if (saved != null) {
+          // 已在库中：沿用库存记录，避免重复导入覆盖掉已保存的字幕等字段
+          saved
+        } else {
+          // 新文件：插入后拿自增 id，构造完整实体返回
+          val id = videoInfoDao.insertOrUpdateInfo(video)
+          video.copy(id = id)
+        }
+        resolved += entity
+      }
+      resolved
+    }
+  }
+
+  override suspend fun saveOrder(order: List<Long>) {
+    if (order.isEmpty()) {
       return
     }
 
     database.withTransaction {
-      if (videos.isNotEmpty()) {
-        videoInfoDao.insertOrUpdateInfo(videos)
-      }
-      if (order.isNotEmpty()) {
-        playbackListDao.upsert(
-          order.mapIndexed { index, mediaId ->
-            PlaybackListEntity(mediaId = mediaId, sortOrder = index.toLong())
-          }
-        )
-      }
+      playbackListDao.upsert(
+        order.mapIndexed { index, mediaId ->
+          PlaybackListEntity(mediaId = mediaId, sortOrder = index.toLong())
+        }
+      )
     }
   }
 
-  override suspend fun remove(mediaId: String) {
+  override suspend fun remove(mediaId: Long) {
     videoInfoDao.deleteById(mediaId)
   }
 }

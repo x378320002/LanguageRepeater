@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Context
 import android.media.AudioManager
 import android.util.Log
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -38,6 +39,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.util.VelocityTracker
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
@@ -78,6 +80,7 @@ fun VideoPlayerBox(
   val state = remember(videoOutput, scope) {
     VideoPlayerBoxState(context, scope)
   }
+  val playerState by player.state.collectAsState()
 
   val supportLeft by DsManager.observe(DsManager.KEY_LEFT_BRIGHTNESS_GESTURE, true).collectAsState()
   val supportRight by DsManager.observe(DsManager.KEY_RIGHT_VOLUME_GESTURE, true).collectAsState()
@@ -159,21 +162,31 @@ fun VideoPlayerBox(
         )
       }
   ) {
-    AndroidView(
-      modifier = Modifier.fillMaxSize(),
-      factory = { context ->
-        PlayerView(context).apply {
-          useController = false
-          videoOutput.attach(this)
+    if (playerState.currentMedia?.isVideo == false) {
+      // 音频没有画面，垫一张静态底图
+      Image(
+        painter = painterResource(R.drawable.tape),
+        contentDescription = null,
+        contentScale = ContentScale.Crop,
+        modifier = Modifier.fillMaxSize()
+      )
+    } else {
+      AndroidView(
+        modifier = Modifier.fillMaxSize(),
+        factory = { context ->
+          PlayerView(context).apply {
+            useController = false
+            videoOutput.attach(this)
+          }
+        },
+        update = { playerView ->
+          videoOutput.attach(playerView)
+        },
+        onRelease = { playerView ->
+          videoOutput.detach(playerView)
         }
-      },
-      update = { playerView ->
-        videoOutput.attach(playerView)
-      },
-      onRelease = { playerView ->
-        videoOutput.detach(playerView)
-      }
-    )
+      )
+    }
 
 //    if (!fullScreen) {
 //      IconButton(

@@ -13,6 +13,7 @@ import coil3.video.VideoFrameDecoder
 import com.language.repeater.playback.PlaybackGraph
 import com.language.repeater.datastore.DsManager
 import com.language.repeater.player.media3.PlaybackServiceConnection
+import com.language.repeater.utils.MediaStoreThumbnailFetcher
 import kotlinx.coroutines.runBlocking
 
 /**
@@ -77,6 +78,7 @@ class MainApp : Application(), SingletonImageLoader.Factory {
     return ImageLoader.Builder(context)
       .components {
         add(VideoFrameDecoder.Factory())
+        add(MediaStoreThumbnailFetcher.Factory())
       }
       .crossfade(true)
       .build()

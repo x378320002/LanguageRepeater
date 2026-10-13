@@ -1,7 +1,5 @@
 package com.language.repeater.playvideo.compose
 
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -13,6 +11,9 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -25,14 +26,10 @@ fun PlayTopBar(
   viewModel: PlayerViewModel,
   onGoSetting: () -> Unit
 ) {
-  // 文件选择器
-  val openFileLauncher = rememberLauncherForActivityResult(
-    ActivityResultContracts.OpenMultipleDocuments()
-  ) { uris ->
-    if (uris.isNotEmpty()) {
-      viewModel.handleSelectedVideos(uris)
-    }
-  }
+  var showMediaLibrary by remember { mutableStateOf(false) }
+  val openMediaLibrary = rememberMediaLibraryOpener(
+    onGranted = { showMediaLibrary = true }
+  )
 
   TopAppBar(
     title = {
@@ -48,9 +45,7 @@ fun PlayTopBar(
       }
     },
     navigationIcon = {
-      IconButton(onClick = {
-        openFileLauncher.launch(arrayOf("audio/*", "video/*"))
-      }) {
+      IconButton(onClick = { openMediaLibrary() }) {
         Icon(
           painter = painterResource(com.composables.icons.tabler.outline.R.drawable.tabler_ic_plus_outline),
           contentDescription = null
@@ -72,4 +67,14 @@ fun PlayTopBar(
       }
     }
   )
+
+  if (showMediaLibrary) {
+    MediaLibrarySheet(
+      onConfirm = { items ->
+        showMediaLibrary = false
+        viewModel.handleSelectedMediaStoreItems(items)
+      },
+      onDismiss = { showMediaLibrary = false }
+    )
+  }
 }

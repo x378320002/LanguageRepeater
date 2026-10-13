@@ -3,30 +3,22 @@ package com.language.repeater.playbacklist
 import com.language.repeater.db.VideoEntity
 import kotlinx.coroutines.flow.Flow
 
-/**
- * 播放列表的持久化出入口。只负责存取，条目怎么排序由调用方决定。
- *
- * [items] 是完整列表且随库变化自动更新，调用方的读取都基于它；
- * [get] 与 [first] 供 [items] 尚未加载时（进程启动）按需取单条。
- */
 interface PlaybackListRepository {
-  val items: Flow<List<PlaybackListItem>>
+  val items: Flow<List<VideoEntity>>
 
-  suspend fun get(mediaId: String): PlaybackListItem?
+  suspend fun get(mediaId: Long): VideoEntity?
 
-  suspend fun first(): PlaybackListItem?
-
-  /**
-   * 按 [order] 给出的顺序整体落盘，同时把 [videos] 的视频信息写入库。
-   *
-   * [order] 为空表示只更新视频信息、不动现有顺序。
-   */
-  suspend fun saveOrder(order: List<String>, videos: List<VideoEntity> = emptyList())
+  suspend fun first(): VideoEntity?
 
   /**
-   * 彻底删除这个视频，不是只把它移出列表。
+   * 落库并返回每个条目在库中的完整记录（已含自增 id）。
    *
-   * 删的是 video_info_table 的行，播放列表和历史记录都配了外键级联，会一起清掉。
+   * 库中已有相同 uri 的条目直接沿用库存记录，不重复插入；不存在的才插入并回填自增 id。
+   * 返回顺序与 [videos] 一一对应，重复 uri 只保留首个。
    */
-  suspend fun remove(mediaId: String)
+  suspend fun insertAndResolveIds(videos: List<VideoEntity>): List<VideoEntity>
+
+  suspend fun saveOrder(order: List<Long>)
+
+  suspend fun remove(mediaId: Long)
 }

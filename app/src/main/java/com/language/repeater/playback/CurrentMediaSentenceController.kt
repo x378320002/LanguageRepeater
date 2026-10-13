@@ -56,7 +56,7 @@ class CurrentMediaSentenceController(
   private val _currentSentence = MutableStateFlow<Sentence?>(null)
   val currentSentence = _currentSentence.asStateFlow()
 
-  private var activeMediaId: String? = null
+  private var activeMediaId: Long? = null
   private var analysisJob: Job? = null
   private var sentenceJob: Job? = null
 
@@ -109,7 +109,7 @@ class CurrentMediaSentenceController(
       }
       _pcmLoader.value = PCMSegmentLoader(pcmFile)
 
-      val cachedSentences = SentenceStoreUtil.loadData(applicationContext, mediaId)
+      val cachedSentences = SentenceStoreUtil.loadData(applicationContext, mediaId.toString())
       if (!cachedSentences.isNullOrEmpty()) {
         publishSentences(mediaId, cachedSentences)
       } else {
@@ -133,7 +133,7 @@ class CurrentMediaSentenceController(
     val path = FFmpegUtil.extractWavFileByFFmpeg(
       context = applicationContext,
       input = media.uri.toUri(),
-      key = media.mediaId
+      key = media.mediaId.toString()
     )
     return File(path)
   }
@@ -172,10 +172,10 @@ class CurrentMediaSentenceController(
       return
     }
     publishSentences(mediaId, newSentences)
-    SentenceStoreUtil.saveData(applicationContext, mediaId, newSentences)
+    SentenceStoreUtil.saveData(applicationContext, mediaId.toString(), newSentences)
   }
 
-  private fun publishSentences(mediaId: String, newSentences: List<Sentence>) {
+  private fun publishSentences(mediaId: Long, newSentences: List<Sentence>) {
     if (!isCurrent(mediaId)) {
       return
     }
@@ -474,12 +474,12 @@ class CurrentMediaSentenceController(
     val mediaId = activeMediaId ?: return
     scope.launch(Dispatchers.IO) {
       if (isCurrent(mediaId)) {
-        SentenceStoreUtil.saveData(applicationContext, mediaId, sentences)
+        SentenceStoreUtil.saveData(applicationContext, mediaId.toString(), sentences)
       }
     }
   }
 
-  private fun isCurrent(mediaId: String): Boolean {
+  private fun isCurrent(mediaId: Long): Boolean {
     return activeMediaId == mediaId && player.state.value.currentMedia?.mediaId == mediaId
   }
 

@@ -3,13 +3,8 @@ package com.language.repeater.utils
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.provider.DocumentsContract
-import android.provider.OpenableColumns
 import android.util.Log
-import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
-import com.language.repeater.app.MainApp
-import com.language.repeater.db.VideoEntity
 
 /**
  * Date: 2026-01-13
@@ -19,78 +14,9 @@ import com.language.repeater.db.VideoEntity
 object FileUtil {
   private const val TAG = "wangzixu_FileUtil"
 
-  /** 按「卷:相对路径」编址的外部存储 Provider，只有它的 documentId 能还原出目录结构 */
-  private const val EXTERNAL_STORAGE_AUTHORITY = "com.android.externalstorage.documents"
-  private const val PRIMARY_VOLUME = "primary"
-
-  /**
-   * 快速获取文件的元数据
-   * @param context Context
-   * @param uri 文件的 Uri
-   * @return 包含文件名、大小的数据类，如果查询失败则返回 null
-   */
-  fun getFileInfo(context: Context, uri: Uri): VideoEntity {
-    var name: String? = null
-    var size: Long = 0
-    try {
-      val projection = arrayOf(
-        OpenableColumns.DISPLAY_NAME,
-        OpenableColumns.SIZE
-      )
-      context.contentResolver.query(uri, projection, null, null, null)?.use { cursor ->
-        if (cursor.moveToFirst()) {
-          val displayNameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-          if (displayNameIndex != -1) {
-            name = cursor.getString(displayNameIndex)
-          }
-
-          val sizeIndex = cursor.getColumnIndex(OpenableColumns.SIZE)
-          if (sizeIndex != -1) {
-            size = cursor.getLong(sizeIndex)
-          }
-        }
-      }
-    } catch (e: Exception) {
-      e.printStackTrace()
-    }
-
-    if (name.isNullOrEmpty()) {
-      name = uri.lastPathSegment
-      Log.i(TAG, "getFileInfo, contentResolver null, use lastPathSegment:$name")
-    }
-
-    if (name.isNullOrEmpty()) {
-      name = uri.path
-      Log.i(TAG, "getFileInfo, contentResolver null, use path:$name")
-    }
-
-    if (name.isNullOrEmpty()) {
-      name = uri.toString()
-      Log.i(TAG, "getFileInfo, contentResolver null, use uri.toString:$name")
-    }
-
-    val trimName = name.trim()
-      .replace(' ', '-') //后续ffmpeg命令里, 文件名不能带空格
-      .replace('\'', '-') //不能带'符号
-    val id = "$trimName-$size"
-    return VideoEntity(id, uri.toString(), name)
-  }
-
   /**
    * 获取文件对应的名字
    */
-  fun getDirUriName(context: Context, uri: String): String {
-    var name = ""
-    try {
-      name = DocumentFile.fromTreeUri(context, uri.toUri())?.name ?: ""
-      Log.i(TAG, "getDirUriName : $name")
-    } catch (e: Exception) {
-      Log.i(TAG, "getDirUriName error : ${e.message}")
-      e.printStackTrace()
-    }
-    return name
-  }
-
   fun getFileUriName(context: Context, uri: Uri): String {
     var name = ""
     try {
@@ -103,16 +29,17 @@ object FileUtil {
     return name
   }
 
-  // 核心方法：申请持久权限
+  /**
+   * 申请持久权限，用于字幕文件与字幕文件夹这类 Storage Access Framework 返回的 uri。
+   *
+   * 只申请读权限：ACTION_OPEN_DOCUMENT 系统只授予读权限，如果同时申请写权限会抛出 SecurityException，
+   * 导致读权限也无法被持久化，App 重启后所有文件都访问不到
+   */
   fun takePersistablePermission(context: Context, uri: Uri) {
     try {
       val contentResolver = context.contentResolver
-      // 只申请读权限：ACTION_OPEN_DOCUMENT 系统只授予读权限，如果同时申请写权限会抛出 SecurityException，
-      // 导致读权限也无法被持久化，App 重启后所有文件都访问不到
       val takeFlags: Int = Intent.FLAG_GRANT_READ_URI_PERMISSION
       contentResolver.takePersistableUriPermission(uri, takeFlags)
-      // 成功后，你就可以把 uri.toString() 存入 Room 或 SharedPreferences 了
-      // 下次直接用 Uri.parse(string) 就能播放
       Log.d(TAG, "takePersistablePermission success, uri: $uri")
     } catch (e: SecurityException) {
       e.printStackTrace()
@@ -120,67 +47,4 @@ object FileUtil {
       Log.d(TAG, "takePersistablePermission failed:${e.message}, uri: $uri")
     }
   }
-
-  fun releasePersistablePermission(uri: Uri) {
-    try {
-      val contentResolver = MainApp.instance.contentResolver
-      val takeFlags: Int = Intent.FLAG_GRANT_READ_URI_PERMISSION
-      contentResolver.releasePersistableUriPermission(uri, takeFlags)
-      Log.d(TAG, "releasePersistablePermission success, uri: $uri")
-    } catch (e: SecurityException) {
-      e.printStackTrace()
-      Log.d(TAG, "releasePersistablePermission failed:${e.message}, uri: $uri")
-    }
-  }
-
-  fun checkPersistPermissionList() {
-    try {
-      val contentResolver = MainApp.instance.contentResolver
-      val list = contentResolver.persistedUriPermissions
-      Log.d(TAG, "checkPersistPermissionList size = ${list.size}")
-      list.forEach {
-        Log.d(TAG, "checkPersistPermissionList uri:${it.uri}")
-      }
-    } catch (e: SecurityException) {
-      e.printStackTrace()
-      Log.d(TAG, "releasePersistablePermission failed:${e.message}")
-    }
-  }
-
-  /**
-   * 解析出 Uri 对应的存储位置，形如「内部存储/Movies/lesson1.mp4」，用于展示给用户。
-   *
-   * 不访问 ContentProvider：documentId 自身就编码了路径，因此授权失效后依然能解析。
-   * 只有按路径编址的外部存储能解出目录，下载内容、云端文件等返回 null。
-   */
-  fun getReadableLocation(uri: Uri): String? {
-    if (uri.authority != EXTERNAL_STORAGE_AUTHORITY) {
-      return null
-    }
-
-    val documentId = try {
-      DocumentsContract.getDocumentId(uri)
-    } catch (e: IllegalArgumentException) {
-      Log.i(TAG, "getReadableLocation, not a document uri: ${e.message}")
-      return null
-    }
-
-    val separatorIndex = documentId.indexOf(':')
-    if (separatorIndex < 0) {
-      return null
-    }
-    val volumeId = documentId.substring(0, separatorIndex)
-    val relativePath = documentId.substring(separatorIndex + 1)
-    if (relativePath.isEmpty()) {
-      return null
-    }
-
-    val volumeName = if (volumeId == PRIMARY_VOLUME) {
-      "内部存储"
-    } else {
-      "SD 卡"
-    }
-    return "$volumeName/$relativePath"
-  }
 }
-

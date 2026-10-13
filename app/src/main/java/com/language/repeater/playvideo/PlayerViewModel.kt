@@ -1,6 +1,5 @@
 package com.language.repeater.playvideo
 
-import android.net.Uri
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -9,11 +8,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.language.repeater.app.MainApp
 import com.language.repeater.datastore.DsManager
+import com.language.repeater.pcm.FFmpegUtil
 import com.language.repeater.playcore.SleepTimerManager
-import com.language.repeater.db.AppDb
 import com.language.repeater.db.VideoEntity
-import com.language.repeater.playbacklist.toPlaybackMedia
-import com.language.repeater.utils.FileUtil
+import com.language.repeater.db.toPlaybackMedia
+import com.language.repeater.sentence.SentenceStoreUtil
+import com.language.repeater.utils.MediaStoreItem
 import com.language.repeater.utils.ToastUtil
 import com.language.repeater.utils.UriAccessUtil
 import kotlinx.coroutines.Dispatchers
@@ -45,11 +45,11 @@ class PlayerViewModel : ViewModel() {
   val subtitleController = playbackGraph.subtitleController
 
   /**
-   * 当前因文件读不到而无法播放的媒体 id。非 null 时 UI 应引导用户重新选择该文件。
-   * 用户选完文件、手动关闭提示，或该媒体恢复正常后清空。
+   * 当前因文件读不到而无法播放的媒体 id。非 null 时 UI 应提示用户该文件已失效。
+   * 用户删除条目、手动关闭提示，或该媒体恢复正常后清空。
    */
-  private val _permissionErrorMediaId = MutableStateFlow<String?>(null)
-  val permissionErrorMediaId: StateFlow<String?> = _permissionErrorMediaId.asStateFlow()
+  private val _permissionErrorMediaId = MutableStateFlow<Long?>(null)
+  val permissionErrorMediaId: StateFlow<Long?> = _permissionErrorMediaId.asStateFlow()
 
   init {
     // 播放出错的原因很多，按错误码区分并不可靠：授权被回收后 ContentResolver 抛的
@@ -78,44 +78,9 @@ class PlayerViewModel : ViewModel() {
     }
   }
 
+  /** 用户关闭失效提示后调用。 */
   fun dismissPermissionError() {
     _permissionErrorMediaId.value = null
-  }
-
-  /**
-   * 用户重新选择文件后调用：申请持久权限、更新 DB 里的 uri、重新起播。
-   *
-   * 必须选回同一个文件。mediaId 由文件名与大小算出（见 FileUtil.getFileInfo），
-   * 波形、句子切分、字幕映射都以它为键，换成别的文件会让这些数据与音频错位，
-   * 因此校验不通过时保留提示、不改任何记录。
-   */
-  fun handleReGrantedUri(mediaId: String, newUri: Uri) {
-    viewModelScope.launch(Dispatchers.IO) {
-      val context = MainApp.instance
-      FileUtil.takePersistablePermission(context, newUri)
-
-      val selected = FileUtil.getFileInfo(context, newUri)
-      if (selected.id != mediaId) {
-        FileUtil.releasePersistablePermission(newUri)
-        withContext(Dispatchers.Main) {
-          ToastUtil.toast("所选文件与原条目不一致，请选择原来的那个文件")
-        }
-        return@launch
-      }
-
-      AppDb.instance(context).videoInfoDao().updateUri(mediaId, newUri.toString())
-
-      val item = playbackListController.items.value.find { it.mediaId == mediaId }
-      withContext(Dispatchers.Main) {
-        if (item != null) {
-          player.prepare(
-            item.copy(uri = newUri.toString()).toPlaybackMedia(),
-            playWhenReady = true
-          )
-        }
-        _permissionErrorMediaId.value = null
-      }
-    }
   }
 
   /**
@@ -155,34 +120,32 @@ class PlayerViewModel : ViewModel() {
 
   // ---------- 播放列表：controller 侧是 suspend，需要 scope 承接 ----------
 
-  fun selectItem(mediaId: String) {
+  fun selectItem(mediaId: Long) {
     viewModelScope.launch {
       playbackListController.select(mediaId)
     }
   }
 
-  fun deleteItem(mediaId: String) {
+  /**
+   * 从播放列表移除条目，连同它的句子切分与 wav 缓存一起清掉。
+   *
+   * 两类缓存都以 mediaId 命名，条目删除后 id 不会被复用，残留文件无法再被命中，必须显式删除。
+   */
+  fun deleteItem(mediaId: Long) {
     viewModelScope.launch {
       playbackListController.remove(mediaId)
+      _permissionErrorMediaId.value = null
+      withContext(Dispatchers.IO) {
+        val context = MainApp.instance
+        SentenceStoreUtil.deleteData(context, mediaId.toString())
+        FFmpegUtil.delete(context, mediaId.toString())
+      }
     }
   }
 
-  fun moveItemToFirst(mediaId: String) {
+  fun moveItemToFirst(mediaId: Long) {
     viewModelScope.launch {
       playbackListController.moveToFirst(mediaId)
-    }
-  }
-
-  /**
-   * 主动释放条目的持久化授权，用于在 debug 包里造出「授权已失效」的条目。
-   *
-   * 只释放授权、不触碰播放器：失效效果要等下次点播该条目时才会显现，
-   * 这与配额超限后系统静默回收授权的真实表现一致。
-   */
-  fun releasePermissionForTest(mediaId: String) {
-    viewModelScope.launch(Dispatchers.IO) {
-      val item = playbackListController.items.value.find { it.mediaId == mediaId } ?: return@launch
-      FileUtil.releasePersistablePermission(item.uri.toUri())
     }
   }
 
@@ -210,22 +173,25 @@ class PlayerViewModel : ViewModel() {
   // ---------- 文件导入 ----------
 
   /**
-   * 处理选择的视频文件
-   * 包括：获取文件信息、申请权限、查找字幕、添加到播放列表
+   * 处理媒体库中选中的条目：查找字幕、添加到播放列表。
+   *
+   * 不申请持久化 Uri 授权：媒体库条目的读取权来自 app 自身的媒体权限，
+   * 不占用持久授权配额，也就不会因配额被回收而失效。
    */
-  fun handleSelectedVideos(uris: List<Uri>) {
-    if (uris.isEmpty()) {
+  fun handleSelectedMediaStoreItems(items: List<MediaStoreItem>) {
+    if (items.isEmpty()) {
       return
     }
 
     viewModelScope.launch(Dispatchers.IO) {
-      val context = MainApp.instance
-      val infos = uris.map { uri ->
-        FileUtil.takePersistablePermission(context, uri)
-        FileUtil.getFileInfo(context, uri)
-      }
-      if (infos.isEmpty()) {
-        return@launch
+      val infos = items.map { item ->
+        VideoEntity(
+          uri = item.uri.toString(),
+          name = item.name,
+          isVideo = item.isVideo,
+          size = item.size,
+          durationMs = item.durationMs
+        )
       }
 
       subtitleController.resolveSubtitles(infos)

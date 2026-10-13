@@ -38,16 +38,15 @@ object FFmpegUtil {
   }
 
   suspend fun clearTempData(
-    context: Context, except: List<String>
+    context: Context, except: List<Long>
   ) = withContext(Dispatchers.IO) {
     val wavDir = context.getExternalFilesDir(WAV_DIR)
     if (wavDir != null && wavDir.exists() && wavDir.isDirectory) {
       wavDir.listFiles()?.forEach { file->
         val fileName = file.name
         Log.i("wangzixu_clearTempData","FFmpegUtil fileName:$fileName")
-        // 如果文件名包含 except 中任意一个字符串，则跳过
         val shouldKeep = except.any { exceptKey ->
-          fileName.contains(exceptKey)
+          fileName.contains(exceptKey.toString())
         }
 
         if (!shouldKeep) {

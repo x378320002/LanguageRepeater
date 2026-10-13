@@ -1,27 +1,40 @@
 package com.language.repeater.db
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.language.repeater.player.PlaybackMedia
 import kotlinx.serialization.Serializable
 
-@Entity(tableName = "video_info_table")
+/**
+ * uri 唯一索引确保同一文件不会重复插入，同时让 @Upsert 在冲突时走 UPDATE 而不是 INSERT。
+ */
+@Entity(
+  tableName = "video_info_table",
+  indices = [Index(value = ["uri"], unique = true)]
+)
 @Serializable
 data class VideoEntity(
-  @PrimaryKey
-  val id: String,
+  @PrimaryKey(autoGenerate = true) val id: Long = 0,
   val uri: String,
   val name: String,
   var subUri: String? = null,
-  var position: Long = 0
+  /** 来源是否为视频：决定播放器是否渲染画面、是否取视频缩略图 */
+  val isVideo: Boolean = false,
+  /** 文件字节数，来自 MediaStore */
+  val size: Long = 0,
+  /** 媒体时长（毫秒），来自 MediaStore */
+  val durationMs: Long = 0
 )
 
-/** 将持久化的视频信息转换为播放器使用的纯 Kotlin 模型。 */
 fun VideoEntity.toPlaybackMedia(): PlaybackMedia {
   return PlaybackMedia(
     mediaId = id,
     uri = uri,
     title = name,
-    subtitleUri = subUri
+    subtitleUri = subUri,
+    isVideo = isVideo,
+    size = size,
+    durationMs = durationMs
   )
 }

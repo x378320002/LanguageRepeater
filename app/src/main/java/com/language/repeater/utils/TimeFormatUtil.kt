@@ -45,4 +45,14 @@ object TimeFormatUtil {
       String.format(Locale.getDefault(), "%02d:%02d", minutes, seconds)
     }
   }
+
+  fun formatDuration(durationMs: Long): String {
+    if (durationMs <= 0L) {
+      return "--:--"
+    }
+    val totalSeconds = durationMs / 1000L
+    val minutes = totalSeconds / 60L
+    val seconds = totalSeconds % 60L
+    return "%02d:%02d".format(minutes, seconds)
+  }
 }
