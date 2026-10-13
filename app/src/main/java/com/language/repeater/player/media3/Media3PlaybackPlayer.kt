@@ -314,7 +314,6 @@ class Media3PlaybackPlayer(
           .build()
       )
 
-    media.mimeType?.let(builder::setMimeType)
     media.subtitleUri
       ?.takeUnless { it.equals("null", ignoreCase = true) }
       ?.toUri()

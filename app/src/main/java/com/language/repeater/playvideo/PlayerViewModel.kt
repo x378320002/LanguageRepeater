@@ -4,16 +4,23 @@ import android.net.Uri
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.language.repeater.app.MainApp
 import com.language.repeater.datastore.DsManager
 import com.language.repeater.playcore.SleepTimerManager
+import com.language.repeater.db.AppDb
 import com.language.repeater.db.VideoEntity
+import com.language.repeater.playbacklist.toPlaybackMedia
 import com.language.repeater.utils.FileUtil
+import com.language.repeater.utils.ToastUtil
+import com.language.repeater.utils.UriAccessUtil
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -36,6 +43,80 @@ class PlayerViewModel : ViewModel() {
   val playbackListController = playbackGraph.playbackListController
   val sentenceController = playbackGraph.sentenceController
   val subtitleController = playbackGraph.subtitleController
+
+  /**
+   * 当前因文件读不到而无法播放的媒体 id。非 null 时 UI 应引导用户重新选择该文件。
+   * 用户选完文件、手动关闭提示，或该媒体恢复正常后清空。
+   */
+  private val _permissionErrorMediaId = MutableStateFlow<String?>(null)
+  val permissionErrorMediaId: StateFlow<String?> = _permissionErrorMediaId.asStateFlow()
+
+  init {
+    // 播放出错的原因很多，按错误码区分并不可靠：授权被回收后 ContentResolver 抛的
+    // SecurityException 不是 IOException，Media3 会把它归为 ERROR_CODE_UNSPECIFIED。
+    // 因此直接试读一次 uri，以「文件到底还能不能打开」为判据。
+    viewModelScope.launch {
+      player.state
+        .map { state ->
+          if (state.error == null) {
+            null
+          } else {
+            state.currentMedia
+          }
+        }
+        .distinctUntilChanged()
+        .collect { media ->
+          if (media == null) {
+            _permissionErrorMediaId.value = null
+            return@collect
+          }
+          val readable = UriAccessUtil.canRead(MainApp.instance, media.uri.toUri())
+          if (!readable) {
+            _permissionErrorMediaId.value = media.mediaId
+          }
+        }
+    }
+  }
+
+  fun dismissPermissionError() {
+    _permissionErrorMediaId.value = null
+  }
+
+  /**
+   * 用户重新选择文件后调用：申请持久权限、更新 DB 里的 uri、重新起播。
+   *
+   * 必须选回同一个文件。mediaId 由文件名与大小算出（见 FileUtil.getFileInfo），
+   * 波形、句子切分、字幕映射都以它为键，换成别的文件会让这些数据与音频错位，
+   * 因此校验不通过时保留提示、不改任何记录。
+   */
+  fun handleReGrantedUri(mediaId: String, newUri: Uri) {
+    viewModelScope.launch(Dispatchers.IO) {
+      val context = MainApp.instance
+      FileUtil.takePersistablePermission(context, newUri)
+
+      val selected = FileUtil.getFileInfo(context, newUri)
+      if (selected.id != mediaId) {
+        FileUtil.releasePersistablePermission(newUri)
+        withContext(Dispatchers.Main) {
+          ToastUtil.toast("所选文件与原条目不一致，请选择原来的那个文件")
+        }
+        return@launch
+      }
+
+      AppDb.instance(context).videoInfoDao().updateUri(mediaId, newUri.toString())
+
+      val item = playbackListController.items.value.find { it.mediaId == mediaId }
+      withContext(Dispatchers.Main) {
+        if (item != null) {
+          player.prepare(
+            item.copy(uri = newUri.toString()).toPlaybackMedia(),
+            playWhenReady = true
+          )
+        }
+        _permissionErrorMediaId.value = null
+      }
+    }
+  }
 
   /**
    * 播放页全屏状态：true = 全屏、false = 默认布局。
@@ -89,6 +170,19 @@ class PlayerViewModel : ViewModel() {
   fun moveItemToFirst(mediaId: String) {
     viewModelScope.launch {
       playbackListController.moveToFirst(mediaId)
+    }
+  }
+
+  /**
+   * 主动释放条目的持久化授权，用于在 debug 包里造出「授权已失效」的条目。
+   *
+   * 只释放授权、不触碰播放器：失效效果要等下次点播该条目时才会显现，
+   * 这与配额超限后系统静默回收授权的真实表现一致。
+   */
+  fun releasePermissionForTest(mediaId: String) {
+    viewModelScope.launch(Dispatchers.IO) {
+      val item = playbackListController.items.value.find { it.mediaId == mediaId } ?: return@launch
+      FileUtil.releasePersistablePermission(item.uri.toUri())
     }
   }
 

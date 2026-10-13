@@ -3,6 +3,7 @@ package com.language.repeater.utils
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.provider.DocumentsContract
 import android.provider.OpenableColumns
 import android.util.Log
 import androidx.core.net.toUri
@@ -17,6 +18,10 @@ import com.language.repeater.db.VideoEntity
  */
 object FileUtil {
   private const val TAG = "wangzixu_FileUtil"
+
+  /** 按「卷:相对路径」编址的外部存储 Provider，只有它的 documentId 能还原出目录结构 */
+  private const val EXTERNAL_STORAGE_AUTHORITY = "com.android.externalstorage.documents"
+  private const val PRIMARY_VOLUME = "primary"
 
   /**
    * 快速获取文件的元数据
@@ -140,6 +145,42 @@ object FileUtil {
       e.printStackTrace()
       Log.d(TAG, "releasePersistablePermission failed:${e.message}")
     }
+  }
+
+  /**
+   * 解析出 Uri 对应的存储位置，形如「内部存储/Movies/lesson1.mp4」，用于展示给用户。
+   *
+   * 不访问 ContentProvider：documentId 自身就编码了路径，因此授权失效后依然能解析。
+   * 只有按路径编址的外部存储能解出目录，下载内容、云端文件等返回 null。
+   */
+  fun getReadableLocation(uri: Uri): String? {
+    if (uri.authority != EXTERNAL_STORAGE_AUTHORITY) {
+      return null
+    }
+
+    val documentId = try {
+      DocumentsContract.getDocumentId(uri)
+    } catch (e: IllegalArgumentException) {
+      Log.i(TAG, "getReadableLocation, not a document uri: ${e.message}")
+      return null
+    }
+
+    val separatorIndex = documentId.indexOf(':')
+    if (separatorIndex < 0) {
+      return null
+    }
+    val volumeId = documentId.substring(0, separatorIndex)
+    val relativePath = documentId.substring(separatorIndex + 1)
+    if (relativePath.isEmpty()) {
+      return null
+    }
+
+    val volumeName = if (volumeId == PRIMARY_VOLUME) {
+      "内部存储"
+    } else {
+      "SD 卡"
+    }
+    return "$volumeName/$relativePath"
   }
 }
 

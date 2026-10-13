@@ -1,5 +1,6 @@
 package com.language.repeater.playvideo.compose
 
+import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -37,6 +38,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import com.language.repeater.BuildConfig
 import com.language.repeater.R
 import com.language.repeater.playbacklist.PlaybackListItem
 import com.language.repeater.playbacklist.PlaybackMode
@@ -55,6 +57,7 @@ fun PlaylistSheet(
   onItemClick: (String) -> Unit,
   onMoveToFirst: (String) -> Unit,
   onDelete: (String) -> Unit,
+  onRemovePermission: (String) -> Unit,
   onDismiss: () -> Unit
 ) {
   val sheetState = rememberModalBottomSheetState()
@@ -104,7 +107,8 @@ fun PlaylistSheet(
           isPlaying = isPlaying && mediaId == currentMediaId,
           onClick = { onItemClick(mediaId) },
           onMoveToFirst = { onMoveToFirst(mediaId) },
-          onDelete = { onDelete(mediaId) }
+          onDelete = { onDelete(mediaId) },
+          onRemovePermission = { onRemovePermission(mediaId) }
         )
       }
     }
@@ -118,7 +122,8 @@ private fun PlaylistItemRow(
   isPlaying: Boolean,
   onClick: () -> Unit,
   onMoveToFirst: () -> Unit,
-  onDelete: () -> Unit
+  onDelete: () -> Unit,
+  onRemovePermission: () -> Unit
 ) {
   Row(
     modifier = Modifier
@@ -148,7 +153,7 @@ private fun PlaylistItemRow(
         .padding(start = 8.dp)
     )
 
-    MoreBtn(onMoveToFirst, onDelete)
+    MoreBtn(onMoveToFirst, onDelete, onRemovePermission)
   }
 }
 
@@ -193,7 +198,8 @@ private fun CoverRegion(
 @Composable
 private fun MoreBtn(
   onMoveToFirst: () -> Unit,
-  onDelete: () -> Unit
+  onDelete: () -> Unit,
+  onRemovePermission: ()->Unit
 ) {
   var showPop by remember { mutableStateOf(false) }
   Box {
@@ -244,6 +250,25 @@ private fun MoreBtn(
         },
         onClick = onDelete
       )
+
+      // 调试入口：构造「授权已失效」的条目，用来验证失效后的提示与恢复流程
+      if (BuildConfig.DEBUG) {
+        DropdownMenuItem(
+          text = {
+            Text(
+              text = "释放授权（测试）",
+              style = MaterialTheme.typography.bodyMedium,
+            )
+          },
+          leadingIcon = {
+            Icon(
+              painter = painterResource(com.composables.icons.tabler.outline.R.drawable.tabler_ic_lock_off_outline),
+              contentDescription = "释放授权"
+            )
+          },
+          onClick = onRemovePermission
+        )
+      }
     }
   }
 }

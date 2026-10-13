@@ -28,4 +28,7 @@ interface VideoInfoDao {
 
   @Query("UPDATE video_info_table SET subUri = :subUri WHERE id = :videoId")
   suspend fun updateSubUri(videoId: String, subUri: String?)
+
+  @Query("UPDATE video_info_table SET uri = :uri WHERE id = :videoId")
+  suspend fun updateUri(videoId: String, uri: String)
 }

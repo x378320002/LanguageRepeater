@@ -238,6 +238,7 @@ fun PlayerPlaylistSheet(
       onItemClick = { mediaId -> viewModel.selectItem(mediaId) },
       onMoveToFirst = { mediaId -> viewModel.moveItemToFirst(mediaId) },
       onDelete = { mediaId -> viewModel.deleteItem(mediaId) },
+      onRemovePermission = { mediaId -> viewModel.releasePermissionForTest(mediaId) },
       onDismiss = onDismiss,
     )
   }
