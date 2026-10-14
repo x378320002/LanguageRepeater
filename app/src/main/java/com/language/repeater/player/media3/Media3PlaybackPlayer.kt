@@ -2,6 +2,7 @@ package com.language.repeater.player.media3
 
 import android.content.Context
 import android.os.Looper
+import android.os.SystemClock
 import androidx.annotation.OptIn
 import androidx.core.net.toUri
 import androidx.media3.common.AudioAttributes
@@ -11,6 +12,7 @@ import androidx.media3.common.MediaMetadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
+import androidx.media3.common.TrackSelectionParameters
 import androidx.media3.common.VideoSize
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
@@ -51,6 +53,13 @@ class Media3PlaybackPlayer(
   private val _progress = MutableStateFlow(PlaybackProgress())
   private val _events = MutableSharedFlow<PlaybackEvent>(extraBufferCapacity = 8)
   private val attachedViews = mutableSetOf<PlayerView>()
+
+  // 平滑进度锚点：音频播放时 ExoPlayer 的 currentPosition 更新粒度较粗，
+  // 连续多次轮询可能返回同一个值，进度条看起来"一跳一跳"。
+  // 记录上一次读到的真实位置与时间点，位置没前进且正在播放时才用插值补足。
+  // -1 表示尚未读过任何位置，避免把首次读取误判成"跟前一次相同"。
+  private var lastRawPositionMs = -1L
+  private var lastRawTimeMs = 0L
 
   /**
    * 全局唯一、与进程同生共死的播放器，同时供 PlaybackService 包装出 MediaSession。
@@ -120,6 +129,9 @@ class Media3PlaybackPlayer(
       newPosition: Player.PositionInfo,
       reason: Int
     ) {
+      if (reason == Player.DISCONTINUITY_REASON_SEEK) {
+        resetPositionBase(newPosition.positionMs.coerceAtLeast(0L))
+      }
       updatePosition()
       if (reason == Player.DISCONTINUITY_REASON_SEEK) {
         val mediaIdStr = exoPlayer.currentMediaItem?.mediaId ?: return
@@ -174,7 +186,8 @@ class Media3PlaybackPlayer(
       _state.value = PlaybackState(
         currentMedia = media,
         isPlaying = playWhenReady,
-        speed = _state.value.speed
+        speed = _state.value.speed,
+        subtitleVisible = _state.value.subtitleVisible
       )
       _progress.value = PlaybackProgress(positionMs = safePositionMs)
 
@@ -192,6 +205,9 @@ class Media3PlaybackPlayer(
       if (mediaChanged) {
         _events.tryEmit(PlaybackEvent.MediaChanged(media, safePositionMs))
       }
+
+      // 以新媒体的起播位置作为插值锚点，避免沿用上一媒体的旧锚点
+      resetPositionBase(safePositionMs)
     }
   }
 
@@ -236,7 +252,10 @@ class Media3PlaybackPlayer(
 
   override fun seekTo(positionMs: Long) {
     runOnPlayerThread {
-      exoPlayer.seekTo(positionMs.coerceAtLeast(0L))
+      val safePositionMs = positionMs.coerceAtLeast(0L)
+      exoPlayer.seekTo(safePositionMs)
+      // seek 之后位置直接跳到目标值，锚点一并重置，避免用旧锚点做插值
+      resetPositionBase(safePositionMs)
       updatePosition()
     }
   }
@@ -246,6 +265,8 @@ class Media3PlaybackPlayer(
       val safeSpeed = speed.coerceIn(0.1f, 4f)
       exoPlayer.setPlaybackSpeed(safeSpeed)
       _state.value = _state.value.copy(speed = safeSpeed)
+      // 倍速改变会改变插值斜率，以当前位置重新起锚保持平滑
+      resetPositionBase()
     }
   }
 
@@ -271,6 +292,8 @@ class Media3PlaybackPlayer(
     if (playWhenReady) {
       exoPlayer.play()
     }
+    // 原位重建后位置仍在 positionMs，重置锚点，不依赖 setMediaItem 是否派发 SEEK 事件
+    resetPositionBase(positionMs)
     _state.value = _state.value.copy(
       currentMedia = updatedMedia,
       error = null
@@ -278,12 +301,33 @@ class Media3PlaybackPlayer(
     updateState()
   }
 
+  override fun setSubtitleVisible(visible: Boolean) {
+    runOnPlayerThread {
+      // 字幕是否渲染由 Media3 的轨道选择参数控制，不动已选字幕配置本身
+      val disabledTrackTypes = exoPlayer.trackSelectionParameters.disabledTrackTypes.toMutableSet()
+      if (visible) {
+        disabledTrackTypes.remove(C.TRACK_TYPE_TEXT)
+      } else {
+        disabledTrackTypes.add(C.TRACK_TYPE_TEXT)
+      }
+      exoPlayer.trackSelectionParameters = exoPlayer.trackSelectionParameters
+        .buildUpon()
+        .setDisabledTrackTypes(disabledTrackTypes)
+        .build()
+      _state.value = _state.value.copy(subtitleVisible = visible)
+    }
+  }
+
   override fun clear() {
     runOnPlayerThread {
       val mediaChanged = _state.value.currentMedia != null
       exoPlayer.clearMediaItems()
-      _state.value = PlaybackState(speed = _state.value.speed)
+      _state.value = PlaybackState(
+        speed = _state.value.speed,
+        subtitleVisible = _state.value.subtitleVisible
+      )
       _progress.value = PlaybackProgress()
+      resetPositionBase(0L)
       if (mediaChanged) {
         _events.tryEmit(PlaybackEvent.MediaChanged(media = null, positionMs = 0L))
       }
@@ -380,6 +424,9 @@ class Media3PlaybackPlayer(
       return
     }
 
+    // 从恢复播放的瞬时位置重新起锚，避免沿用暂停前的老锚点产生跳变
+    resetPositionBase()
+
     positionJob = scope.launch {
       while (isActive && exoPlayer.isPlaying) {
         updatePosition()
@@ -388,10 +435,52 @@ class Media3PlaybackPlayer(
     }
   }
 
+  /** 重置插值锚点到指定位置。seek、切媒体、速度变化等改变播放节奏的场景必须调用。 */
+  private fun resetPositionBase(positionMs: Long = exoPlayer.currentPosition.coerceAtLeast(0L)) {
+    lastRawPositionMs = positionMs
+    lastRawTimeMs = SystemClock.elapsedRealtime()
+  }
+
+  /**
+   * 发布当前播放位置。音频播放时 ExoPlayer 的 currentPosition 更新粒度较粗
+   * （取决于音频 buffer 大小与设备驱动，可能连续多次读到同一个值），
+   * 直接上报会导致进度条"一跳一跳"。
+   *
+   * 处理方式：拿到当前真实位置后与上一次读取值对比——若位置没前进且正在播放，
+   * 就以「上一次真实位置 + 经过时间 × 速度」做插值，让进度连续推进；
+   * 一旦位置推进（拿到新真实值），立即采用新真实值。插值起点永远是最后读到
+   * 的真实位置，因此估算值只会填充真实值之间的空档，不会超前或跳变。
+   */
   private fun updatePosition() {
+    val now = SystemClock.elapsedRealtime()
+    val durationMs = exoPlayer.safeDurationMs()
+
+    // 当前的真实读取值；与前一次相同说明音频硬件尚未推进
+    val actual = exoPlayer.currentPosition.coerceAtLeast(0L)
+
+    val positionMs = if (lastRawPositionMs != -1L &&
+      actual == lastRawPositionMs && exoPlayer.isPlaying) {
+      // 位置停在同一个值且正在播放：用插值补足推进，起点是最后一次真实位置
+      val elapsed = now - lastRawTimeMs
+      val speed = exoPlayer.playbackParameters.speed
+      lastRawPositionMs + (elapsed * speed).toLong()
+    } else {
+      // 位置有推进（或未播放/尚未读过）：直接采用真实位置，并重置上一次读取记录
+      lastRawPositionMs = actual
+      lastRawTimeMs = now
+      actual
+    }
+
+    // 时长未知（未解析出、流式无时长）时不钳制，否则播放头会被压到 0
+    val safePositionMs = if (durationMs > 0L) {
+      positionMs.coerceAtMost(durationMs)
+    } else {
+      positionMs
+    }
+
     _progress.value = PlaybackProgress(
-      positionMs = exoPlayer.currentPosition.coerceAtLeast(0L),
-      durationMs = exoPlayer.safeDurationMs()
+      positionMs = safePositionMs,
+      durationMs = durationMs
     )
   }
 
@@ -406,6 +495,6 @@ class Media3PlaybackPlayer(
   }
 
   private companion object {
-    const val POSITION_INTERVAL_MS = 50L
+    const val POSITION_INTERVAL_MS = 30L
   }
 }

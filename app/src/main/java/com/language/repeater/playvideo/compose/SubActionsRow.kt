@@ -46,6 +46,9 @@ fun SubActionsRow(
   onTimerSelected: (Int) -> Unit,
   onTimerComplete: () -> Unit,
   onSelectSubtitle: () -> Unit,
+  hasSubtitle: Boolean,
+  subtitleVisible: Boolean,
+  onToggleSubtitle: () -> Unit,
   onSplitSubtitle: (Boolean) -> Unit,
   onToggleFullScreen: () -> Unit,
   modifier: Modifier = Modifier,
@@ -185,6 +188,24 @@ fun SubActionsRow(
         expanded = showMoreMenu,
         onDismissRequest = { showMoreMenu = false },
       ) {
+        if (hasSubtitle) {
+          DropdownMenuItem(
+            text = {
+              Text(
+                text = if (subtitleVisible) {
+                  "关闭字幕"
+                } else {
+                  "开启字幕"
+                },
+                style = MaterialTheme.typography.bodyMedium,
+              )
+            },
+            onClick = {
+              onToggleSubtitle()
+              showMoreMenu = false
+            },
+          )
+        }
         DropdownMenuItem(
           text = {
             Text(

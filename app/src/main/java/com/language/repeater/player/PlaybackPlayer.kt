@@ -27,6 +27,9 @@ interface PlaybackPlayer {
 
   fun setSubtitle(subtitleUri: String?)
 
+  /** 控制当前媒体字幕轨的渲染开关，与所选字幕配置（subtitleUri）互相独立。 */
+  fun setSubtitleVisible(visible: Boolean)
+
   fun clear()
 }
 

@@ -189,6 +189,11 @@ fun PlayerSubActionsSection(
         )
       )
     },
+    hasSubtitle = playerState.currentMedia?.subtitleUri != null,
+    subtitleVisible = playerState.subtitleVisible,
+    onToggleSubtitle = {
+      viewModel.player.setSubtitleVisible(!playerState.subtitleVisible)
+    },
     onSplitSubtitle = { viewModel.sentenceController.reloadSentences(it) },
     onToggleFullScreen = { viewModel.changeScreenMode(!fullScreenEntered) },
   )

@@ -23,6 +23,11 @@ data class PlaybackState(
    * 解码器出首帧后才有值，因此切换媒体到画面就绪之间会短暂为 0。
    */
   val videoAspectRatio: Float = 0f,
+  /**
+   * 当前字幕是否渲染。与 Media3 的 TEXT 轨禁用状态互为镜像，
+   * 切媒体、清列表时原样保留，用户选择不随媒体重置。
+   */
+  val subtitleVisible: Boolean = true,
   val error: PlaybackError? = null
 )
 
