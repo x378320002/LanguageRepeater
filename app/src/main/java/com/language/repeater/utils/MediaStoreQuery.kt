@@ -23,6 +23,8 @@ data class MediaStoreItem(
   val durationMs: Long,
   /** 入库时间，单位秒（MediaStore 的 DATE_ADDED 即秒），用于音视频混排 */
   val dateAddedSeconds: Long,
+  /** 所在文件夹名（MediaStore 的 BUCKET_DISPLAY_NAME），为空表示未分类 */
+  val folderName: String,
   val isVideo: Boolean
 )
 
@@ -87,7 +89,8 @@ object MediaStoreQuery {
       MediaStore.MediaColumns.DISPLAY_NAME,
       MediaStore.MediaColumns.SIZE,
       MediaStore.MediaColumns.DATE_ADDED,
-      MediaStore.MediaColumns.DURATION
+      MediaStore.MediaColumns.DURATION,
+      MediaStore.MediaColumns.BUCKET_DISPLAY_NAME
     )
     val items = mutableListOf<MediaStoreItem>()
 
@@ -104,6 +107,7 @@ object MediaStoreQuery {
         val sizeIndex = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.SIZE)
         val durationIndex = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DURATION)
         val dateAddedIndex = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATE_ADDED)
+        val folderIndex = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.BUCKET_DISPLAY_NAME)
 
         while (cursor.moveToNext()) {
           val name = cursor.getString(nameIndex) ?: continue
@@ -114,6 +118,7 @@ object MediaStoreQuery {
             size = cursor.getLong(sizeIndex),
             durationMs = cursor.getLong(durationIndex),
             dateAddedSeconds = cursor.getLong(dateAddedIndex),
+            folderName = cursor.getString(folderIndex)?.trim().orEmpty(),
             isVideo = isVideo
           )
         }

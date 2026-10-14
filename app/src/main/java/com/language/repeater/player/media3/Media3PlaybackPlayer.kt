@@ -389,9 +389,9 @@ class Media3PlaybackPlayer(
    */
   private fun Player.isPlayIntended(): Boolean {
     return playWhenReady &&
-      playbackState != Player.STATE_IDLE &&
-      playbackState != Player.STATE_ENDED &&
-      playbackSuppressionReason == Player.PLAYBACK_SUPPRESSION_REASON_NONE
+        playbackState != Player.STATE_IDLE &&
+        playbackState != Player.STATE_ENDED &&
+        playbackSuppressionReason == Player.PLAYBACK_SUPPRESSION_REASON_NONE
   }
 
   private fun Player.safeDurationMs(): Long {
@@ -458,8 +458,11 @@ class Media3PlaybackPlayer(
     // 当前的真实读取值；与前一次相同说明音频硬件尚未推进
     val actual = exoPlayer.currentPosition.coerceAtLeast(0L)
 
-    val positionMs = if (lastRawPositionMs != -1L &&
-      actual == lastRawPositionMs && exoPlayer.isPlaying) {
+    val positionMs = if (lastRawPositionMs != -1L
+      && _state.value.currentMedia?.isVideo == false
+      && actual == lastRawPositionMs
+      && exoPlayer.isPlaying
+    ) {
       // 位置停在同一个值且正在播放：用插值补足推进，起点是最后一次真实位置
       val elapsed = now - lastRawTimeMs
       val speed = exoPlayer.playbackParameters.speed

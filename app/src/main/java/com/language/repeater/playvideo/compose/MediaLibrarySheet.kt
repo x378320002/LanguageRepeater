@@ -18,6 +18,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
@@ -35,9 +37,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.ContentScale.Companion
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.painterResource
@@ -48,6 +48,7 @@ import com.language.repeater.utils.MediaStoreItem
 import com.language.repeater.utils.MediaStoreQuery
 import com.language.repeater.utils.TimeFormatUtil.formatDuration
 import com.language.repeater.utils.ToastUtil
+import kotlinx.coroutines.launch
 
 /**
  * 打开媒体库的入口：已有权限直接执行 [onGranted]，否则先申请。
@@ -94,11 +95,35 @@ fun MediaLibrarySheet(
 
   var loading by remember { mutableStateOf(true) }
   var mediaList by remember { mutableStateOf<List<MediaStoreItem>>(emptyList()) }
-  val selectedUris = remember { mutableStateOf(emptySet<String>()) }
+  val selectedItems = remember { mutableStateOf(emptySet<MediaStoreItem>()) }
+  // 当前展示的文件夹，null 表示全部媒体
+  var selectedFolder by remember { mutableStateOf<String?>(null) }
+  var showFolderMenu by remember { mutableStateOf(false) }
 
   LaunchedEffect(Unit) {
-    mediaList = MediaStoreQuery.loadAll(context)
-    loading = false
+    launch {
+      mediaList = MediaStoreQuery.loadAll(context)
+      loading = false
+    }
+  }
+
+  // 每个文件夹的条目数，按数量倒序，供切换菜单展示耗时少的在最上面
+  val folderCounts = remember(mediaList) {
+    mediaList
+      .map { item -> item.folderName }
+      .filter { folder -> folder.isNotBlank() }
+      .groupingBy { folder -> folder }
+      .eachCount()
+      .toList()
+      .sortedByDescending { (_, count) -> count }
+  }
+  // 当前展示的列表：全部媒体或指定文件夹内的条目
+  val displayedList = remember(mediaList, selectedFolder) {
+    if (selectedFolder == null) {
+      mediaList
+    } else {
+      mediaList.filter { item -> item.folderName == selectedFolder }
+    }
   }
 
   ModalBottomSheet(
@@ -112,22 +137,67 @@ fun MediaLibrarySheet(
         .padding(horizontal = 15.dp),
       verticalAlignment = Alignment.CenterVertically
     ) {
-      Text(
-        text = "媒体库 (${mediaList.size})",
-        style = MaterialTheme.typography.titleMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant
-      )
-      Spacer(modifier = Modifier.weight(1f))
-      TextButton(
-        enabled = selectedUris.value.isNotEmpty(),
-        onClick = {
-          val selected = mediaList.filter { item ->
-            item.uri.toString() in selectedUris.value
+      // 标题即可点击的文件夹切换器：默认显示全部媒体，点击后从菜单选择文件夹
+      Box(modifier = Modifier.weight(1f)) {
+        Row(
+          modifier = Modifier
+            .clip(MaterialTheme.shapes.small)
+            .clickable { showFolderMenu = true }
+            .padding(vertical = 4.dp),
+          verticalAlignment = Alignment.CenterVertically
+        ) {
+          Text(
+            text = if (selectedFolder == null) {
+              "全部 (${mediaList.size})"
+            } else {
+              "$selectedFolder (${displayedList.size})"
+            },
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.MiddleEllipsis
+          )
+          Icon(
+            painter = painterResource(
+              com.composables.icons.tabler.outline.R.drawable.tabler_ic_chevron_down_outline
+            ),
+            contentDescription = "切换文件夹",
+            modifier = Modifier.size(18.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
+          )
+        }
+        DropdownMenu(
+          containerColor = MaterialTheme.colorScheme.surface,
+          expanded = showFolderMenu,
+          onDismissRequest = { showFolderMenu = false }
+        ) {
+          DropdownMenuItem(
+            text = { Text("全部 (${mediaList.size})") },
+            onClick = {
+              selectedFolder = null
+              showFolderMenu = false
+            }
+          )
+          folderCounts.forEach { (folder, count) ->
+            DropdownMenuItem(
+              text = { Text("$folder ($count)") },
+              onClick = {
+                selectedFolder = folder
+                showFolderMenu = false
+              }
+            )
           }
-          onConfirm(selected)
+        }
+      }
+      //Spacer(modifier = Modifier.weight(1f))
+      TextButton(
+        enabled = selectedItems.value.isNotEmpty(),
+        onClick = {
+          // 选中项跨文件夹保留，一次添加全部已选媒体
+          onConfirm(selectedItems.value.toList())
         }
       ) {
-        Text("添加(${selectedUris.value.size})")
+        Text("添加(${selectedItems.value.size})")
       }
     }
 
@@ -148,18 +218,18 @@ fun MediaLibrarySheet(
         else -> {
           LazyColumn {
             items(
-              items = mediaList,
+              items = displayedList,
               key = { item -> item.uri.toString() }
             ) { item ->
               val uriKey = item.uri.toString()
               MediaLibraryRow(
                 item = item,
-                checked = uriKey in selectedUris.value,
+                checked = item in selectedItems.value,
                 onToggle = {
-                  selectedUris.value = if (uriKey in selectedUris.value) {
-                    selectedUris.value - uriKey
+                  selectedItems.value = if (item in selectedItems.value) {
+                    selectedItems.value - item
                   } else {
-                    selectedUris.value + uriKey
+                    selectedItems.value + item
                   }
                 }
               )

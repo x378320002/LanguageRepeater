@@ -73,7 +73,7 @@ fun HorizontalFullPlayVideoScreen(
     IconButton(
       modifier = Modifier
         .align(Alignment.TopStart)
-        .padding(top = 15.dp, start = 15.dp),
+        .padding(top = 25.dp, start = 15.dp),
       onClick = {
         viewModel.changeScreenMode(false)
       }) {
