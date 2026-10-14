@@ -1,9 +1,8 @@
-package com.language.repeater.playcore
+package com.language.repeater.utils
 
 import android.annotation.SuppressLint
 import com.language.repeater.R
 import com.language.repeater.app.MainApp
-import com.language.repeater.utils.ToastUtil
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -42,12 +41,12 @@ object SleepTimerManager {
       }
       if (_remainingSeconds.value == 0L) {
         onTimeout?.invoke()
-        MainApp.playbackGraph.player.pause()
+        MainApp.Companion.playbackGraph.player.pause()
       }
       _remainingSeconds.value = -1
     }
 
-    val message = MainApp.instance.resources.getString(
+    val message = MainApp.Companion.instance.resources.getString(
       R.string.timer_set_toast,
       formatTime(seconds)
     )

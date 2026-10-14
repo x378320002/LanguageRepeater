@@ -1,4 +1,4 @@
-package com.language.repeater.playcore
+package com.language.repeater.player.media3
 
 import android.app.PendingIntent
 import android.content.Intent

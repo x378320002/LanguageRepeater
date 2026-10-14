@@ -18,7 +18,6 @@
   <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
   <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
 
-  <uses-permission android:name="android.permission.RECORD_AUDIO" />
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
   <!-- 2. 【Android 14 必加】请求专门的媒体播放服务权限 -->
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
@@ -48,7 +47,7 @@
     </activity>
 
     <service
-      android:name=".playcore.PlaybackService"
+      android:name=".player.media3.PlaybackService"
       android:foregroundServiceType="mediaPlayback"
       android:exported="true">
       <intent-filter>

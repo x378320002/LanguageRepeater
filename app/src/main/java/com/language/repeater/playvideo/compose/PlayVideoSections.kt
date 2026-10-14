@@ -18,7 +18,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.language.repeater.app.MainApp
 import com.language.repeater.datastore.DsManager
-import com.language.repeater.playcore.SleepTimerManager
+import com.language.repeater.utils.SleepTimerManager
 import com.language.repeater.player.PlaybackPlayer
 import com.language.repeater.player.togglePlayPause
 import com.language.repeater.playvideo.PlayerViewModel

@@ -2,12 +2,9 @@ package com.language.repeater.playvideo.compose
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
@@ -16,7 +13,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.language.repeater.R
@@ -46,28 +42,26 @@ fun PlaybackControlRow(
     verticalAlignment = Alignment.CenterVertically,
     horizontalArrangement = Arrangement.SpaceEvenly,
   ) {
-    // 上一句
-    IconButton(
-      onClick = onSeekPrevSentence,
-      modifier = Modifier
-        .size(iconSize),
-    ) {
-      Icon(
-        painter = painterResource(R.drawable.ic_pre_sentence),
-        contentDescription = "上一句",
-        tint = MaterialTheme.colorScheme.onBackground,
-      )
-    }
-
-    // 回到句首
     IconButton(
       onClick = onBackSentenceHead,
       modifier = Modifier
         .size(iconSize),
     ) {
       Icon(
+        painter = painterResource(com.composables.icons.tabler.filled.R.drawable.tabler_ic_transition_left_filled),
+        contentDescription = "回句首",
+        tint = MaterialTheme.colorScheme.onBackground,
+      )
+    }
+
+    IconButton(
+      onClick = onSeekPrevSentence,
+      modifier = Modifier
+        .size(iconSize),
+    ) {
+      Icon(
         painter = painterResource(R.drawable.ic_go_sentence_head_1),
-        contentDescription = "回到当前句开头",
+        contentDescription = "上一句",
         tint = MaterialTheme.colorScheme.onBackground,
       )
     }
@@ -106,7 +100,7 @@ fun PlaybackControlRow(
         .size(iconSize),
     ) {
       Icon(
-        painter = painterResource(R.drawable.ic_next_sentence),
+        painter = painterResource(com.composables.icons.tabler.filled.R.drawable.tabler_ic_player_play_filled),
         contentDescription = "下一句",
         tint = MaterialTheme.colorScheme.onBackground,
       )
