@@ -1,5 +1,6 @@
 package com.language.repeater.setting
 
+import android.R.attr.onClick
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -44,6 +45,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation3.runtime.NavBackStack
@@ -162,7 +164,6 @@ private fun MainContent(
       .fillMaxSize()
       .verticalScroll(rememberScrollState())
   ) {
-    val fullGesture by viewModel.stateHolder.fullGesture.collectAsState()
     val leftBrightnessGesture by DsManager.observe(DsManager.KEY_LEFT_BRIGHTNESS_GESTURE, true).collectAsState()
     val rightVolumeGesture by DsManager.observe(DsManager.KEY_RIGHT_VOLUME_GESTURE, true).collectAsState()
     Card {
@@ -207,13 +208,28 @@ private fun MainContent(
         onClick = { viewModel.onAction(ActionClearCache) }
       )
 
-      SettingDivider()
-
-      SettingClickItem(
-        title = "默认查找字幕文件夹",
-        desc = subtitleFolder,
-        onClick = onSelectSubtitleFolder
-      )
+//      SettingDivider()
+//      ListItem(
+//        colors = ListItemDefaults.colors().copy(containerColor = Color.Transparent),
+//        headlineContent = {
+//          Text(
+//            text = "默认查找字幕文件夹",
+//            style = MaterialTheme.typography.bodyMedium
+//          )
+//        },
+//        supportingContent = {
+//          if (subtitleFolder.isNotBlank()) {
+//            Text(
+//              text = subtitleFolder,
+//              style = MaterialTheme.typography.labelSmall,
+//              maxLines = 2,
+//              overflow = TextOverflow.StartEllipsis
+//            )
+//          }
+//        },
+//        modifier = Modifier
+//          .clickable(onClick = onSelectSubtitleFolder)
+//      )
     }
   }
 }

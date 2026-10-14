@@ -194,17 +194,10 @@ class PlayerViewModel : ViewModel() {
         )
       }
 
-      subtitleController.resolveSubtitles(infos)
-
+//      subtitleController.resolveSubtitles(infos)
       withContext(Dispatchers.Main) {
-        addPlayList(infos)
+        playbackListController.addToFront(infos)
       }
-    }
-  }
-
-  private fun addPlayList(list: List<VideoEntity>) {
-    viewModelScope.launch {
-      playbackListController.addToFront(list)
     }
   }
 }
