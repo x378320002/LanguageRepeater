@@ -466,7 +466,7 @@ class Media3PlaybackPlayer(
       // 位置停在同一个值且正在播放：用插值补足推进，起点是最后一次真实位置
       val elapsed = now - lastRawTimeMs
       val speed = exoPlayer.playbackParameters.speed
-      lastRawPositionMs + (elapsed * speed).toLong()
+      lastRawPositionMs + (elapsed * speed).toLong() - 1
     } else {
       // 位置有推进（或未播放/尚未读过）：直接采用真实位置，并重置上一次读取记录
       lastRawPositionMs = actual

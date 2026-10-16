@@ -7,16 +7,21 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
-private val darkColor = darkColorScheme()
+private val darkColor = darkColorScheme(
+  primary = Color(0xFF07C160),
+  onPrimary = Color.White,
+)
 
-private val bgColor = Color(red = 248, green = 243, blue = 229, alpha = 255)
-private val bgCard = Color(red = 229, green = 229, blue = 205, alpha = 255)
+private val bgColor = Color(red = 248, green = 243, blue = 235, alpha = 255)
+private val bgCard = Color(red = 235, green = 235, blue = 225, alpha = 255)
 
 private val lightColor = lightColorScheme(
   background = bgColor,
   surface = bgColor,
-  surfaceVariant = bgCard,
-  surfaceContainerHighest = bgCard
+  surfaceVariant =  bgCard,
+  surfaceContainerHighest = bgCard,
+  primary = Color(0xFF07C160),
+  onPrimary = Color.White,
 )
 
 @Composable

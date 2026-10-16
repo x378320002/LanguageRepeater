@@ -38,7 +38,7 @@ class PlaybackService : MediaSessionService() {
       .build()
 
     val notificationProvider = DefaultMediaNotificationProvider.Builder(this).build()
-    notificationProvider.setSmallIcon(R.drawable.ic_launcher_foreground)
+    notificationProvider.setSmallIcon(R.mipmap.ic_launcher)
     setMediaNotificationProvider(notificationProvider)
 
     Log.i(TAG, "PlaybackService created, pid=${Process.myPid()}")

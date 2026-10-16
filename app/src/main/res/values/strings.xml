@@ -1,5 +1,5 @@
 <resources>
-  <string name="app_name">复读机-View</string>
+  <string name="app_name">复读机</string>
 
   <string name="setting_title">设置</string>
   <string name="setting_sub_folder">默认字幕文件夹</string>
