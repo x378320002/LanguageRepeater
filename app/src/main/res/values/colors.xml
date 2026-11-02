@@ -1,87 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources xmlns:tools="http://schemas.android.com/tools">
+<resources>
   <color name="black">#FF000000</color>
-  <color name="black_60">#99000000</color>
   <color name="white">#FFFFFFFF</color>
-  <color name="white_20">#33FFFFFF</color>
-  <color name="transparent">#00000000</color>
 
-  <color name="color_primary">#82d3e0</color>
-  <color name="color_onPrimary">#ffffff</color>
-  <color name="color_primaryContainer">#009688</color>
-  <color name="color_onPrimaryContainer">#ffffff</color>
-
-  <!-- 窗口底色，只被 MyTheme 的 windowBackground 使用。
-       必须与 Compose MyTheme 的 background 保持一致：启动窗口在 Compose 渲染之前就显示，
-       两边不一致会导致启动瞬间闪一下别的颜色。夜间值见 values-night。 -->
+  <!-- 启动窗口底色，明暗模式分别由 values 和 values-night 提供。 -->
   <color name="color_background">#F8F3E5</color>
-  <color name="color_background_container">#292929</color>
-  <color name="color_background_translucent_black">#88000000</color>
-  <color name="color_onBackground">#D9D9D9</color>
-  <color name="color_onBackground_low">#969696</color>
-  <color name="color_onBackground_low1">#747474</color>
-  <color name="color_onBackground_low2">#404040</color>
-
-  <color name="color_on_edit_layout">@color/color_onBackground_low</color>
-  <!--<color name="color_on_edit_layout">#46847F</color>-->
-
-  <!--波形图相关-->
-  <color name="wave_outline">#46847F</color>
-  <color name="wave_played">#1E3534</color>
-  <color name="wave_unplay">#2F5957</color>
-  <color name="wave_indicator">#12B0FF</color>
-  <!--<color name="wave_indicator">#bcebf2</color>-->
-  <color name="wave_time">@color/color_onBackground_low</color>
-  <color name="wave_sentence_sign">@color/color_onBackground_low1</color>
-  <color name="wave_sentence_sign_cur">#E1C601</color>
-  <color name="wave_center_line">@color/color_onBackground_low2</color>
-  <color name="wave_ab_sign_bg">#009688</color>
-  <color name="wave_ab_sign_text">@color/color_onBackground</color>
-
-  <color name="md_theme_primary">#82d3e0</color>
-  <color name="md_theme_onPrimary">#ffffff</color>
-  <color name="md_theme_primaryContainer">#009688</color>
-  <color name="md_theme_onPrimaryContainer">#ffffff</color>
-  <color name="md_theme_secondary">#BFC6DC</color>
-  <color name="md_theme_onSecondary">#293041</color>
-  <color name="md_theme_secondaryContainer">#3F4759</color>
-  <color name="md_theme_onSecondaryContainer">#DBE2F9</color>
-  <color name="md_theme_tertiary">#DEBCDF</color>
-  <color name="md_theme_onTertiary">#402843</color>
-  <color name="md_theme_tertiaryContainer">#583E5B</color>
-  <color name="md_theme_onTertiaryContainer">#FBD7FC</color>
-  <color name="md_theme_error">#FFB4AB</color>
-  <color name="md_theme_onError">#690005</color>
-  <color name="md_theme_errorContainer">#93000A</color>
-  <color name="md_theme_onErrorContainer">#FFDAD6</color>
-  <color name="md_theme_background">#111318</color>
-  <color name="md_theme_onBackground">#E2E2E9</color>
-  <color name="md_theme_surface">#111318</color>
-  <color name="md_theme_onSurface">#E2E2E9</color>
-  <color name="md_theme_surfaceVariant">#44474F</color>
-  <color name="md_theme_onSurfaceVariant">#C4C6D0</color>
-  <color name="md_theme_outline">#8E9099</color>
-  <color name="md_theme_outlineVariant">#44474F</color>
-  <color name="md_theme_inverseSurface">#E2E2E9</color>
-  <color name="md_theme_inverseOnSurface">#2F3036</color>
-  <color name="md_theme_inversePrimary">#82d3e0</color>
-  <color name="md_theme_primaryFixed">#D8E2FF</color>
-  <color name="md_theme_onPrimaryFixed">#001A41</color>
-  <color name="md_theme_primaryFixedDim">#ADC6FF</color>
-  <color name="md_theme_onPrimaryFixedVariant">#2B4678</color>
-  <color name="md_theme_secondaryFixed">#DBE2F9</color>
-  <color name="md_theme_onSecondaryFixed">#141B2C</color>
-  <color name="md_theme_secondaryFixedDim">#BFC6DC</color>
-  <color name="md_theme_onSecondaryFixedVariant">#3F4759</color>
-  <color name="md_theme_tertiaryFixed">#FBD7FC</color>
-  <color name="md_theme_onTertiaryFixed">#29132D</color>
-  <color name="md_theme_tertiaryFixedDim">#DEBCDF</color>
-  <color name="md_theme_onTertiaryFixedVariant">#583E5B</color>
-  <color name="md_theme_surfaceDim">#111318</color>
-  <color name="md_theme_surfaceBright">#37393E</color>
-  <color name="md_theme_surfaceContainerLowest">#0C0E13</color>
-  <color name="md_theme_surfaceContainerLow">#1A1B20</color>
-  <color name="md_theme_surfaceContainer">#1E1F25</color>
-  <color name="md_theme_surfaceContainerHigh">#282A2F</color>
-  <color name="md_theme_surfaceContainerHighest">#33353A</color>
 </resources>

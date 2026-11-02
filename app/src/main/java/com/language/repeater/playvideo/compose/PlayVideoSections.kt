@@ -14,8 +14,10 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.language.repeater.R
 import com.language.repeater.app.MainApp
 import com.language.repeater.datastore.DsManager
 import com.language.repeater.utils.SleepTimerManager
@@ -39,11 +41,13 @@ import com.language.repeater.utils.FileUtil
 fun PlayerProgressSection(
   viewModel: PlayerViewModel,
   modifier: Modifier = Modifier,
+  isFull: Boolean = false
 ) {
   val progress by viewModel.player.progress.collectAsState()
   val durationMs = progress.durationMs
 
   ProgressSeekBar(
+    isFull = isFull,
     modifier = modifier,
     value = if (durationMs == 0L) {
       0f
@@ -136,8 +140,7 @@ fun PlayerEditSection(
 /**
  * 副操作栏：编辑模式、AB 复读、倍速、定时、字幕、全屏。
  *
- * @param fullScreenEntered 当前是否处于全屏。为 true 时栏内出现退出全屏按钮；
- *   为 false 时进入全屏由视频画面右下角的按钮负责，这里不重复放入口。
+ * @param fullScreenEntered 当前是否处于全屏，决定栏内全屏切换按钮显示进入或退出图标。
  */
 @Composable
 fun PlayerSubActionsSection(
@@ -162,7 +165,7 @@ fun PlayerSubActionsSection(
 
   SubActionsRow(
     modifier = modifier,
-    playSpeedText = "${playerState.speed}x",
+    playSpeedText = stringResource(R.string.playback_speed_badge, playerState.speed.toString()),
     sleepTimerText = if (sleepTimerRemaining > 0) {
       SleepTimerManager.formatTime(sleepTimerRemaining)
     } else {

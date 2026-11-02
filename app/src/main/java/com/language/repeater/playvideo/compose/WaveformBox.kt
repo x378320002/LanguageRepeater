@@ -8,7 +8,9 @@ import androidx.compose.material3.CardColors
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -16,10 +18,29 @@ import com.language.repeater.pcm.PCMSegmentLoader
 import com.language.repeater.sentence.Sentence
 import com.language.repeater.widgets.ScrollWaveformView
 
+/** 将当前 Compose 主题映射到波形配色，颜色透明度包含在 ARGB 值中。 */
+@Composable
+fun rememberWaveformColors(): ScrollWaveformView.WaveformColors {
+  val colorScheme = MaterialTheme.colorScheme
+  return remember(colorScheme) {
+    ScrollWaveformView.WaveformColors(
+      outline = colorScheme.primary.copy(alpha = 0.75f).toArgb(),
+      played = colorScheme.onSurface.copy(alpha = 0.2f).toArgb(),
+      unplayed = colorScheme.primary.copy(alpha = 0.5f).toArgb(),
+      progressIndicator = colorScheme.primary.toArgb(),
+      sentenceBoundary = colorScheme.onSurfaceVariant.copy(alpha = 0.65f).toArgb(),
+      currentSentenceBoundary = colorScheme.primary.toArgb(),
+      centerLine = colorScheme.onSurface.copy(alpha = 0.15f).toArgb(),
+      timeText = colorScheme.onSurfaceVariant.toArgb(),
+      abBackground = colorScheme.primary.toArgb(),
+      abText = colorScheme.onPrimary.toArgb(),
+      editHandle = colorScheme.primary.toArgb(),
+    )
+  }
+}
+
 /**
- * 波形图区 — 包装旧 ScrollWaveformView
- *
- * 阶段 2 先用 AndroidView 包装，阶段 7 再用 Compose Canvas 重写
+ * 波形图区通过 AndroidView 绑定数据、交互与主题配色。
  */
 @Composable
 fun WaveformBox(
@@ -37,7 +58,8 @@ fun WaveformBox(
   onAbDragEnd: (wasPlaying: Boolean) -> Unit,
   modifier: Modifier = Modifier,
   height: Dp = 100.dp,
-  colors: CardColors = CardDefaults.cardColors()
+  colors: CardColors = CardDefaults.cardColors(),
+  waveformColors: ScrollWaveformView.WaveformColors = rememberWaveformColors()
 ) {
   Card(
     modifier = modifier
@@ -84,6 +106,7 @@ fun WaveformBox(
         }
       },
       update = { view ->
+        view.setWaveformColors(waveformColors)
         view.setPCMLoader(pcmLoader)
         view.setSentenceData(sentences)
         view.curABSentence = curAbSentence

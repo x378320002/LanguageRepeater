@@ -59,6 +59,7 @@ fun FullScreenControlPanel(
         )
 
         PlayerProgressSection(
+          isFull = true,
           viewModel = viewModel,
           modifier = Modifier.padding(horizontal = 12.dp),
         )

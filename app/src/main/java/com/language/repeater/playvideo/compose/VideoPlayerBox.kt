@@ -41,6 +41,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -61,8 +62,8 @@ const val TAG = "VideoPlayerBox"
 /**
  * Android 视频输出。Composable 只绑定和解绑画面，不持有或释放底层播放器。
  *
- * @param fullScreen true 时画面铺满父容器、纯黑底、不显示进入全屏按钮；
- *   false 时按 16:9 卡片样式摆放，右下角带进入全屏按钮。
+ * @param fullScreen true 时画面铺满父容器、纯黑底；
+ *   false 时按 16:9 卡片样式摆放。
  * @param onTap 单击画面的行为。默认播放/暂停；全屏布局可改为切换控制面板显隐。
  */
 @Composable
@@ -74,6 +75,7 @@ fun VideoPlayerBox(
 ) {
   val scope = rememberCoroutineScope()
   val context = LocalContext.current
+  val resources = LocalResources.current
   val player = viewModel.player
   val sentenceController = viewModel.sentenceController
   val videoOutput = viewModel.videoOutput
@@ -137,7 +139,9 @@ fun VideoPlayerBox(
               val speed = oldSpeed ?: return@launch
               val newSpeed = speed * DsManager.get(DsManager.KEY_LONG_PRESS_SPEED, 1.0f)
               player.setSpeed(newSpeed)
-              state.showFeedback("⏩ ${newSpeed}X")
+              state.showFeedback(
+                resources.getString(R.string.long_press_speed_overlay, newSpeed.toString())
+              )
             }
           },
           onDoubleTap = {

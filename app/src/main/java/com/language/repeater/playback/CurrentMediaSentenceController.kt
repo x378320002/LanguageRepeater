@@ -124,7 +124,7 @@ class CurrentMediaSentenceController(
       }
       Log.e(TAG, "Failed to analyze media: $mediaId", throwable)
       withContext(Dispatchers.Main) {
-        ToastUtil.toast("解析音频数据失败")
+        ToastUtil.toast(R.string.audio_parse_failed)
       }
     }
   }
@@ -145,7 +145,7 @@ class CurrentMediaSentenceController(
     val mediaId = media.mediaId
     if (useSrt && media.subtitleUri.isNullOrEmpty()) {
       withContext(Dispatchers.Main) {
-        ToastUtil.toast("当前没有字幕文件")
+        ToastUtil.toast(R.string.subtitle_file_missing)
       }
       return
     }
@@ -290,7 +290,7 @@ class CurrentMediaSentenceController(
         }
         Log.e(TAG, "Failed to reload sentences: ${media.mediaId}", throwable)
         withContext(Dispatchers.Main) {
-          ToastUtil.toast("加载句子失败")
+          ToastUtil.toast(R.string.sentence_load_failed)
         }
       }
     }
@@ -304,7 +304,7 @@ class CurrentMediaSentenceController(
       return
     }
     if (sentence.end - sentence.start < 0.1f) {
-      ToastUtil.toast("当前句子太短，无法继续分割")
+      ToastUtil.toast(R.string.sentence_too_short_to_split)
       return
     }
 
@@ -312,7 +312,7 @@ class CurrentMediaSentenceController(
     if (positionSeconds <= sentence.start + minimumEdgeGap ||
       positionSeconds >= sentence.end - minimumEdgeGap
     ) {
-      ToastUtil.toast("距离句子边缘太近，无法分割")
+      ToastUtil.toast(R.string.sentence_split_too_close)
       return
     }
 
@@ -328,7 +328,7 @@ class CurrentMediaSentenceController(
     _sentences.value = updated
     _currentSentence.value = firstPart
     saveSentences(updated)
-    ToastUtil.toast("分割成功")
+    ToastUtil.toast(R.string.sentence_split_success)
   }
 
   fun mergePreviousSentence() {
@@ -340,7 +340,7 @@ class CurrentMediaSentenceController(
     val updated = _sentences.value.toMutableList()
     val index = updated.indexOf(sentence)
     if (index <= 0) {
-      ToastUtil.toast("当前没有上一句, 无法合并")
+      ToastUtil.toast(R.string.previous_sentence_missing)
       return
     }
 
@@ -365,7 +365,7 @@ class CurrentMediaSentenceController(
     val updated = _sentences.value.toMutableList()
     val index = updated.indexOf(sentence)
     if (index < 0 || index == updated.lastIndex) {
-      ToastUtil.toast("当前没有下一句, 无法合并")
+      ToastUtil.toast(R.string.next_sentence_missing)
       return
     }
 

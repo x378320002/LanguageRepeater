@@ -13,12 +13,12 @@ import android.util.Log
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.View
+import androidx.annotation.ColorInt
 import androidx.appcompat.content.res.AppCompatResources
 import com.language.repeater.R
 import com.language.repeater.pcm.PCMSegmentLoader
 import com.language.repeater.sentence.Sentence
 import com.language.repeater.pcm.WaveformPoint
-import com.language.repeater.utils.ResourcesUtil
 import com.language.repeater.utils.ResourcesUtil.toDp
 import com.language.repeater.utils.ScreenUtil
 import com.language.repeater.utils.TimeFormatUtil
@@ -49,6 +49,23 @@ class ScrollWaveformView @JvmOverloads constructor(
     const val TAG = "ScrollingWaveformView"
   }
 
+  /** 所有颜色使用 ARGB，透明度由调用方提供；背景由外层容器绘制。 */
+  data class WaveformColors(
+    @ColorInt val outline: Int,
+    @ColorInt val unplayed: Int,
+    @ColorInt val played: Int,
+    @ColorInt val progressIndicator: Int,
+    @ColorInt val sentenceBoundary: Int,
+    @ColorInt val currentSentenceBoundary: Int,
+    @ColorInt val centerLine: Int,
+    @ColorInt val timeText: Int,
+    @ColorInt val abBackground: Int,
+    @ColorInt val abText: Int,
+    @ColorInt val editHandle: Int,
+  )
+
+  private var waveformColors: WaveformColors? = null
+
   // ========== 配置参数 ==========
 
   /**
@@ -69,10 +86,7 @@ class ScrollWaveformView @JvmOverloads constructor(
   private val editRectA = Rect()
   private val editRectB = Rect()
   private val editDrawable =
-    AppCompatResources.getDrawable(context, R.drawable.ic_drag_ab_lr)?.also {
-      it.setTint(ResourcesUtil.getColor(R.color.color_onBackground))
-      it.alpha = 200
-    }
+    AppCompatResources.getDrawable(context, R.drawable.ic_drag_ab_lr)?.mutate()
 
   /**
    * 拖动监听器
@@ -106,86 +120,67 @@ class ScrollWaveformView @JvmOverloads constructor(
   }
 
   // ========== 画笔 ==========
-  /** 背景颜色 */
-  //val waveBackgroundColor: Int = ResourcesUtil.getColor(R.color.main_bg_color_on)
 
-  //波形图边缘颜色
+  // 波形画笔的颜色由 setWaveformColors 提供，初始化仅定义绘制属性。
   private val waveOutlinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-    color = ResourcesUtil.getColor(R.color.wave_outline)
     style = Paint.Style.STROKE
     strokeWidth = 1f
     strokeCap = Paint.Cap.ROUND
   }
 
-  // 用于绘制未播放画笔
+  // 未播放区域填充。
   private val unPlayPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
     style = Paint.Style.FILL
-    color = ResourcesUtil.getColor(R.color.wave_unplay)
   }
 
-  // 用于绘制已经播放的填充区域的画笔
+  // 已播放区域填充。
   private val playedPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
     style = Paint.Style.FILL
-    color = ResourcesUtil.getColor(R.color.wave_played)
-    alpha = 180 // 0-255
   }
 
-  //进度条
+  // 播放进度线。
   private val indicatorLinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-    color = ResourcesUtil.getColor(R.color.wave_indicator)
     strokeWidth = 1f.toDp()
     strokeCap = Paint.Cap.ROUND
-    pathEffect = CornerPathEffect(3f.toDp()) // 👈 圆角半径
+    pathEffect = CornerPathEffect(3f.toDp())
   }
 
-  //voice开始指示器
+  // 普通句子的起止边界。
   private val senStartPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-    color = ResourcesUtil.getColor(R.color.wave_sentence_sign)
     strokeWidth = 1f.toDp()
     strokeCap = Paint.Cap.ROUND
   }
 
-  //voice结束指示器
   private val senEndPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-    color = ResourcesUtil.getColor(R.color.wave_sentence_sign)
     strokeWidth = 1f.toDp()
     strokeCap = Paint.Cap.ROUND
   }
 
-  //voice开始指示器
+  // 当前句子的起止边界。
   private val curSenStartPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-    color = ResourcesUtil.getColor(R.color.wave_sentence_sign_cur)
     strokeWidth = 2f.toDp()
     strokeCap = Paint.Cap.ROUND
   }
 
-  //voice结束指示器
   private val curSenEndPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-    color = ResourcesUtil.getColor(R.color.wave_sentence_sign_cur)
     strokeWidth = 2f.toDp()
     strokeCap = Paint.Cap.ROUND
   }
 
-  //中线画笔
   private val centerLinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-    color = ResourcesUtil.getColor(R.color.wave_center_line)
     strokeWidth = 1f
   }
 
-  //draw时间的画笔
-  val timeTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-    color = ResourcesUtil.getColor(R.color.wave_time)
+  private val timeTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
     textSize = 30f
     textAlign = Paint.Align.CENTER
   }
 
-  val abBgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+  private val abBgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
     style = Paint.Style.FILL
-    color = ResourcesUtil.getColor(R.color.wave_ab_sign_bg)
   }
 
-  val abTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-    color = ResourcesUtil.getColor(R.color.wave_ab_sign_text)
+  private val abTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
     textSize = 10f.toDp()
     textAlign = Paint.Align.CENTER
     typeface = Typeface.DEFAULT_BOLD
@@ -236,6 +231,31 @@ class ScrollWaveformView @JvmOverloads constructor(
   private var dragABResult: ABHitResult? = null
 
   // ========== 公共方法 ==========
+
+  /** 首次绘制前须提供配色；颜色未变化时保持现有画笔和绘制状态。 */
+  fun setWaveformColors(colors: WaveformColors) {
+    if (waveformColors == colors) {
+      return
+    }
+
+    waveformColors = colors
+    waveOutlinePaint.color = colors.outline
+    unPlayPaint.color = colors.unplayed
+    playedPaint.color = colors.played
+    indicatorLinePaint.color = colors.progressIndicator
+    senStartPaint.color = colors.sentenceBoundary
+    senEndPaint.color = colors.sentenceBoundary
+    curSenStartPaint.color = colors.currentSentenceBoundary
+    curSenEndPaint.color = colors.currentSentenceBoundary
+    centerLinePaint.color = colors.centerLine
+    timeTextPaint.color = colors.timeText
+    abBgPaint.color = colors.abBackground
+    abTextPaint.color = colors.abText
+    editDrawable?.setTint(colors.editHandle)
+    editDrawable?.alpha = 255
+    invalidate()
+  }
+
   /**
    * 设置拖动监听器
    */
@@ -572,8 +592,9 @@ class ScrollWaveformView @JvmOverloads constructor(
   override fun onDraw(canvas: Canvas) {
     super.onDraw(canvas)
 
-    // 背景
-    //canvas.drawColor(waveBackgroundColor)
+    if (waveformColors == null) {
+      return
+    }
 
     val centerY = height / 2f
     val centerX = width / 2f
@@ -670,12 +691,12 @@ class ScrollWaveformView @JvmOverloads constructor(
   }
 
   private fun drawSignPoint(canvas: Canvas, time: Float, paint: Paint) {
-    if (time < visibleStartTime || time > visibleEndTime) {
+    if (time !in visibleStartTime..visibleEndTime) {
       return
     }
     val x = timeToX(time)
     val y = height / 2f
-    canvas.drawLine(x, y - 15, x, y + 15, paint)
+    canvas.drawLine(x, y - 10, x, y + 10, paint)
   }
 
   /**

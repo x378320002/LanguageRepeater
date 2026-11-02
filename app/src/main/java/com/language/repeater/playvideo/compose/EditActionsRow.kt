@@ -6,6 +6,7 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -30,8 +31,8 @@ import androidx.compose.ui.unit.sp
 import com.language.repeater.R
 
 /**
- * 编辑栏 — 对应旧 XML 的 edit_layout (FlexboxLayout)
- * 5 个编辑操作按钮：合并前句、合并后句、分割句子、删除句子、插入句子
+ * 五个编辑操作等宽排列，图标与单行标签居中显示。
+ * 操作包括合并前句、合并后句、分割句子、删除句子和插入句子。
  */
 @Composable
 fun EditActionsRow(
@@ -47,35 +48,50 @@ fun EditActionsRow(
       .padding(horizontal = 15.dp)
       .fillMaxWidth()
       .height(60.dp),
-    horizontalArrangement = Arrangement.SpaceEvenly,
+    horizontalArrangement = Arrangement.Start,
     verticalAlignment = Alignment.CenterVertically,
   ) {
     EditActionButton(
-      iconRes = R.drawable.ic_edit_merge_left,
+      modifier = Modifier
+        .weight(1f)
+        .fillMaxHeight(),
+      iconRes = com.composables.icons.tabler.outline.R.drawable.tabler_ic_arrow_bear_left_2_outline,
       textRes = R.string.merge_pre,
       onClick = onMergePre,
     )
 
     EditActionButton(
-      iconRes = R.drawable.ic_edit_merge_right,
+      modifier = Modifier
+        .weight(1f)
+        .fillMaxHeight(),
+      iconRes = com.composables.icons.tabler.outline.R.drawable.tabler_ic_arrow_bear_right_2_outline,
       textRes = R.string.merge_next,
       onClick = onMergeNext,
     )
 
     EditActionButton(
-      iconRes = R.drawable.ic_edit_split,
+      modifier = Modifier
+        .weight(1f)
+        .fillMaxHeight(),
+      iconRes = com.composables.icons.tabler.outline.R.drawable.tabler_ic_cut_outline,
       textRes = R.string.split_sentence,
       onClick = onSplitSentence,
     )
 
     EditActionButton(
-      iconRes = R.drawable.ic_edit_delete,
+      modifier = Modifier
+        .weight(1f)
+        .fillMaxHeight(),
+      iconRes = com.composables.icons.tabler.outline.R.drawable.tabler_ic_trash_outline,
       textRes = R.string.delete_sentence,
       onClick = onDeleteSentence,
     )
 
     EditActionButton(
-      iconRes = R.drawable.ic_edit_insert,
+      modifier = Modifier
+        .weight(1f)
+        .fillMaxHeight(),
+      iconRes = com.composables.icons.tabler.outline.R.drawable.tabler_ic_row_insert_top_outline,
       textRes = R.string.insert_sentence,
       onClick = onInsertSentence,
     )
@@ -88,26 +104,28 @@ private fun EditActionButton(
   iconRes: Int,
   textRes: Int,
   onClick: () -> Unit,
+  modifier: Modifier = Modifier,
 ) {
   val interactionSource = remember { MutableInteractionSource() }
   val isPressed by interactionSource.collectIsPressedAsState()
-  val color =
-    if (isPressed)
-      MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-    else
-      MaterialTheme.colorScheme.onSurfaceVariant
+  val color = if (isPressed) {
+    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+  } else {
+    MaterialTheme.colorScheme.onSurfaceVariant
+  }
 
   CompositionLocalProvider(
     LocalContentColor provides color
   ) {
     Column(
-      modifier = Modifier
+      modifier = modifier
         .clickable(
           interactionSource = interactionSource,
           indication = null,
           onClick = onClick,
         ),
       horizontalAlignment = Alignment.CenterHorizontally,
+      verticalArrangement = Arrangement.Center,
     ) {
       Icon(
         painter = painterResource(iconRes),

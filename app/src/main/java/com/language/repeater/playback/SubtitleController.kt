@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import android.util.Log
 import androidx.core.net.toUri
+import com.language.repeater.R
 import com.language.repeater.datastore.DsManager
 import com.language.repeater.db.VideoEntity
 import com.language.repeater.db.VideoInfoDao
@@ -43,7 +44,7 @@ class SubtitleController(
         }
         Log.e(TAG, "Failed to update subtitle: $mediaId", throwable)
         withContext(Dispatchers.Main) {
-          ToastUtil.toast("加载字幕失败")
+          ToastUtil.toast(R.string.subtitle_load_failed)
         }
       }
     }

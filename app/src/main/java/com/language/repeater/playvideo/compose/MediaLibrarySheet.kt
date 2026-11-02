@@ -41,9 +41,11 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import com.language.repeater.R
 import com.language.repeater.utils.MediaStoreItem
 import com.language.repeater.utils.MediaStoreQuery
 import com.language.repeater.utils.TimeFormatUtil.formatDuration
@@ -53,7 +55,7 @@ import kotlinx.coroutines.launch
 /**
  * 打开媒体库的入口：已有权限直接执行 [onGranted]，否则先申请。
  *
- * 权限被拒后不再重复弹系统对话框，只提示用户，由用户自行去设置页开启。
+ * 权限申请被拒时显示媒体访问权限提示；后续点击仍按当前权限状态处理。
  */
 @Composable
 fun rememberMediaLibraryOpener(onGranted: () -> Unit): () -> Unit {
@@ -64,7 +66,7 @@ fun rememberMediaLibraryOpener(onGranted: () -> Unit): () -> Unit {
     if (result.values.all { granted -> granted }) {
       onGranted()
     } else {
-      ToastUtil.toast("需要媒体访问权限才能读取设备中的音视频")
+      ToastUtil.toast(R.string.media_access_permission_required)
     }
   }
 
@@ -107,7 +109,7 @@ fun MediaLibrarySheet(
     }
   }
 
-  // 每个文件夹的条目数，按数量倒序，供切换菜单展示耗时少的在最上面
+  // 文件夹按媒体条目数倒序排列，条目最多的文件夹显示在菜单顶部
   val folderCounts = remember(mediaList) {
     mediaList
       .map { item -> item.folderName }
@@ -148,9 +150,9 @@ fun MediaLibrarySheet(
         ) {
           Text(
             text = if (selectedFolder == null) {
-              "全部 (${mediaList.size})"
+              stringResource(R.string.media_library_all_count, mediaList.size)
             } else {
-              "$selectedFolder (${displayedList.size})"
+              stringResource(R.string.media_folder_count, selectedFolder.orEmpty(), displayedList.size)
             },
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -161,7 +163,7 @@ fun MediaLibrarySheet(
             painter = painterResource(
               com.composables.icons.tabler.outline.R.drawable.tabler_ic_chevron_down_outline
             ),
-            contentDescription = "切换文件夹",
+            contentDescription = stringResource(R.string.switch_media_folder),
             modifier = Modifier.size(18.dp),
             tint = MaterialTheme.colorScheme.onSurfaceVariant
           )
@@ -172,7 +174,7 @@ fun MediaLibrarySheet(
           onDismissRequest = { showFolderMenu = false }
         ) {
           DropdownMenuItem(
-            text = { Text("全部 (${mediaList.size})") },
+            text = { Text(stringResource(R.string.media_library_all_count, mediaList.size)) },
             onClick = {
               selectedFolder = null
               showFolderMenu = false
@@ -180,7 +182,7 @@ fun MediaLibrarySheet(
           )
           folderCounts.forEach { (folder, count) ->
             DropdownMenuItem(
-              text = { Text("$folder ($count)") },
+              text = { Text(stringResource(R.string.media_folder_count, folder, count)) },
               onClick = {
                 selectedFolder = folder
                 showFolderMenu = false
@@ -197,7 +199,7 @@ fun MediaLibrarySheet(
           onConfirm(selectedItems.value.toList())
         }
       ) {
-        Text("添加(${selectedItems.value.size})")
+        Text(stringResource(R.string.media_library_add_count, selectedItems.value.size))
       }
     }
 
@@ -209,7 +211,7 @@ fun MediaLibrarySheet(
 
         mediaList.isEmpty() -> {
           Text(
-            text = "媒体库里没有找到音视频文件",
+            text = stringResource(R.string.media_library_empty),
             color = LocalContentColor.current.copy(alpha = 0.7f),
             modifier = Modifier.align(Alignment.Center)
           )

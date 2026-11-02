@@ -30,10 +30,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavKey
+import com.language.repeater.R
 import com.language.repeater.app.SettingPageKey
 import com.language.repeater.playvideo.compose.PlayTopBar
 import com.language.repeater.playvideo.compose.PlayerControlSection
@@ -79,7 +81,7 @@ fun DefaultPlayVideoScreen(
           contentAlignment = Alignment.Center
         ) {
           Text(
-            text = "点击+号选择音视频",
+            text = stringResource(R.string.empty_playlist_hint),
             color = LocalContentColor.current.copy(alpha = 0.7f)
           )
         }
@@ -128,18 +130,20 @@ fun DefaultPlayVideoScreen(
     val invalidItem = playlist.find { item -> item.id == invalidMediaId }
     AlertDialog(
       onDismissRequest = { viewModel.dismissPermissionError() },
-      title = { Text("媒体文件已失效") },
+      title = { Text(stringResource(R.string.media_file_invalid_title)) },
       text = {
-        Text("「${invalidItem?.name.orEmpty()}」的文件已被移动或删除。是否从列表中删除该条目？")
+        Text(
+          stringResource(R.string.media_file_invalid_message, invalidItem?.name.orEmpty())
+        )
       },
       confirmButton = {
         TextButton(onClick = { viewModel.deleteItem(invalidMediaId) }) {
-          Text("删除")
+          Text(stringResource(R.string.history_item_delete))
         }
       },
       dismissButton = {
         TextButton(onClick = { viewModel.dismissPermissionError() }) {
-          Text("取消")
+          Text(stringResource(R.string.action_cancel))
         }
       }
     )

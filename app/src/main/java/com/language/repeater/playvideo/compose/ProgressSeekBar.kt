@@ -4,6 +4,7 @@ package com.language.repeater.playvideo.compose
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -28,6 +29,7 @@ import androidx.compose.ui.unit.dp
 fun ProgressSeekBar(
   value: Float,
   onSeek: (Float) -> Unit,
+  isFull: Boolean,
   modifier: Modifier = Modifier,
 ) {
   Slider(
@@ -37,8 +39,12 @@ fun ProgressSeekBar(
       .fillMaxWidth()
       .height(SliderH),
     track = { state ->
-      val bgColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
-      val onBgColor = MaterialTheme.colorScheme.onSurfaceVariant
+      val bgColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f)
+      val onBgColor = if (isFull || isSystemInDarkTheme()) {
+        MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f)
+      } else {
+        MaterialTheme.colorScheme.primary.copy(alpha = 0.9f)
+      }
       Canvas(
         modifier = Modifier
           .fillMaxWidth()
@@ -67,7 +73,11 @@ fun ProgressSeekBar(
         Box(
           Modifier
             .size(SliderThumbSize)
-            .background(MaterialTheme.colorScheme.onBackground, CircleShape),
+            .background(if (isFull || isSystemInDarkTheme()) {
+              MaterialTheme.colorScheme.onBackground
+            } else {
+              MaterialTheme.colorScheme.primary.copy(alpha = 0.9f)
+            }, CircleShape),
         )
       }
     })

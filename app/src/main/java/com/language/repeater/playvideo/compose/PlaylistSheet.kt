@@ -39,6 +39,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
@@ -79,7 +80,7 @@ fun PlaylistSheet(
       verticalAlignment = Alignment.CenterVertically
     ) {
       Text(
-        text = "当前列表 (${playlist.size})",
+        text = stringResource(R.string.current_playlist_count, playlist.size),
         style = MaterialTheme.typography.titleMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant
       )
@@ -233,7 +234,7 @@ private fun MoreBtn(
     }) {
       Icon(
         painter = painterResource(com.composables.icons.tabler.outline.R.drawable.tabler_ic_dots_vertical_outline),
-        contentDescription = "移到顶部",
+        contentDescription = stringResource(R.string.move_to_top),
         tint = MaterialTheme.colorScheme.onSurfaceVariant
       )
     }
@@ -247,14 +248,14 @@ private fun MoreBtn(
       DropdownMenuItem(
         text = {
           Text(
-            text = "移到首位",
+            text = stringResource(R.string.playlist_item_move_to_first),
             style = MaterialTheme.typography.bodyMedium,
           )
         },
         leadingIcon = {
           Icon(
             painter = painterResource(com.composables.icons.tabler.outline.R.drawable.tabler_ic_arrow_narrow_up_dashed_outline),
-            contentDescription = "移到顶部"
+            contentDescription = stringResource(R.string.move_to_top)
           )
         },
         onClick = onMoveToFirst
@@ -263,14 +264,14 @@ private fun MoreBtn(
       DropdownMenuItem(
         text = {
           Text(
-            text = "删除",
+            text = stringResource(R.string.history_item_delete),
             style = MaterialTheme.typography.bodyMedium,
           )
         },
         leadingIcon = {
           Icon(
             painter = painterResource(com.composables.icons.tabler.outline.R.drawable.tabler_ic_trash_outline),
-            contentDescription = "删除"
+            contentDescription = stringResource(R.string.history_item_delete)
           )
         },
         onClick = onDelete

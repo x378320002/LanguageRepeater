@@ -1,6 +1,7 @@
 package com.language.repeater.playvideo.compose
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -13,7 +14,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.language.repeater.R
 
@@ -34,6 +37,16 @@ fun PlaybackControlRow(
 
   val iconSize = 50.dp
   val centerIconSize = 70.dp
+  val iconColor = if (isFull || isSystemInDarkTheme()) {
+    MaterialTheme.colorScheme.onBackground.copy(alpha = 0.9f)
+  } else {
+    MaterialTheme.colorScheme.primary.copy(alpha = 1.0f)
+  }
+  val mainPlayIconColor = if (isFull || isSystemInDarkTheme()) {
+    MaterialTheme.colorScheme.onBackground.copy(alpha = 0.9f)
+  } else {
+    Color.White
+  }
 
   Row(
     modifier = modifier
@@ -48,9 +61,9 @@ fun PlaybackControlRow(
         .size(iconSize),
     ) {
       Icon(
-        painter = painterResource(com.composables.icons.tabler.filled.R.drawable.tabler_ic_transition_left_filled),
-        contentDescription = "回句首",
-        tint = MaterialTheme.colorScheme.onBackground,
+        painter = painterResource(com.composables.icons.tabler.outline.R.drawable.tabler_ic_transition_left_outline),
+        contentDescription = stringResource(R.string.restart_sentence),
+        tint = iconColor,
       )
     }
 
@@ -61,8 +74,8 @@ fun PlaybackControlRow(
     ) {
       Icon(
         painter = painterResource(R.drawable.ic_go_sentence_head_1),
-        contentDescription = "上一句",
-        tint = MaterialTheme.colorScheme.onBackground,
+        contentDescription = stringResource(R.string.previous_sentence),
+        tint = iconColor,
       )
     }
 
@@ -77,19 +90,25 @@ fun PlaybackControlRow(
       modifier = Modifier
         .size(centerIconSize)
         .background(
-          color = if (isFull) {
-            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+          color = if (isFull || isSystemInDarkTheme()) {
+            MaterialTheme.colorScheme.onBackground.copy(alpha = 0.25f)
           } else {
-            MaterialTheme.colorScheme.surfaceVariant
+            MaterialTheme.colorScheme.primary
           },
           shape = CircleShape
         ),
     ) {
       Icon(
         painter = painterResource(id = playPauseIconRes),
-        contentDescription = if (isPlaying) "暂停" else "播放",
+        contentDescription = stringResource(
+          if (isPlaying) {
+            R.string.action_pause
+          } else {
+            R.string.history_item_play
+          }
+        ),
         modifier = Modifier.size(40.dp),
-        tint = MaterialTheme.colorScheme.onBackground,
+        tint = mainPlayIconColor,
       )
     }
 
@@ -101,8 +120,8 @@ fun PlaybackControlRow(
     ) {
       Icon(
         painter = painterResource(com.composables.icons.tabler.filled.R.drawable.tabler_ic_player_play_filled),
-        contentDescription = "下一句",
-        tint = MaterialTheme.colorScheme.onBackground,
+        contentDescription = stringResource(R.string.next_sentence),
+        tint = iconColor,
       )
     }
 
@@ -114,8 +133,8 @@ fun PlaybackControlRow(
     ) {
       Icon(
         painter = painterResource(R.drawable.ic_list),
-        contentDescription = "播放列表",
-        tint = MaterialTheme.colorScheme.onBackground,
+        contentDescription = stringResource(R.string.playlist_title),
+        tint = iconColor,
       )
     }
   }

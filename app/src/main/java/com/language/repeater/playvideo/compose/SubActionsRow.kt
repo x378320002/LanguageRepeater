@@ -24,14 +24,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.language.repeater.R
 
 /**
- * 副操作栏 — 对齐旧 XML sub_actions_layout
- * 每个按钮 44dp 宽，图标居中，整体集中排列
+ * 副操作栏
+ * 每个按钮 42dp 宽，图标居中，整体集中排列
  * 速度/定时/更多菜单锚定在对应按钮上
  */
 @Composable
@@ -71,7 +72,7 @@ fun SubActionsRow(
     // AB 拖动切换
     SubActionIcon(
       iconRes = R.drawable.ic_sub_action_edit,
-      contentDescription = "AB 拖动模式",
+      contentDescription = stringResource(R.string.ab_drag_mode),
       tint = if (abDragEnabled) activeTint else iconTint,
       onClick = onToggleAbDrag,
     )
@@ -83,7 +84,7 @@ fun SubActionsRow(
       } else {
         com.composables.icons.tabler.outline.R.drawable.tabler_ic_a_b_off_outline
       },
-      contentDescription = "AB 复读",
+      contentDescription = stringResource(R.string.ab_repeat),
       tint = if (repeatEnabled) activeTint else iconTint,
       onClick = onToggleRepeat,
     )
@@ -92,7 +93,7 @@ fun SubActionsRow(
     Box {
       SubActionIconWithText(
         iconRes = com.composables.icons.tabler.outline.R.drawable.tabler_ic_brand_speedtest_outline,
-        contentDescription = "播放速度",
+        contentDescription = stringResource(R.string.playback_speed),
         badgeText = playSpeedText,
         tint = iconTint,
         onClick = { showSpeedMenu = true },
@@ -101,13 +102,21 @@ fun SubActionsRow(
         expanded = showSpeedMenu,
         onDismissRequest = { showSpeedMenu = false }
       ) {
-        val speeds = listOf(0.25f, 0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 2.0f)
-        val speedLabels = listOf("0.25x", "0.5x", "0.75x", "1.0x", "1.25x", "1.5x", "2.0x")
-        speeds.forEachIndexed { index, speed ->
+        // 播放器接收数值，菜单文案由对应的速度资源提供。
+        val speedOptions = listOf(
+          0.25f to R.string.speed_0_25,
+          0.5f to R.string.speed_0_5,
+          0.75f to R.string.speed_0_75,
+          1.0f to R.string.speed_1_0,
+          1.25f to R.string.speed_1_25,
+          1.5f to R.string.speed_1_5,
+          2.0f to R.string.speed_2_0,
+        )
+        speedOptions.forEach { (speed, labelRes) ->
           DropdownMenuItem(
             text = {
               Text(
-                text = speedLabels[index],
+                text = stringResource(labelRes),
                 style = MaterialTheme.typography.bodyMedium,
               )
             },
@@ -124,7 +133,7 @@ fun SubActionsRow(
     Box {
       SubActionIconWithText(
         iconRes = com.composables.icons.tabler.outline.R.drawable.tabler_ic_alarm_outline,
-        contentDescription = "睡眠定时",
+        contentDescription = stringResource(R.string.sleep_time_btn),
         badgeText = sleepTimerText,
         tint = iconTint,
         onClick = { showSleepTimerMenu = true },
@@ -133,13 +142,19 @@ fun SubActionsRow(
         expanded = showSleepTimerMenu,
         onDismissRequest = { showSleepTimerMenu = false },
       ) {
-        val timers = listOf(0, 10, 20, 30, 45, 60)
-        val timerLabels = listOf("取消", "10 分钟", "20 分钟", "30 分钟", "45 分钟", "60 分钟")
-        timers.forEachIndexed { index, minutes ->
+        val timerOptions = listOf(
+          0 to R.string.action_cancel,
+          10 to R.string.timer_10_minutes,
+          20 to R.string.timer_20_minutes,
+          30 to R.string.timer_30_minutes,
+          45 to R.string.timer_45_minutes,
+          60 to R.string.timer_60_minutes,
+        )
+        timerOptions.forEach { (minutes, labelRes) ->
           DropdownMenuItem(
             text = {
               Text(
-                text = timerLabels[index],
+                text = stringResource(labelRes),
                 style = MaterialTheme.typography.bodyMedium,
               )
             },
@@ -152,7 +167,7 @@ fun SubActionsRow(
         DropdownMenuItem(
           text = {
             Text(
-              text = "播完当前",
+              text = stringResource(R.string.timer_complete),
               style = MaterialTheme.typography.bodyMedium,
             )
           },
@@ -171,7 +186,7 @@ fun SubActionsRow(
       } else {
         com.composables.icons.tabler.outline.R.drawable.tabler_ic_maximize_outline
       },
-      contentDescription = "全屏切换",
+      contentDescription = stringResource(R.string.toggle_fullscreen),
       tint = iconTint,
       onClick = onToggleFullScreen,
     )
@@ -180,7 +195,7 @@ fun SubActionsRow(
     Box {
       SubActionIcon(
         iconRes = R.drawable.ic_more_vert,
-        contentDescription = "更多",
+        contentDescription = stringResource(R.string.action_more),
         tint = iconTint,
         onClick = { showMoreMenu = true },
       )
@@ -192,11 +207,13 @@ fun SubActionsRow(
           DropdownMenuItem(
             text = {
               Text(
-                text = if (subtitleVisible) {
-                  "关闭字幕"
-                } else {
-                  "开启字幕"
-                },
+                text = stringResource(
+                  if (subtitleVisible) {
+                    R.string.disable_subtitle_action
+                  } else {
+                    R.string.enable_subtitle_action
+                  }
+                ),
                 style = MaterialTheme.typography.bodyMedium,
               )
             },
@@ -209,7 +226,7 @@ fun SubActionsRow(
         DropdownMenuItem(
           text = {
             Text(
-              text = "选择字幕",
+              text = stringResource(R.string.select_subtitle),
               style = MaterialTheme.typography.bodyMedium,
             )
           },
@@ -221,7 +238,7 @@ fun SubActionsRow(
         DropdownMenuItem(
           text = {
             Text(
-              text = "字幕分句",
+              text = stringResource(R.string.split_by_subtitle),
               style = MaterialTheme.typography.bodyMedium,
             )
           },
@@ -233,7 +250,7 @@ fun SubActionsRow(
         DropdownMenuItem(
           text = {
             Text(
-              text = "音频分句",
+              text = stringResource(R.string.split_by_audio),
               style = MaterialTheme.typography.bodyMedium,
             )
           },
@@ -248,7 +265,7 @@ fun SubActionsRow(
 }
 
 /**
- * 单个副操作按钮：44dp 宽，图标居中，无边框点击效果
+ * 单个副操作按钮：42dp 宽，图标居中，无边框点击效果
  */
 @Composable
 private fun SubActionIcon(

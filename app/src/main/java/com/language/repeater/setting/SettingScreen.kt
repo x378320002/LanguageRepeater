@@ -1,6 +1,10 @@
 package com.language.repeater.setting
 
-import android.R.attr.onClick
+import android.content.ActivityNotFoundException
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Intent
+import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -11,6 +15,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.style.ExperimentalFoundationStyleApi
@@ -43,16 +48,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavKey
+import com.language.repeater.R
 import com.language.repeater.datastore.DsManager
 import com.language.repeater.setting.action.ActionClearCache
-import com.language.repeater.setting.action.ActionFullGestureChange
 import com.language.repeater.setting.action.ActionLeftBrightnessGestureChange
 import com.language.repeater.setting.action.ActionLongPressSpeedChange
 import com.language.repeater.setting.action.ActionRightVolumeGestureChange
@@ -69,7 +76,10 @@ fun SettingScreen(
 ) {
   var showSentenceGapDialog by remember { mutableStateOf(false) }
   var showLongPressSpeedDialog by remember { mutableStateOf(false) }
+  var showDeveloperContactDialog by remember { mutableStateOf(false) }
   val context = LocalContext.current
+  val resources = LocalResources.current
+  val uriHandler = LocalUriHandler.current
   val subtitleFolderPicker = rememberLauncherForActivityResult(
     ActivityResultContracts.OpenDocumentTree()
   ) { uri ->
@@ -92,7 +102,25 @@ fun SettingScreen(
       paddingValues = paddingValues,
       onShowSentenceGapDialog = { showSentenceGapDialog = true },
       onShowLongPressSpeedDialog = { showLongPressSpeedDialog = true },
-      onSelectSubtitleFolder = { subtitleFolderPicker.launch(null) }
+      onSelectSubtitleFolder = { subtitleFolderPicker.launch(null) },
+      onShowDeveloperContact = { showDeveloperContactDialog = true },
+      onOpenPrivacyPolicy = {
+        try {
+          uriHandler.openUri("https://x378320002.github.io/language-repeater-site/privacy.html")
+        } catch (_: IllegalArgumentException) {
+          Toast.makeText(
+            context,
+            resources.getString(R.string.error_no_browser),
+            Toast.LENGTH_SHORT
+          ).show()
+        }
+      }
+    )
+  }
+
+  if (showDeveloperContactDialog) {
+    DeveloperContactDialog(
+      onDismiss = { showDeveloperContactDialog = false }
     )
   }
 
@@ -121,7 +149,7 @@ private fun SettingTopAppBar(
   TopAppBar(
     title = {
       Text(
-        text = "设置",
+        text = stringResource(R.string.setting_title),
         style = MaterialTheme.typography.titleMedium
       )
     },
@@ -155,7 +183,9 @@ private fun MainContent(
   paddingValues: PaddingValues,
   onShowSentenceGapDialog: () -> Unit,
   onShowLongPressSpeedDialog: () -> Unit,
-  onSelectSubtitleFolder: () -> Unit
+  onSelectSubtitleFolder: () -> Unit,
+  onShowDeveloperContact: () -> Unit,
+  onOpenPrivacyPolicy: () -> Unit
 ) {
   Column(
     modifier = Modifier
@@ -167,71 +197,133 @@ private fun MainContent(
     val leftBrightnessGesture by DsManager.observe(DsManager.KEY_LEFT_BRIGHTNESS_GESTURE, true).collectAsState()
     val rightVolumeGesture by DsManager.observe(DsManager.KEY_RIGHT_VOLUME_GESTURE, true).collectAsState()
     Card {
-//      SettingSwitchItem(title = "全屏手势", checked = fullGesture) {
-//        viewModel.onAction(ActionFullGestureChange(it))
-//      }
-//      SettingDivider()
-      SettingSwitchItem(title = "左侧亮度手势", checked = leftBrightnessGesture) {
+      SettingSwitchItem(
+        title = stringResource(R.string.setting_left_brightness),
+        checked = leftBrightnessGesture
+      ) {
         viewModel.onAction(ActionLeftBrightnessGestureChange(it))
       }
       SettingDivider()
-      SettingSwitchItem(title = "右侧音量手势", checked = rightVolumeGesture) {
+      SettingSwitchItem(
+        title = stringResource(R.string.setting_right_volume),
+        checked = rightVolumeGesture
+      ) {
         viewModel.onAction(ActionRightVolumeGestureChange(it))
       }
     }
 
     Spacer(modifier = Modifier.height(30.dp))
 
-    // 第一组卡片：字幕文件夹 / 清除缓存 / 句子最小间隔 / 长按倍速
+    // 播放参数与处理缓存。
     val subtitleFolder by viewModel.stateHolder.subtitleFolder.collectAsState()
     val cacheSizeText by viewModel.stateHolder.cacheSizeFlow.collectAsState()
     val sentenceGap by viewModel.stateHolder.sentenceGap.collectAsState()
     val speed by viewModel.stateHolder.longPressSpeed.collectAsState()
     Card {
       SettingClickItem(
-        title = "长按倍速",
-        desc = "$speed x",
+        title = stringResource(R.string.setting_long_press_speed),
+        desc = stringResource(R.string.playback_speed_value, speed.toString()),
         onClick = onShowLongPressSpeedDialog
       )
 
       SettingDivider()
       SettingClickItem(
-        title = "句子最小间隔",
-        desc = "$sentenceGap ms",
+        title = stringResource(R.string.setting_sentence_gap),
+        desc = stringResource(R.string.sentence_gap_value, sentenceGap),
         onClick = onShowSentenceGapDialog
       )
 
       SettingDivider()
       SettingClickItem(
-        title = "清除缓存",
+        title = stringResource(R.string.setting_clear_temp),
         desc = cacheSizeText,
         onClick = { viewModel.onAction(ActionClearCache) }
       )
+    }
 
-//      SettingDivider()
-//      ListItem(
-//        colors = ListItemDefaults.colors().copy(containerColor = Color.Transparent),
-//        headlineContent = {
-//          Text(
-//            text = "默认查找字幕文件夹",
-//            style = MaterialTheme.typography.bodyMedium
-//          )
-//        },
-//        supportingContent = {
-//          if (subtitleFolder.isNotBlank()) {
-//            Text(
-//              text = subtitleFolder,
-//              style = MaterialTheme.typography.labelSmall,
-//              maxLines = 2,
-//              overflow = TextOverflow.StartEllipsis
-//            )
-//          }
-//        },
-//        modifier = Modifier
-//          .clickable(onClick = onSelectSubtitleFolder)
-//      )
+    Spacer(modifier = Modifier.height(30.dp))
+
+    Card {
+      SettingClickItem(
+        title = stringResource(R.string.setting_privacy_policy),
+        desc = stringResource(R.string.setting_open_in_browser),
+        onClick = onOpenPrivacyPolicy
+      )
+      SettingDivider()
+      SettingClickItem(
+        title = stringResource(R.string.setting_developer_contact),
+        desc = stringResource(R.string.setting_email_feedback),
+        onClick = onShowDeveloperContact
+      )
     }
   }
+}
+
+@Composable
+private fun DeveloperContactDialog(onDismiss: () -> Unit) {
+  val context = LocalContext.current
+  val resources = LocalResources.current
+  val email = "wangzixu0612@gmail.com"
+
+  AlertDialog(
+    onDismissRequest = onDismiss,
+    title = { Text(stringResource(R.string.setting_developer_contact)) },
+    text = {
+      Column {
+        Text(email)
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(stringResource(R.string.developer_feedback_description))
+      }
+    },
+    confirmButton = {
+      TextButton(
+        onClick = {
+          // 邮件主题和正文按当前语言读取，并编码为 mailto 查询参数。
+          val subject = Uri.encode(resources.getString(R.string.feedback_email_subject))
+          val body = Uri.encode(resources.getString(R.string.feedback_email_body))
+          val mailUri = Uri.parse("mailto:$email?subject=$subject&body=$body")
+          val intent = Intent(Intent.ACTION_SENDTO, mailUri)
+          try {
+            context.startActivity(intent)
+            onDismiss()
+          } catch (_: ActivityNotFoundException) {
+            Toast.makeText(
+              context,
+              resources.getString(R.string.error_no_email_app),
+              Toast.LENGTH_LONG
+            ).show()
+          }
+        }
+      ) {
+        Text(stringResource(R.string.action_write_email))
+      }
+    },
+    dismissButton = {
+      TextButton(
+        onClick = {
+          val clipboard = context.getSystemService(ClipboardManager::class.java)
+          if (clipboard != null) {
+            clipboard.setPrimaryClip(
+              ClipData.newPlainText(resources.getString(R.string.developer_email_clip_label), email)
+            )
+            Toast.makeText(
+              context,
+              resources.getString(R.string.email_address_copied),
+              Toast.LENGTH_SHORT
+            ).show()
+          } else {
+            Toast.makeText(
+              context,
+              resources.getString(R.string.error_copy_email),
+              Toast.LENGTH_SHORT
+            ).show()
+          }
+        }
+      ) {
+        Text(stringResource(R.string.action_copy_email))
+      }
+    }
+  )
 }
 
 @Composable
@@ -263,7 +355,7 @@ private fun SettingClickItem(
       }
     },
     modifier = Modifier
-      .height(48.dp)
+      .heightIn(min = 48.dp)
       .clickable(onClick = onClick)
   )
 }
@@ -277,7 +369,7 @@ private fun SettingSwitchItem(
 ) {
   ListItem(
     colors = ListItemDefaults.colors().copy(containerColor = Color.Transparent),
-    modifier = Modifier.height(48.dp),
+    modifier = Modifier.heightIn(min = 48.dp),
     headlineContent = {
       Text(
         text = title,
@@ -314,26 +406,26 @@ private fun SentenceGapDialog(
           onDismiss()
         }
       ) {
-        Text("确认")
+        Text(stringResource(R.string.action_confirm))
       }
     },
     dismissButton = {
       TextButton(
         onClick = onDismiss
       ) {
-        Text("取消")
+        Text(stringResource(R.string.action_cancel))
       }
     },
     text = {
       Column {
         Text(
-          "自动分割句子时, 小于此间隔的连续句子被视作成同一句",
+          stringResource(R.string.sentence_gap_description),
           style = MaterialTheme.typography.bodyLarge
         )
         Spacer(modifier = Modifier.height(20.dp))
         OutlinedTextField(
           label = {
-            Text("设置最小间隔")
+            Text(stringResource(R.string.sentence_gap_dialog_title))
           },
           maxLines = 1,
           value = text.toString(),
@@ -358,6 +450,7 @@ private fun LongPressSpeedDialog(
   var value by remember { mutableFloatStateOf(currentValue) }
   val regex = remember { Regex("^\\d*(\\.\\d*)?$") }
   val context = LocalContext.current
+  val resources = LocalResources.current
 
   AlertDialog(
     onDismissRequest = onDismiss,
@@ -369,7 +462,7 @@ private fun LongPressSpeedDialog(
               // 提示错误
               Toast.makeText(
                 context,
-                "请输入0.1~2.0之间的数字",
+                resources.getString(R.string.speed_input_error),
                 Toast.LENGTH_SHORT
               ).show()
             } else {
@@ -380,24 +473,24 @@ private fun LongPressSpeedDialog(
           onDismiss()
         }
       ) {
-        Text("确认")
+        Text(stringResource(R.string.action_confirm))
       }
     },
     dismissButton = {
       TextButton(
         onClick = onDismiss
       ) {
-        Text("取消")
+        Text(stringResource(R.string.action_cancel))
       }
     },
     title = {
-      Text("长按倍速调整")
+      Text(stringResource(R.string.long_press_speed_dialog_title))
     },
     text = {
       Column {
         OutlinedTextField(
           label = {
-            Text("范围: 0.1-2.0")
+            Text(stringResource(R.string.speed_range_hint))
           },
           maxLines = 1,
           value = value.toString(),
