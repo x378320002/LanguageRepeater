@@ -62,6 +62,7 @@
   <string name="action_pause">Pause</string>
   <string name="action_more">More</string>
   <string name="setting_privacy_policy">Privacy policy</string>
+  <string name="privacy_policy_url">https://x378320002.github.io/language-repeater-site/privacy-en.html</string>
   <string name="setting_open_in_browser">Open in browser</string>
   <string name="setting_developer_contact">Feedback</string>
   <string name="setting_email_feedback">Email feedback</string>

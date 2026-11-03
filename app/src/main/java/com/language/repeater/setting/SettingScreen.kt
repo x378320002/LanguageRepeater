@@ -106,7 +106,7 @@ fun SettingScreen(
       onShowDeveloperContact = { showDeveloperContactDialog = true },
       onOpenPrivacyPolicy = {
         try {
-          uriHandler.openUri("https://x378320002.github.io/language-repeater-site/privacy.html")
+          uriHandler.openUri(resources.getString(R.string.privacy_policy_url))
         } catch (_: IllegalArgumentException) {
           Toast.makeText(
             context,
@@ -318,6 +318,7 @@ private fun DeveloperContactDialog(onDismiss: () -> Unit) {
               Toast.LENGTH_SHORT
             ).show()
           }
+          onDismiss()
         }
       ) {
         Text(stringResource(R.string.action_copy_email))

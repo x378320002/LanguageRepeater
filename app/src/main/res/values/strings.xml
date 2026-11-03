@@ -76,6 +76,7 @@
   <string name="action_pause">暂停</string>
   <string name="action_more">更多</string>
   <string name="setting_privacy_policy">隐私政策</string>
+  <string name="privacy_policy_url">https://x378320002.github.io/language-repeater-site/privacy.html</string>
   <string name="setting_open_in_browser">在浏览器中查看</string>
   <string name="setting_developer_contact">意见反馈</string>
   <string name="setting_email_feedback">邮件反馈</string>

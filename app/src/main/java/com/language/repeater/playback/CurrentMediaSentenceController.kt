@@ -1,7 +1,6 @@
 package com.language.repeater.playback
 
 import android.content.Context
-import android.net.Uri
 import android.util.Log
 import com.language.repeater.R
 import com.language.repeater.datastore.DsManager
@@ -200,12 +199,21 @@ class CurrentMediaSentenceController(
     val current = _currentSentence.value
     val currentSeconds = player.progress.value.positionMs / 1000f
     val target = if (current == null) {
-      sentenceAround(currentSeconds, list)
+      val first = list.first()
+      val last = list.last()
+      when {
+        currentSeconds >= last.start -> first
+        else -> {
+          list.firstOrNull {
+            it.start >= currentSeconds
+          } ?: last
+        }
+      }
     } else if (currentSeconds < current.start) {
       current
     } else {
       val index = list.indexOf(current)
-      list.getOrNull(index + 1) ?: list.last()
+      list.getOrNull(index + 1) ?: list.first()
     }
     seekToSentence(target)
   }
@@ -218,7 +226,16 @@ class CurrentMediaSentenceController(
     val current = _currentSentence.value
     val currentSeconds = player.progress.value.positionMs / 1000f
     val target = if (current == null) {
-      sentenceAround(currentSeconds, list)
+      val first = list.first()
+      val last = list.last()
+      when {
+        currentSeconds <= first.end -> last
+        else -> {
+          list.lastOrNull {
+            it.end < currentSeconds
+          } ?: first
+        }
+      }
     } else {
       val index = list.indexOf(current)
       if (index <= 0) {
@@ -230,14 +247,8 @@ class CurrentMediaSentenceController(
     seekToSentence(target)
   }
 
-  private fun sentenceAround(positionSeconds: Float, list: List<Sentence>): Sentence {
-    val first = list.first()
-    val last = list.last()
-    return when {
-      positionSeconds < first.start -> first
-      positionSeconds >= last.end -> last
-      else -> findSentenceByTime(positionSeconds) ?: last
-    }
+  private fun findSentencePre(currentSeconds: Float) {
+
   }
 
   fun backToSentenceHead() {
@@ -260,14 +271,30 @@ class CurrentMediaSentenceController(
     }
 
     if (current == null || currentSeconds < current.start || currentSeconds > current.end) {
-      _currentSentence.value = findSentenceByTime(currentSeconds)
+      _currentSentence.value = findSentenceCurrent(currentSeconds)
     }
   }
 
-  private fun findSentenceByTime(positionSeconds: Float): Sentence? {
-    return _sentences.value.firstOrNull { sentence ->
-      positionSeconds >= sentence.start && positionSeconds < sentence.end
+  private fun findSentenceCurrent(positionSeconds: Float): Sentence? {
+    val list = _sentences.value
+    var low = 0
+    var high = list.size
+
+    // 按 start 升序二分定位最后一个已开始的句子，重叠时选择最近开始的一句。
+    while (low < high) {
+      val middle = low + (high - low) / 2
+      if (list[middle].start <= positionSeconds) {
+        low = middle + 1
+      } else {
+        high = middle
+      }
     }
+
+    val sentence = list.getOrNull(low - 1) ?: return null
+    if (positionSeconds < sentence.end) {
+      return sentence
+    }
+    return null
   }
 
   private fun seekToSentence(sentence: Sentence) {
@@ -442,7 +469,7 @@ class CurrentMediaSentenceController(
       updated[0] = reset
     }
     _sentences.value = updated
-    _currentSentence.value = findSentenceByTime(player.progress.value.positionMs / 1000f)
+    _currentSentence.value = findSentenceCurrent(player.progress.value.positionMs / 1000f)
     saveSentences(updated)
   }
 
