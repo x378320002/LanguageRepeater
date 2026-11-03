@@ -31,35 +31,45 @@ data class MediaStoreItem(
 /**
  * 读取设备媒体库中的音视频。
  *
- * Android 13 起需要 READ_MEDIA_VIDEO 与 READ_MEDIA_AUDIO，更早版本用 READ_EXTERNAL_STORAGE。
- * Android 10 起 MediaStore 已支持 scoped storage，无需申请存储写权限。
+ * 加载媒体前检查完整音视频访问权限，授权结果以当前系统状态为准。
+ * Android 12 及以下使用存储读取权限。
  */
 object MediaStoreQuery {
 
-  /** 当前系统版本下读取媒体库所需的运行时权限。 */
-  val REQUIRED_PERMISSIONS: Array<String> =
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+  /** Android 14 显式参与选定视频授权流程，完整访问仍须检查 READ_MEDIA_VIDEO。 */
+  val REQUIRED_PERMISSIONS: Array<String> = when {
+    Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE -> {
       arrayOf(
         android.Manifest.permission.READ_MEDIA_VIDEO,
         android.Manifest.permission.READ_MEDIA_AUDIO
       )
-    } else {
-      arrayOf(android.Manifest.permission.READ_EXTERNAL_STORAGE)
     }
-
-  fun hasPermission(context: Context): Boolean {
-    return REQUIRED_PERMISSIONS.all { permission ->
-      ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
+    Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU -> {
+      arrayOf(
+        android.Manifest.permission.READ_MEDIA_VIDEO,
+        android.Manifest.permission.READ_MEDIA_AUDIO
+      )
+    }
+    else -> {
+      arrayOf(android.Manifest.permission.READ_EXTERNAL_STORAGE)
     }
   }
 
+  /** 媒体库要求完整的音频和视频访问，选定视频授权不满足全库读取。 */
+  fun hasPermission(context: Context): Boolean {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+      return isGranted(context, android.Manifest.permission.READ_EXTERNAL_STORAGE)
+    }
+    return isGranted(context, android.Manifest.permission.READ_MEDIA_AUDIO) &&
+      isGranted(context, android.Manifest.permission.READ_MEDIA_VIDEO)
+  }
+
+  private fun isGranted(context: Context, permission: String): Boolean {
+    return ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
+  }
+
   /**
-   * 查询全部音视频，按添加时间倒序，最新的排在前面。
-   *
-   * 两类各自查询后再混排：MediaStore 的分区表之间没有统一排序，分开查完再按时间合并
-   * 才能得到真正的全局时间顺序，否则音频会整体排在视频之后。
-   *
-   * 无权限时返回空列表而不是抛异常：调用方应先用 [hasPermission] 判断并申请权限。
+   * 完整授权后查询音视频，按添加时间倒序；未授权时返回空列表。
    */
   suspend fun loadAll(context: Context): List<MediaStoreItem> = withContext(Dispatchers.IO) {
     if (!hasPermission(context)) {

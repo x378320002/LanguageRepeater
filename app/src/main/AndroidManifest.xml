@@ -15,6 +15,8 @@
   <!-- Android 13 起按媒体类型分别授权 -->
   <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
   <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+  <!-- Android 14 起用户可仅允许访问选定的视频。 -->
+  <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" />
 
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
   <!-- 2. 【Android 14 必加】请求专门的媒体播放服务权限 -->

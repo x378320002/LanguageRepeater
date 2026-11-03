@@ -128,6 +128,10 @@
   <string name="media_library_all_count">全部 (%1$d)</string>
   <string name="media_folder_count">%1$s (%2$d)</string>
   <string name="switch_media_folder">切换文件夹</string>
-  <string name="media_library_add_count">添加(%1$d)</string>
+  <string name="media_library_add_count">选择(%1$d)</string>
   <string name="media_library_empty">媒体库里没有找到音视频文件</string>
+  <string name="media_permission_settings_hint">尚未获得完整音视频权限。若授权窗口不再出现，请前往系统设置，将音频和视频访问设为允许全部。</string>
+  <string name="media_allow_access">申请授权</string>
+  <string name="media_open_settings">系统设置</string>
+  <string name="media_settings_unavailable">无法打开系统设置，请手动进入本应用的权限设置。</string>
 </resources>

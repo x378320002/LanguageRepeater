@@ -116,4 +116,8 @@
   <string name="switch_media_folder">Switch folder</string>
   <string name="media_library_add_count">Add (%1$d)</string>
   <string name="media_library_empty">No audio or video files found in the media library</string>
+  <string name="media_permission_settings_hint">Full audio and video access has not been granted. If the permission prompt no longer appears, open system settings and allow access to all audio and video.</string>
+  <string name="media_allow_access">Allow access</string>
+  <string name="media_open_settings">System settings</string>
+  <string name="media_settings_unavailable">Unable to open system settings. Open the app permissions manually.</string>
 </resources>

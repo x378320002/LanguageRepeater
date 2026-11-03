@@ -137,7 +137,7 @@ fun VideoPlayerBox(
             oldSpeed = player.state.value.speed
             scope.launch {
               val speed = oldSpeed ?: return@launch
-              val newSpeed = speed * DsManager.get(DsManager.KEY_LONG_PRESS_SPEED, 1.0f)
+              val newSpeed = speed * DsManager.get(DsManager.KEY_LONG_PRESS_SPEED, 0.5f)
               player.setSpeed(newSpeed)
               state.showFeedback(
                 resources.getString(R.string.long_press_speed_overlay, newSpeed.toString())
@@ -216,7 +216,8 @@ fun VideoPlayerBox(
           .background(Color.Black.copy(alpha = 0.6f), shape = MaterialTheme.shapes.medium)
           .padding(horizontal = 8.dp),
         fontSize = 12.sp,
-        text = text
+        text = text,
+        color = Color.White
       )
     }
   }
