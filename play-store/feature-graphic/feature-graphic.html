@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; width: 1024px; height: 500px; overflow: hidden; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+    background:
+      radial-gradient(620px 520px at 82% 22%, rgba(250, 204, 21, 0.18), rgba(250, 204, 21, 0) 62%),
+      linear-gradient(128deg, #06130e 0%, #0c2419 48%, #123324 100%);
+    color: #fff;
+    position: relative;
+  }
+  .dots {
+    position: absolute; inset: 0;
+    background-image: radial-gradient(rgba(255,255,255,.07) 1px, transparent 1.2px);
+    background-size: 28px 28px;
+    opacity: .55;
+  }
+  .content { position: absolute; left: 64px; top: 66px; width: 896px; }
+  .title {
+    font-size: 64px; line-height: 1.05; font-weight: 800; letter-spacing: -1.6px;
+    text-shadow: 0 2px 18px rgba(0,0,0,.25);
+  }
+  .cn {
+    margin-top: 18px; font-size: 34px; font-weight: 600; color: #8ff0c0;
+    letter-spacing: .2px;
+  }
+  .sub {
+    margin-top: 12px; font-size: 23px; font-weight: 400; color: rgba(255,255,255,.82);
+    letter-spacing: .4px;
+  }
+  .badge {
+    position: absolute; right: 64px; top: 64px;
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 16px; border: 1px solid rgba(143,240,192,.35);
+    border-radius: 999px; background: rgba(9, 35, 24, .45);
+    color: rgba(220,255,240,.9); font-size: 14px; font-weight: 600;
+    letter-spacing: 2.4px; backdrop-filter: blur(4px);
+  }
+  .dot-live { width: 8px; height: 8px; border-radius: 50%; background: #8ff0c0; box-shadow: 0 0 14px #8ff0c0; }
+  .wave { position: absolute; left: 0; bottom: 0; width: 1024px; height: 250px; }
+  .tag {
+    position: absolute; right: 64px; bottom: 40px;
+    color: rgba(255,255,255,.6); font-size: 15px; font-weight: 600; letter-spacing: 3.2px;
+  }
+  .fade {
+    position: absolute; left: 0; bottom: 0; width: 1024px; height: 120px;
+    background: linear-gradient(to top, rgba(5,17,12,.55), rgba(5,17,12,0));
+  }
+</style>
+</head>
+<body>
+  <div class="dots"></div>
+  <div class="badge"><span class="dot-live"></span>LOCAL PLAYER</div>
+  <div class="content">
+    <div class="title">Language Repeater</div>
+    <div class="cn">复读机 · 句子级 AB 复读</div>
+    <div class="sub">本地视频 · 字幕 · 倍速 · 后台播放</div>
+  </div>
+  <svg class="wave" viewBox="0 0 1024 250" preserveAspectRatio="none" aria-hidden="true">
+    <defs>
+      <linearGradient id="waveGrad" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="1024" y2="0">
+        <stop offset="0" stop-color="#34d399" stop-opacity=".18"/>
+        <stop offset=".5" stop-color="#5eead4" stop-opacity=".85"/>
+        <stop offset="1" stop-color="#34d399" stop-opacity=".22"/>
+      </linearGradient>
+    </defs>
+    <g id="bars" stroke="url(#waveGrad)" stroke-width="4" stroke-linecap="round"></g>
+    <g stroke-width="5" stroke-linecap="round">
+      <line x1="360" y1="72" x2="360" y2="208" stroke="#facc15" opacity=".95"/>
+      <line x1="650" y1="72" x2="650" y2="208" stroke="#5eead4" opacity=".95"/>
+    </g>
+    <g font-family="-apple-system, PingFang SC, sans-serif" font-weight="700" font-size="20" text-anchor="middle">
+      <circle cx="360" cy="54" r="19" fill="#facc15"/>
+      <text x="360" y="61" fill="#082018">A</text>
+      <circle cx="650" cy="54" r="19" fill="#5eead4"/>
+      <text x="650" y="61" fill="#082018">B</text>
+    </g>
+  </svg>
+  <div class="fade"></div>
+<script>
+  const bars = document.getElementById('bars');
+  const W = 1024, base = 196, left = 64, right = 960, count = 92;
+  const step = (right - left) / (count - 1);
+  for (let i = 0; i < count; i++) {
+    const t = i / (count - 1);
+    const envelope = 0.30 + 0.70 * Math.pow(Math.sin(Math.PI * t), 1.4);
+    const h = (14 + 58 * Math.abs(Math.sin(t * 37.0)) * envelope) * (1.0 - 0.25 * Math.abs(t - 0.5));
+    const x = left + i * step;
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', x.toFixed(2));
+    line.setAttribute('x2', x.toFixed(2));
+    line.setAttribute('y1', (base - h / 2).toFixed(2));
+    line.setAttribute('y2', (base + h / 2).toFixed(2));
+    bars.appendChild(line);
+  }
+</script>
+</body>
+</html>

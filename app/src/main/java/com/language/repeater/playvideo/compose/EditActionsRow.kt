@@ -87,14 +87,14 @@ fun EditActionsRow(
       onClick = onDeleteSentence,
     )
 
-    EditActionButton(
-      modifier = Modifier
-        .weight(1f)
-        .fillMaxHeight(),
-      iconRes = com.composables.icons.tabler.outline.R.drawable.tabler_ic_row_insert_top_outline,
-      textRes = R.string.insert_sentence,
-      onClick = onInsertSentence,
-    )
+//    EditActionButton(
+//      modifier = Modifier
+//        .weight(1f)
+//        .fillMaxHeight(),
+//      iconRes = com.composables.icons.tabler.outline.R.drawable.tabler_ic_row_insert_top_outline,
+//      textRes = R.string.insert_sentence,
+//      onClick = onInsertSentence,
+//    )
   }
 }
 

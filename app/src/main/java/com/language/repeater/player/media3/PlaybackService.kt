@@ -7,11 +7,14 @@ import android.os.Process
 import android.util.Log
 import androidx.annotation.OptIn
 import androidx.media3.common.ForwardingPlayer
+import androidx.media3.common.ForwardingSimpleBasePlayer
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.DefaultMediaNotificationProvider
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
+import com.google.common.util.concurrent.Futures
+import com.google.common.util.concurrent.ListenableFuture
 import com.language.repeater.R
 import com.language.repeater.app.MainActivity
 import com.language.repeater.app.MainApp
@@ -32,7 +35,17 @@ class PlaybackService : MediaSessionService() {
   override fun onCreate() {
     super.onCreate()
 
-    mediaSession = MediaSession.Builder(this, createSessionPlayer())
+    val sessionPlayer = SentenceAwarePlayer(
+      player = playbackGraph.media3Player.exoPlayer,
+      onNextSentence = {
+        playbackGraph.sentenceController.seekToNextSentence()
+      },
+      onPreviousSentence = {
+        playbackGraph.sentenceController.seekToPreviousSentence()
+      }
+    )
+
+    mediaSession = MediaSession.Builder(this, sessionPlayer)
       .setSessionActivity(getSingleTopActivityIntent())
       .setBitmapLoader(CoilBitmapLoader(applicationContext))
       .build()
@@ -44,22 +57,59 @@ class PlaybackService : MediaSessionService() {
     Log.i(TAG, "PlaybackService created, pid=${Process.myPid()}")
   }
 
-  /**
-   * 在应用层播放器之上叠加通知栏专属行为，构造仅供本服务 MediaSession 使用的 Player。
-   *
-   * 音频焦点由 ExoPlayer 内部处理，这里只需把系统媒体卡片的「上一首 / 下一首」
-   * 改写成本应用的「上一句 / 下一句」。应用层播放链路不经过这一层，
-   * 因此 App 内的 seek 语义不受影响。
-   */
+  @UnstableApi
+  class SentenceAwarePlayer(
+    player: Player,
+    private val onNextSentence: () -> Unit,
+    private val onPreviousSentence: () -> Unit,
+  ) : ForwardingSimpleBasePlayer(player) {
+
+    // 告诉 MediaSession：播放器支持上一项和下一项
+    override fun getState(): State {
+      val state = super.getState()
+
+      val commands = state.availableCommands.buildUpon()
+        .add(Player.COMMAND_SEEK_TO_NEXT)
+        .add(Player.COMMAND_SEEK_TO_PREVIOUS)
+        .build()
+
+      return state.buildUpon()
+        .setAvailableCommands(commands)
+        .build()
+    }
+
+    // 拦截上一项、下一项操作
+    override fun handleSeek(
+      mediaItemIndex: Int,
+      positionMs: Long,
+      seekCommand: Int,
+    ): ListenableFuture<*> {
+
+      when (seekCommand) {
+        Player.COMMAND_SEEK_TO_NEXT -> {
+          onNextSentence()
+          return Futures.immediateFuture(Unit)
+        }
+
+        Player.COMMAND_SEEK_TO_PREVIOUS -> {
+          onPreviousSentence()
+          return Futures.immediateFuture(Unit)
+        }
+
+        else -> return super.handleSeek(
+          mediaItemIndex,
+          positionMs,
+          seekCommand
+        )
+      }
+    }
+  }
+
   @OptIn(UnstableApi::class)
   private fun createSessionPlayer(): Player {
     return object : ForwardingPlayer(playbackGraph.media3Player.exoPlayer) {
-      override fun seekToNext() {
-        seekToNextSentence()
-      }
-
-      override fun seekToNextMediaItem() {
-        seekToNextSentence()
+      override fun hasPreviousMediaItem(): Boolean {
+        return true
       }
 
       override fun seekToPrevious() {
@@ -68,6 +118,18 @@ class PlaybackService : MediaSessionService() {
 
       override fun seekToPreviousMediaItem() {
         seekToPreviousSentence()
+      }
+
+      override fun hasNextMediaItem(): Boolean {
+        return true
+      }
+
+      override fun seekToNext() {
+        seekToNextSentence()
+      }
+
+      override fun seekToNextMediaItem() {
+        seekToNextSentence()
       }
 
       private fun seekToNextSentence() {

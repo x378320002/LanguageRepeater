@@ -644,6 +644,7 @@ class ScrollWaveformView @JvmOverloads constructor(
     editDrawable.setBounds(left, top, right, bottom)
     editDrawable.draw(canvas)
     rect.set(left - 15, (aby - abBgRadius).toInt(), right + 15, bottom + 30)
+    rect.set(left - 15, top - 15, right + 15, bottom + 30)
   }
 
   /**
