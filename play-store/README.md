@@ -22,7 +22,8 @@ play-store/
 │   ├── feature-graphic-1024x500.jpg  ← 已做好的 Feature graphic 占位图，可直接上传
 │   └── feature-graphic.html          ← 这张图的源文件，想改可以用浏览器打开
 ├── screenshots/
-│   ├── phone/                    ← 手机截图放这里
+│   ├── phone/                    ← 手机截图放这里（已裁好 4 张，可直接上传）
+│   ├── originals/                ← 原始截图备份，不要上传
 │   ├── tablet-7/                 ← 7 寸平板截图放这里（可选）
 │   └── tablet-10/                ← 10 寸平板截图放这里（可选）
 └── videos/README.md              ← 审核用演示视频怎么录
@@ -85,6 +86,15 @@ play-store/screenshots/phone/
 ---
 
 ## 2. 把截图处理成 Play 接受的尺寸
+
+> 当前已经把首批 4 张截图裁好，放在 `play-store/screenshots/phone/`：
+>
+> - `01-player-video-1080x1920.jpg`
+> - `02-landscape-1920x1080.jpg`
+> - `03-audio-dark-1080x1920.jpg`
+> - `04-audio-light-1080x1920.jpg`
+>
+> 原始尺寸截图在 `play-store/screenshots/originals/`，不要上传那一份。以后新增截图再按下面的方法裁。
 
 ### 2.1 Play 的硬性要求
 

@@ -48,7 +48,7 @@ fun EditActionsRow(
       .padding(horizontal = 15.dp)
       .fillMaxWidth()
       .height(60.dp),
-    horizontalArrangement = Arrangement.Start,
+    horizontalArrangement = Arrangement.SpaceEvenly,
     verticalAlignment = Alignment.CenterVertically,
   ) {
     EditActionButton(
