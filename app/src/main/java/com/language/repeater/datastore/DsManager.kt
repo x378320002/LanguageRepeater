@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentHashMap
 
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "app_config")
@@ -52,6 +53,8 @@ object DsManager {
 
   //当前的subtitle备用寻找文件夹
   val KEY_SUBTITLE_FOLDER = stringPreferencesKey("subtitle_folder_uri")
+  //媒体库上次选择的文件夹，空串表示全部媒体
+  val KEY_MEDIA_LIBRARY_FOLDER = stringPreferencesKey("key_media_library_folder")
   //当前播放的视频ID。与播放位置成对读写，见 PlayProgress
   private val KEY_CURRENT_PLAY_ID = longPreferencesKey("key_current_play_id_v2")
   //当前播放视频的播放位置。与视频ID成对读写，见 PlayProgress
@@ -114,6 +117,11 @@ object DsManager {
     MainApp.instance.dataStore.edit { preferences ->
       preferences[key] = value
     }
+  }
+
+  /** UI 触发的写入不要求调用方等待结果，使用自身 scope，界面销毁后仍能完成写盘。 */
+  fun <T> setAsync(key: Preferences.Key<T>, value: T) {
+    scope.launch { set(key, value) }
   }
 
   /** 一次读出成对的进度，保证两个字段来自同一个快照。 */

@@ -194,7 +194,6 @@ class PlayerViewModel : ViewModel() {
         )
       }
 
-//      subtitleController.resolveSubtitles(infos)
       withContext(Dispatchers.Main) {
         playbackListController.addToFront(infos)
       }

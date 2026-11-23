@@ -56,6 +56,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import coil3.compose.AsyncImage
 import com.language.repeater.R
+import com.language.repeater.datastore.DsManager
 import com.language.repeater.utils.MediaStoreItem
 import com.language.repeater.utils.MediaStoreQuery
 import com.language.repeater.utils.TimeFormatUtil.formatDuration
@@ -101,6 +102,8 @@ fun MediaLibrarySheet(
   // 当前展示的文件夹，null 表示全部媒体。
   var selectedFolder by remember { mutableStateOf<String?>(null) }
   var showFolderMenu by remember { mutableStateOf(false) }
+  // 上次选择的文件夹只在首次加载到媒体后恢复一次，刷新时保留用户当前的选择。
+  var folderSelectionRestored by remember { mutableStateOf(false) }
 
   val refresh: () -> Unit = {
     hasMediaPermission = MediaStoreQuery.hasPermission(context)
@@ -198,6 +201,14 @@ fun MediaLibrarySheet(
     if (selectedFolder != null && items.none { item -> item.folderName == selectedFolder }) {
       selectedFolder = null
     }
+    // 首次拿到媒体时恢复上次选择的文件夹；没有记录或文件夹已不存在则保持全部媒体。
+    if (!folderSelectionRestored && items.isNotEmpty()) {
+      val rememberedFolder = DsManager.get(DsManager.KEY_MEDIA_LIBRARY_FOLDER, "")
+      if (rememberedFolder.isNotBlank() && items.any { item -> item.folderName == rememberedFolder }) {
+        selectedFolder = rememberedFolder
+      }
+      folderSelectionRestored = true
+    }
     loading = false
   }
 
@@ -273,6 +284,8 @@ fun MediaLibrarySheet(
               onClick = {
                 selectedFolder = null
                 showFolderMenu = false
+                // 记住本次选择，空串表示全部媒体。
+                DsManager.setAsync(DsManager.KEY_MEDIA_LIBRARY_FOLDER, "")
               }
             )
             folderCounts.forEach { (folder, count) ->
@@ -281,6 +294,7 @@ fun MediaLibrarySheet(
                 onClick = {
                   selectedFolder = folder
                   showFolderMenu = false
+                  DsManager.setAsync(DsManager.KEY_MEDIA_LIBRARY_FOLDER, folder)
                 }
               )
             }

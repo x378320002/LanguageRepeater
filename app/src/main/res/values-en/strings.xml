@@ -1,8 +1,8 @@
 <resources>
   <string name="app_name">Language Repeater</string>
   <string name="setting_title">Settings</string>
-  <string name="setting_sub_folder">Default subtitle folder</string>
-  <string name="setting_sub_folder_desc">Folder to search for subtitles after selecting media</string>
+  <string name="setting_sub_folder">Subtitle folder</string>
+  <string name="setting_sub_folder_desc">Folder scanned recursively for srt/vtt subtitles when choosing subtitles</string>
   <string name="setting_clear_temp">Clear cache</string>
   <string name="setting_sentence_title">Automatic sentence segmentation</string>
   <string name="setting_sentence_gap">Minimum sentence gap</string>
@@ -16,6 +16,21 @@
   <string name="sub_more_split_subtitle">Regenerate sentences</string>
   <string name="select_file">Select audio or video</string>
   <string name="select_subtitle">Select subtitles</string>
+  <string name="subtitle_picker_no_folder">No subtitle folder selected</string>
+  <string name="subtitle_picker_no_folder_desc">Choose a subtitle folder and its srt / vtt files will be listed here</string>
+  <string name="subtitle_picker_folder_unavailable">The subtitle folder is not accessible. Please choose it again.</string>
+  <string name="subtitle_picker_folder_unavailable_desc">The folder may have been deleted or access may have expired</string>
+  <string name="subtitle_picker_empty_folder">No srt/vtt subtitles in this folder</string>
+  <string name="subtitle_picker_empty_folder_desc">Try another folder, or choose a subtitle from the file manager</string>
+  <string name="subtitle_picker_truncated">Too many files. Showing partial results</string>
+  <string name="subtitle_picker_truncated_title">Folder is too large</string>
+  <string name="subtitle_picker_truncated_desc">Only part of the folder was scanned and no subtitles were found. Choose a smaller folder.</string>
+  <string name="subtitle_picker_match_current">Matches the current video</string>
+  <string name="subtitle_picker_match_current_with_dir">Matches the current video · %1$s</string>
+  <string name="subtitle_picker_choose_folder">Choose subtitle folder</string>
+  <string name="subtitle_picker_change_folder">Change subtitle folder</string>
+  <string name="subtitle_picker_from_files">Choose from file manager</string>
+  <string name="subtitle_file_unsupported">Only .srt or .vtt subtitle files are supported</string>
   <string name="disable_subtitle">Disable subtitles</string>
   <string name="subtitle_track">Subtitle track %1$d</string>
   <string name="subtitle_disabled">Subtitles disabled</string>

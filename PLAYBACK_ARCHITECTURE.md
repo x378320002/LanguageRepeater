@@ -37,7 +37,7 @@ PlaybackService
 - Compose 直接观察 Player 和 Controller，不通过 ViewModel 复制播放状态。
 - Compose 和业务层不获取 Media3、腾讯 SDK 或 AVPlayer 实例。
 - 底层播放器由应用层创建并常驻，与进程同生共死、不提供释放入口；页面销毁只解绑视频输出。
-- Player 不负责 Room、PlaybackList、字幕匹配、PCM、句子、AB 复读或历史。
+- Player 不负责 Room、PlaybackList、字幕选择、PCM、句子、AB 复读或历史。
 
 ## PlaybackPlayer
 
@@ -196,7 +196,7 @@ Controller 负责把 PlaybackList 与单媒体 Player 协调起来：
 
 ## 字幕、PCM、句子、AB 和历史
 
-- `SubtitleManager` 负责字幕匹配、持久化和当前单媒体字幕更新；不得遍历或重建 PlaybackList。
+- `SubtitleManager` 负责字幕持久化和当前单媒体字幕更新；不得遍历或重建 PlaybackList。
 - `MediaAnalysisRepository` 负责 PCM/WAV 缓存和波形，切换媒体时取消旧任务并校验 `mediaId`。
 - `SentenceRepository` 负责字幕/VAD 分句和句子编辑、保存，不操作播放器。
 - `SentencePlaybackController` 观察 Player 的媒体和 position，负责当前句、上一句、下一句、回句首和 AB 回跳。

@@ -1,7 +1,5 @@
 package com.language.repeater.playvideo.compose
 
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -12,8 +10,10 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -24,7 +24,6 @@ import com.language.repeater.utils.SleepTimerManager
 import com.language.repeater.player.PlaybackPlayer
 import com.language.repeater.player.togglePlayPause
 import com.language.repeater.playvideo.PlayerViewModel
-import com.language.repeater.utils.FileUtil
 
 /**
  * 播放页各功能区与 [PlayerViewModel] 的接线。
@@ -148,20 +147,11 @@ fun PlayerSubActionsSection(
   fullScreenEntered: Boolean,
   modifier: Modifier = Modifier,
 ) {
-  val context = LocalContext.current
   val playerState by viewModel.player.state.collectAsState()
   val repeatable by viewModel.sentenceController.repeatAb.collectAsState()
   val editMode by DsManager.observe(DsManager.KEY_EDIT_SEN_MODE, false).collectAsState()
   val sleepTimerRemaining by viewModel.sleepTimerRemaining.collectAsState()
-
-  val subtitlePicker = rememberLauncherForActivityResult(
-    ActivityResultContracts.OpenDocument()
-  ) { uri ->
-    if (uri != null) {
-      FileUtil.takePersistablePermission(context, uri)
-      viewModel.subtitleController.updateSubtitle(uri)
-    }
-  }
+  var showSubtitlePicker by remember { mutableStateOf(false) }
 
   SubActionsRow(
     modifier = modifier,
@@ -180,17 +170,9 @@ fun PlayerSubActionsSection(
     onTimerSelected = { minutes -> viewModel.startSleepTimer(minutes) },
     onTimerComplete = { viewModel.startSleepTimerByCurrentItem() },
     onSelectSubtitle = {
-      if (MainApp.playbackGraph.playbackListController.items.value.isEmpty()) {
-        return@SubActionsRow
+      if (MainApp.playbackGraph.playbackListController.items.value.isNotEmpty()) {
+        showSubtitlePicker = true
       }
-      subtitlePicker.launch(
-        arrayOf(
-          "application/x-subrip",
-          "text/vtt",
-          "text/plain",
-          "application/octet-stream"
-        )
-      )
     },
     hasSubtitle = playerState.currentMedia?.subtitleUri != null,
     subtitleVisible = playerState.subtitleVisible,
@@ -200,6 +182,17 @@ fun PlayerSubActionsSection(
     onSplitSubtitle = { viewModel.sentenceController.reloadSentences(it) },
     onToggleFullScreen = { viewModel.changeScreenMode(!fullScreenEntered) },
   )
+
+  if (showSubtitlePicker) {
+    SubtitlePickerSheet(
+      currentVideoName = playerState.currentMedia?.title,
+      onConfirm = { uri ->
+        showSubtitlePicker = false
+        viewModel.subtitleController.updateSubtitle(uri)
+      },
+      onDismiss = { showSubtitlePicker = false }
+    )
+  }
 }
 
 /** 播放控制栏：前后句、回句首、播放暂停、播放列表。 */

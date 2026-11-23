@@ -2,8 +2,8 @@
   <string name="app_name">复读机</string>
 
   <string name="setting_title">设置</string>
-  <string name="setting_sub_folder">默认字幕文件夹</string>
-  <string name="setting_sub_folder_desc">选择音视频后自动搜索字幕文件的位置</string>
+  <string name="setting_sub_folder">字幕文件夹</string>
+  <string name="setting_sub_folder_desc">选择字幕时从这里递归扫描 srt/vtt 文件</string>
   <string name="setting_clear_temp">清除缓存</string>
   <string name="setting_sentence_title">自动分句设置</string>
   <string name="setting_sentence_gap">句子最小间隔</string>
@@ -20,6 +20,21 @@
 
   <string name="select_file">选择音视频</string>
   <string name="select_subtitle">选择字幕</string>
+  <string name="subtitle_picker_no_folder">还没有选择字幕文件夹</string>
+  <string name="subtitle_picker_no_folder_desc">选择一个字幕文件夹后，这里会自动列出其中的 srt / vtt 文件</string>
+  <string name="subtitle_picker_folder_unavailable">字幕文件夹无法访问，请重新选择</string>
+  <string name="subtitle_picker_folder_unavailable_desc">文件夹可能已被删除，或访问权限已失效</string>
+  <string name="subtitle_picker_empty_folder">字幕文件夹里没有 srt/vtt 文件</string>
+  <string name="subtitle_picker_empty_folder_desc">可以先更换文件夹，或从文件管理器里选择字幕</string>
+  <string name="subtitle_picker_truncated">字幕数量较多，仅显示部分结果</string>
+  <string name="subtitle_picker_truncated_title">目录内容过多</string>
+  <string name="subtitle_picker_truncated_desc">仅扫描了部分文件，未找到字幕；建议选择更小的文件夹</string>
+  <string name="subtitle_picker_match_current">与当前视频同名</string>
+  <string name="subtitle_picker_match_current_with_dir">与当前视频同名 · %1$s</string>
+  <string name="subtitle_picker_choose_folder">选择字幕文件夹</string>
+  <string name="subtitle_picker_change_folder">更换字幕文件夹</string>
+  <string name="subtitle_picker_from_files">从文件管理器选择</string>
+  <string name="subtitle_file_unsupported">只支持 .srt 或 .vtt 字幕文件</string>
   <string name="disable_subtitle">禁用字幕</string>
   <string name="subtitle_track">字幕轨道 %d</string>
   <string name="subtitle_disabled">已禁用字幕</string>

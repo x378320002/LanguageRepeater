@@ -5,17 +5,17 @@ import android.net.Uri
 import android.util.Log
 import androidx.core.net.toUri
 import com.language.repeater.R
-import com.language.repeater.datastore.DsManager
-import com.language.repeater.db.VideoEntity
 import com.language.repeater.db.VideoInfoDao
 import com.language.repeater.player.PlaybackPlayer
-import com.language.repeater.utils.SubtitleFolderScanner
+import com.language.repeater.utils.FileUtil
 import com.language.repeater.utils.ToastUtil
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.IOException
 
 class SubtitleController(
   context: Context,
@@ -25,19 +25,28 @@ class SubtitleController(
 ) {
   private val applicationContext = context.applicationContext
 
+  /**
+   * 更新当前媒体的字幕。
+   *
+   * 优先保留原始 Uri：能从 provider 拿到持久读权限（或位于已授权的字幕目录树下）时，
+   * 不需要复制。provider 不支持持久授权时复制到应用私有目录，否则重启后字幕会失效。
+   */
   fun updateSubtitle(subtitleUri: Uri) {
-    val mediaId = player.state.value.currentMedia?.mediaId ?: return
-    val subtitle = subtitleUri.toString()
+    val currentMedia = player.state.value.currentMedia ?: return
+    val mediaId = currentMedia.mediaId
+    val previousSubtitleUri = currentMedia.subtitleUri
     scope.launch(Dispatchers.IO) {
       try {
-        videoInfoDao.updateSubUri(mediaId, subtitle)
+        val storedUri = prepareSubtitleUri(mediaId, subtitleUri)
+        videoInfoDao.updateSubUri(mediaId, storedUri)
         if (player.state.value.currentMedia?.mediaId != mediaId) {
           return@launch
         }
 
         withContext(Dispatchers.Main) {
-          player.setSubtitle(subtitle)
+          player.setSubtitle(storedUri)
         }
+        releaseUnusedSubtitlePermission(previousSubtitleUri, storedUri)
       } catch (throwable: Throwable) {
         if (throwable is CancellationException) {
           throw throwable
@@ -50,53 +59,85 @@ class SubtitleController(
     }
   }
 
-  /**
-   * 为即将入库的媒体解析字幕。字幕跟着 VideoEntity.subUri 走：
-   * uri 已在库中的条目沿用库里已保存的字幕；未入库的新文件按文件名去字幕文件夹找。
-   * 结果直接写回 item.subUri，由仓库入库时一并落盘。
-   */
-  suspend fun resolveSubtitles(items: List<VideoEntity>) {
-    if (items.isEmpty()) {
-      return
-    }
-    val existingByUri = videoInfoDao.getVideosByUris(items.map { item -> item.uri })
-      .associateBy({ entry -> entry.uri })
-    var needScanFolder = false
-    items.forEach { item ->
-      val existing = existingByUri[item.uri]
-      if (existing == null) {
-        needScanFolder = true
-      } else {
-        item.subUri = existing.subUri
-      }
+  /** 校验来源可读，并返回可以长期保存的字幕 Uri 字符串。 */
+  private fun prepareSubtitleUri(mediaId: Long, source: Uri): String {
+    FileUtil.takePersistablePermission(applicationContext, source)
+    if (!canRead(source)) {
+      throw IOException("Subtitle is not readable: $source")
     }
 
-    if (!needScanFolder) {
-      return
+    val durable = source.scheme == "file" ||
+      FileUtil.hasPersistedReadPermission(applicationContext, source)
+    if (durable) {
+      // 之前可能为同一媒体复制过私有副本，改用外部 uri 后不再需要。
+      deletePrivateSubtitleCopies(mediaId, keep = null)
+      return source.toString()
     }
-    scanFolderForSubtitles(items)
+
+    return copySubtitleToPrivateStorage(mediaId, source)
   }
 
-  private suspend fun scanFolderForSubtitles(items: List<VideoEntity>) {
-    val folder = DsManager.get(DsManager.KEY_SUBTITLE_FOLDER, "")
-      .takeIf { path -> path.isNotEmpty() }
-      ?.toUri()
-    val found = SubtitleFolderScanner.scan(applicationContext, folder)
-    if (found.isEmpty()) {
+  private fun canRead(uri: Uri): Boolean {
+    return try {
+      applicationContext.contentResolver.openInputStream(uri)?.use { true } ?: false
+    } catch (_: Exception) {
+      false
+    }
+  }
+
+  /** provider 不支持持久授权时复制到私有目录，文件名按 mediaId 固定，换字幕时覆盖。 */
+  private fun copySubtitleToPrivateStorage(mediaId: Long, source: Uri): String {
+    val displayName = FileUtil.getFileUriName(applicationContext, source)
+    val extension = displayName.substringAfterLast('.', "").lowercase()
+      .takeIf { it == "srt" || it == "vtt" }
+      ?: "srt"
+
+    val directory = File(applicationContext.filesDir, SUBTITLE_DIRECTORY).apply { mkdirs() }
+    val target = File(directory, "$mediaId.$extension")
+    deletePrivateSubtitleCopies(mediaId, keep = target)
+
+    val input = applicationContext.contentResolver.openInputStream(source)
+      ?: throw IOException("Cannot open subtitle: $source")
+    input.use { sourceStream ->
+      target.outputStream().use { targetStream ->
+        sourceStream.copyTo(targetStream)
+      }
+    }
+    return Uri.fromFile(target).toString()
+  }
+
+  private fun deletePrivateSubtitleCopies(mediaId: Long, keep: File?) {
+    val directory = File(applicationContext.filesDir, SUBTITLE_DIRECTORY)
+    directory.listFiles()?.forEach { file ->
+      if (file.nameWithoutExtension == mediaId.toString() && file != keep) {
+        file.delete()
+      }
+    }
+  }
+
+  /** 旧字幕不再被任何媒体引用时释放它的持久授权，避免授权名额持续累积。 */
+  private suspend fun releaseUnusedSubtitlePermission(previousUri: String?, currentUri: String) {
+    if (previousUri.isNullOrBlank() || previousUri == currentUri) {
       return
     }
-
-    items.forEach { item ->
-      if (item.subUri != null) {
-        return@forEach
-      }
-      val key = item.name.substringBeforeLast(".")
-      val subtitleUri = found[key] ?: return@forEach
-      item.subUri = subtitleUri.toString()
+    val previous = previousUri.toUri()
+    if (previous.scheme != "content") {
+      return
     }
+    if (videoInfoDao.countBySubUri(previousUri) > 0) {
+      return
+    }
+    val persistedDirectly = applicationContext.contentResolver.persistedUriPermissions.any {
+      it.isReadPermission && it.uri == previous
+    }
+    if (!persistedDirectly) {
+      return
+    }
+    FileUtil.releasePersistablePermission(applicationContext, previous)
   }
 
   private companion object {
     const val TAG = "SubtitleController"
+    const val SUBTITLE_DIRECTORY = "subtitles"
   }
 }

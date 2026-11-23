@@ -16,9 +16,6 @@ interface VideoInfoDao {
   @Query("SELECT * FROM video_info_table WHERE uri = :uri LIMIT 1")
   suspend fun getVideoByUri(uri: String): VideoEntity?
 
-  @Query("SELECT * FROM video_info_table WHERE uri IN (:uris)")
-  suspend fun getVideosByUris(uris: List<String>): List<VideoEntity>
-
   @Delete
   suspend fun delete(video: VideoEntity)
 
@@ -30,4 +27,7 @@ interface VideoInfoDao {
 
   @Query("UPDATE video_info_table SET subUri = :subUri WHERE id = :videoId")
   suspend fun updateSubUri(videoId: Long, subUri: String?)
+
+  @Query("SELECT COUNT(*) FROM video_info_table WHERE subUri = :subUri")
+  suspend fun countBySubUri(subUri: String): Int
 }
